@@ -1,0 +1,848 @@
+# libDWD code-/flag-table file (WMO codeflags), created: 2019-08-23 17:58:32
+# line format: "FXY<tab>libDWDType<tab>codeFigureFrom<tab>codeFigureTo<tab>entryname<tab>entryNameSub1<tab>entryNameSub2<lf>"
+001193	C	0		Climatological data		
+001193	C	1		Numerical weather analysis		
+001193	C	2		Numerical weather predictions		
+001193	C	3		Observations		
+001193	C	4		Compound data composed of any other entry		
+001193	C	5	6	Reserved		
+001193	C	7		Missing value		
+001194	C	0		Basic observation without radar data capability		
+001194	C	1		Intermediate observation with or without radar data capability		
+001194	C	2		Basic observation with radar data capability		
+001194	C	3		Missing value		
+001200	C	0		Wind		
+001200	C	1		Reserved		
+001200	C	2		Visibility		
+001200	C	3		Clouds		
+001200	C	4		Hail/Ice pellets/freezing precipitation		
+001200	C	5		Reserved		
+001200	C	6		Precipitation		
+001200	C	7		Reserved		
+001200	C	8		Thunderstorm		
+001200	C	9		Tornado		
+001200	C	10	62	Reserved		
+001200	C	63		Missing value		
+002192	C	0		Original report, not corrected		
+002192	C	1	26	Bulletins containing corrected reports are marked by BBB = 'CCA' to 'CCZ' (converted to 1-26 respectively) in the abbreviated heading. For BBB = 'COR' 1 is used		
+002192	C	27	31	Reserved		
+002192	C	32		Report corrected by decoding		
+002192	C	33		CLIMAT report: Formal errors corrected manually		
+002192	C	34		CLIMAT report: Internal errors corrected manually		
+002192	C	35	39	Reserved		
+002192	C	40		Report corrected for 'Amtsblatt'		
+002192	C	41		Report corrected for 'European weather report'		
+002192	C	42	47	Reserved		
+002192	C	48		Report corrected by climatological checking		
+002192	C	49	63	Reserved		
+002192	C	64	127	Report as defined by 'code figure-64' (see above) checked by numerical analysis (Northern hemisphere or global)		
+002192	C	128	191	Report as defined by 'code figure-128' (see above) checked by numerical analysis (Europe)		
+002192	C	192	255	Report as defined by 'code figure-192' (see above) checked by numerical analysis (Germany)		
+002193	F	1		Pseudo report		
+002193	F	2	A	Missing value (No pseudo report)		
+002201	C	0		No errors detected	No errors detected	
+002201	C	1		Slightly suspect	No errors detected	
+002201	C	2		Bad	No errors detected	
+002201	C	3		Corrected value	No errors detected	
+002201	C	4		No errors detected      	Probably correct	
+002201	C	5		Slightly suspect	Probably correct	
+002201	C	6		Bad	Probably correct	
+002201	C	7		Corrected value	Probably correct	
+002201	C	8		No errors detected	Probably false	
+002201	C	9		Slightly suspect	Probably false	
+002201	C	10		Bad	Probably false	
+002201	C	11		Corrected value	Probably false	
+002201	C	12		No errors detected     	False	
+002201	C	13		Slightly suspect	False	
+002201	C	14		Bad	False	
+002201	C	15		Corrected value	False	
+002201	C	16	30	Reserved		
+002201	C	31		Missing value		
+002221	C	1		Excellent (within 3 metres)		
+002221	C	2		Good (within 10 metres)		
+002221	C	3		Fair (within 20 metres)		
+002221	C	4		Poor (more than 20 metres)		
+002221	C	5		Excellent (within 3 feet)		
+002221	C	6		Good (within 10 feet)		
+002221	C	7		Fair (within 20 feet)		
+002221	C	8		Poor (more than 20 feet)		
+002221	C	10	14	Reserved		
+002221	C	15		Missing value		
+002222	C	0	9	Indicator figure for data-rpocessing techniques used to identify tropopause level (supplied by operator). (see Volume II)		
+002222	C	10	14	Reserved		
+002222	C	15		Missing value		
+002241	C	0		Reserved		
+002241	C	1		ANT/Bosch		
+002241	C	2		Boschung		
+002241	C	3		SSI/Scan (MicKS)		
+002241	C	4		Vaisala		
+002241	C	5		Vibrometer		
+002241	C	6		Malling		
+002241	C	7		Lufft		
+002241	C	8		Medipo		
+002241	C	9	14	Reserved		
+002241	C	15		Missing value		
+002242	C	0		Fast lane between the wheel tracks		
+002242	C	1		Fast lane between the wheel tracks in the opposite direction		
+002242	C	2		Fast lane in the wheel tracks		
+002242	C	3		Fast lane in the wheel tracks in the opposite direction		
+002242	C	4		Slow lane between the wheel tracks		
+002242	C	5		Slow lane between the wheel tracks in the opposite direction		
+002242	C	6		Slow lane in the wheel tracks		
+002242	C	7		Slow lane in the wheel tracks in the opposite direction		
+002242	C	8	14	Reserved		
+002242	C	15		Missing value		
+002243	F	1		automatic; automatisc		
+002243	F	2		manned; bemann		
+002243	F	3		event triggered; Ereignis gesteuer		
+002243	F	4		longer time period than the standard		
+002243	F	5		Reserved		
+002243	F	6	A	Missing value		
+002244	C	0		free track without further information		
+002244	C	1		free track, embankment		
+002244	C	2		free track, flat relative to surroundings		
+002244	C	3		free track, water basin(s) in vicinity		
+002244	C	4		free track, forest		
+002244	C	5		free track, cleft		
+002244	C	6		free track on hilltop		
+002244	C	7		free track on hilltop, forest		
+002244	C	8		free track in valley		
+002244	C	9		free track in valley, forest		
+002244	C	10		free track, north inclination		
+002244	C	11		free track, north inclination, forest		
+002244	C	12		free track, south inclination		
+002244	C	13		free track, south inclination, forest		
+002244	C	14	19	reserved		
+002244	C	20		bridge without further information		
+002244	C	21		bridge across a valley in a urban area		
+002244	C	22		bridge across a valley with forest/meadows/fielde		
+002244	C	23		bridge across street/track		
+002244	C	24		bridge across big river/canal		
+002244	C	25		bridge across river/canal of medium size		
+002244	C	26		bridge across a small stream/loading canal		
+002244	C	27	30	reserved		
+002244	C	31		missing value		
+002245	C	0		asphalt		
+002245	C	1		concrete		
+002245	C	2		concrete construction		
+002245	C	3		steel-girder construction		
+002245	C	4		box girder bridge		
+002245	C	5		orthotrope slab		
+002245	C	6		drain asphalt		
+002245	C	7	14	reserved		
+002245	C	15		missing value		
+004192	C	0		Reserved		
+004192	C	1		Past day		
+004192	C	2		Present day		
+004192	C	3		Mean from 24 Measurements from day before past day 23:50 UTC until past day 22:50 UTC		
+004192	C	4		Mean from 3 Measurements at 06:50, 13:50 and 20:50 UTC from past day		
+004192	C	5		From past day 06:30 UTC until 06:30 UTC (today)		
+004192	C	6		From past day 21 UTC until 21 UTC (today)		
+004192	C	7		Last 10 hours		
+004192	C	8	14	Reserved		
+004192	C	15		Missing value		
+006192	C	0		No report		
+006192	C	1		Previous position		
+006192	C	2		Present position		
+006192	C	3		30 nautical miles		
+006192	C	4		60 nautical miles		
+006192	C	5		90 nautical miles		
+006192	C	6		120 nautical miles		
+006192	C	7		150 nautical miles		
+006192	C	8		180 nautical miles		
+006192	C	9		More than 180 nautical miles		
+006192	C	10	14	Reserved		
+006192	C	15		Missing value		
+008192	C	0		Reserved		
+008192	C	1		First guess		
+008192	C	2		Analysis		
+008192	C	3		Initialized analysis		
+008192	C	4		Forecast A		
+008192	C	5		Forecast B		
+008192	C	6		Forecast C		
+008192	C	7		Forecast D		
+008192	C	8		Forecast E		
+008192	C	9		Forecast F		
+008192	C	10		Forecast G		
+008192	C	11	62	Reserved		
+008192	C	63		Missing value		
+008193	C	0		Sea-level pressure		
+008193	C	1		Altitude of 200 hPa surface		
+008193	C	2		Altitude of 850 hPa surface		
+008193	C	3		Altitude of 700 hPa surface		
+008193	C	4		Altitude of 500 hPa surface		
+008193	C	5		Altitude of 400 hPa surface		
+008193	C	6		Altitude of 300 hPa surface		
+008193	C	7		Altitude of 250 hPa surface		
+008193	C	8		D-value		
+008193	C	9		No absolute altitude available or geopotential data inaccurate		
+008193	C	10	14	Reserved		
+008193	C	15		Missing value		
+008195	C	0	9	N/A		
+008195	C	9		Forecast		
+008195	C	10		Control forecast		
+008195	C	11		Pertubed forecast		
+008195	C	12	126	N/A		
+008195	C	127		Missing value		
+008196	C	0		Total concentration of ice		
+008196	C	1		Amount of slush, brash and ice-cakes		
+008196	C	2		Amount of small and medium floes		
+008196	C	3		Amount of giant floes and ice fields		
+008196	C	4	6	Reserved		
+008196	C	7		Missing value		
+008197	C	0		Reserved		
+008197	C	1		Drift ice boundary data follow		
+008197	C	2		Fast ice boundary data follow		
+008197	C	3		Lead data follow		
+008197	C	4		Polynya data follow		
+008197	C	5		Ice belt data follow		
+008197	C	6		Reserved		
+008197	C	7		Missing value		
+008198	C	0		Automatically acquired data		
+008198	C	1		Manually acquired data		
+008198	C	2		Controlling measurements		
+008198	C	3		Alternative measurements		
+008198	C	4		Reference measurements		
+008198	C	5		""Nebenamtliche"" measurement		
+008198	C	6		Meteorological reports and alarms		
+008198	C	7		High-resolution measurements calculated by Message and Product Generator (MPG)		
+008198	C	8		Additional measurements for continuous weather history		
+008198	C	9		Urban climatology station		
+008198	C	10	14	Reserved		
+008198	C	15		Missing value		
+008199	C	0		N/A		
+008199	C	1		Creation date		
+008199	C	2		Observation date		
+008199	C	3		N/A		
+008199	C	4		N/A		
+008199	C	5		N/A		
+008199	C	6		N/A		
+008199	C	7	14	Reserved		
+008199	C	15		Missing value		
+011199	C	0		Calm		
+011199	C	1		Reserved		
+011199	C	2		Light breeze		
+011199	C	3		Reserved		
+011199	C	4		Moderate breeze		
+011199	C	5		Reserved		
+011199	C	6		Strong breeze		
+011199	C	7		Reserved		
+011199	C	8		Gale		
+011199	C	9	14	Reserved		
+011199	C	15		Missing value		
+011200	C	0		None		
+011200	C	1		Light turbulence		
+011200	C	2		Moderate turbulence in clear air, infrequent		
+011200	C	3		Moderate turbulence in clear air, frequent		
+011200	C	4		Moderate turbulence in cloud, infrequent		
+011200	C	5		Moderate turbulence in cloud, frequent		
+011200	C	6		Severe turbulence in clear air, infrequent		
+011200	C	7		Severe turbulence in clear air, frequent		
+011200	C	8		Severe turbulence in cloud, infrequent		
+011200	C	9		Severe turbulence in cloud, frequent		
+011200	C	10	14	Reserved		
+011200	C	15		Missing value		
+011201	C	0		Spot wind		
+011201	C	1		Winds averaged over 100 nm preceding last fix, last fix 25 nm prior to the reported position		
+011201	C	2		Winds averaged over 200 nm preceding last fix, last fix 25 nm prior to the reported position		
+011201	C	3		Winds averaged over 300 nm preceding last fix, last fix 25 nm prior to the reported position		
+011201	C	4		Winds averaged over 400 nm preceding last fix, last fix 25 nm prior to the reported position		
+011201	C	5		Winds averaged over 100 nm preceding last fix, last fix 75 nm prior to the reported position		
+011201	C	6		Winds averaged over 200 nm preceding last fix, last fix 75 nm prior to the reported position		
+011201	C	7		Winds averaged over 300 nm preceding last fix, last fix 75 nm prior to the reported position		
+011201	C	8		Winds averaged over 400 nm preceding last fix, last fix 75 nm prior to the reported position		
+011201	C	9		Winds averaged over more than 400 nm		
+011201	C	10	14	Reserved		
+011201	C	15		Missing value		
+011208	C	0		90% to 100% reliable - multiple drift with closed wind star, or small open star whenwinds are 50 kt or greater - short radar wind runs, wind obtained using Doppler radaror inertial omega system		
+011208	C	1		85% to 100% reliable - multiple drift with small open star, or double drift or single driftwith average ground speed by timing - short radar wind run		
+011208	C	2		80% to 100% reliable - fix to fix winds using the following pin point visual fixes, radarfixes or accurate loran fixes using good ground wave		
+011208	C	3		75% to 90% reliable - fix to fix winds using two or three lines of position (LOPs) eitherloran, celestial, radio, or sight bearings or any combination of the three above whenall lines of position are considered reliabl		
+011208	C	4		60% to 80% reliable - winds obtained using single drift and single LOP (Speed Line),air-plot, etc		
+011208	C	5		50% to 75% reliable - fix to fix winds using two or three lines of position either loran,celestial, radio, or sight bearings or any combination of the above when one of thelines is not considered reliabl		
+011208	C	6		Less than 50% reliable - winds obtained by any of the above methods that the navigatorbelieves to be inaccurate or of questionable accurac		
+011208	C	7		No reliability - assumed or estimated wind		
+011208	C	8		No wind - navigator unable to determine a wind		
+011208	C	9	14	Reserved		
+011208	C	15		Missing value		
+011209	C	0		Calm		
+011209	C	4		NE		
+011209	C	8		E		
+011209	C	12		SE		
+011209	C	16		S		
+011209	C	20		SW		
+011209	C	24		W		
+011209	C	28		NW		
+011209	C	32		N		
+011209	C	63		Missing value		
+012195	C	0		No		
+012195	C	1		Yes		
+012195	C	2		Missing value		
+012197	C	0		Not reported		
+012197	C	1		Very unstable		
+012197	C	2		Unstable		
+012197	C	3		Slightly unstable		
+012197	C	4		Neutral		
+012197	C	5		Slightly stable		
+012197	C	6		Stable		
+012197	C	7		Very stable		
+012197	C	8	14	Reserved		
+012197	C	15		Missing value		
+012201	C	0	4	Reserved		
+012201	C	5		Temperature positiv or 0.0 Celsius		
+012201	C	6		Temperature negative and water (w) at the mull covering		
+012201	C	7		Temperature negative and ice (e) at the mull covering		
+012201	C	8	14	Reserved		
+012201	C	15		Missing value		
+013192	C	0	6	See code table 3534 - Frequency group within which R1R1R1R1 falls in the WMO Manual on Codes, Vol. I		
+013192	C	7		Missing value		
+013195	C	0		Reserved		
+013195	C	1		Very unstable		
+013195	C	2		Unstable		
+013195	C	3		Slightly unstable		
+013195	C	4		Neutral		
+013195	C	5		Slightly stable		
+013195	C	6		Stable		
+013195	C	7		Very stable		
+013195	C	8	14	Reserved		
+013195	C	15		Missing value		
+013196	C	0		No precipitation		
+013196	C	1		Light rain (<0.5 mm/hr)		
+013196	C	2		Moderate rain (0.5 to 4.0 mm/hr)		
+013196	C	3		Heavy rain (>4.0 mm/hr)		
+013196	C	4		Light snow (<0.5 cm/hr)		
+013196	C	5		Moderate snow (0.5 to 4.0 cm/hr)		
+013196	C	6		Heavy snow (>4.0 cm/hr)		
+013196	C	7		Missing value		
+013232	C	0		Yes		
+013232	C	1		No		
+013232	C	2		Reserved		
+013232	C	3		Missing value		
+013234	C	0		Ice		
+013234	C	1		Water		
+013234	C	2		Reserved		
+013234	C	3		Missing value		
+013237	C	0		Reserved		
+013237	C	1		Geschlossen		
+013237	C	2		Reste		
+013237	C	3		Flecken		
+013237	C	4		Durchbrochen		
+013237	C	5	6	Reserved		
+013237	C	7		Missing value		
+020192	C	0		Summer Day		
+020192	C	1		Day with maximum temperature of 30 degrees Celsius or more		
+020192	C	2		Day with minimum temperature below 0 degrees Celsius		
+020192	C	3		Day with maximum temperature below 0 degrees Celsius		
+020192	C	4		Day with precipitation of 0.1 mm or more		
+020192	C	5		Day with precipitation of 1.0 mm or more		
+020192	C	6		Day with snow or hail (hail, small hail, snow pellets) but no rain or drizzle		
+020192	C	7		Day with snow or hail (hail, small hail, snow pellets) cover		
+020192	C	8		Sunny Day		
+020192	C	9		Day with overcast sky		
+020192	C	10		Day with thunderstorm		
+020192	C	11		Day with Beaufort 6 or more		
+020192	C	12		Day with Beaufort 8 or more		
+020192	C	13		Day with both snow and/or hail (hail, small hail, snow pellets) and rain and/or drizzle		
+020192	C	14		Day with depositions of precipitation >=0.1 mm only		
+020192	C	15	30	Reserved		
+020192	C	31		Missing value		
+020193	C	0	99	See code table 89 - zusaetzliche Wettererscheinungen in VuB 2 Band D nationale Schluesseltabellen		
+020195	C	0		Not used		
+020195	C	0	9	See code table 90 - Entwicklung von Dunst, Talnebel, Wolken unterhalb des Stationsniveaus in VuB 2 Band D nationale Schluesseltabellen		
+020195	C	1		More than zero to 4 oktas haze, mist, fog, clouds below station level developing during the past hour		
+020195	C	2		4 to less than 8 oktas haze, mist, fog, clouds below station level developing during the past hour		
+020195	C	3		8 oktas haze, mist, fog, clouds below station level developing during the past hour		
+020195	C	4		More than zero to 4 oktas haze, mist, fog, clouds below station level on the whole unchanged during the past hour		
+020195	C	5		4 to less than 8 oktas haze, mist, fog, clouds below station level on the whole unchanged during the past hour		
+020195	C	6		8 oktas haze, mist, fog, clouds below station level on the whole unchanged during the past hour		
+020195	C	7		More than zero to 4 oktas haze, mist, fog, clouds below station level dissolving during the past hour		
+020195	C	8		4 to less than 8 oktas haze, mist, fog, clouds below station level dissolving during the past hour		
+020195	C	9		8 oktas haze, mist, fog, clouds below station level dissolving during the past hour		
+020195	C	10	14	Reserved		
+020195	C	15		Missing value		
+020201	C	0		No precipitation at time of observation		
+020201	C	1		Precipitation at time of observation		
+020201	C	2		Reserved		
+020201	C	3		Missing value		
+020202	C	0	255	N/A		
+020203	C	0		No precipitation		
+020203	C	1		Total precipitation solely of depositional precipitation (solid and liquid)		
+020203	C	2		Total precipitation solely of liquid depositional precipitation		
+020203	C	3		Total precipitation solely of solid depositional precipitation		
+020203	C	4	5	Reserved		
+020203	C	6		Liquid precipitation		
+020203	C	7		Solid precipitation		
+020203	C	8		Liquid and solid precipitation		
+020203	C	9		Type of precipitation unascertainable, manually ascertainment		
+020203	C	10		No precipitation, automatically ascertainment		
+020203	C	11		Liquid precipitation, automatically ascertainment		
+020203	C	12		Solid precipitation, automatically ascertainment		
+020203	C	13		Liquid and solid precipitation, automatically ascertainment		
+020203	C	14		Type of precipitation unascertainable and depositional precipitation, automatically ascertainment		
+020203	C	15		Missing value, Type of precipitation unascertainable, automatically ascertainment		
+020204	C	0		No fallen precipitation		
+020204	C	1		Rain		
+020204	C	2		Rain (freezing)		
+020204	C	4		Snow		
+020204	C	8		Graupel		
+020204	C	16		Hail		
+020204	C	32	62	Reserved		
+020204	C	63		Missing value		
+020205	C	0		No deposit		
+020205	C	1		Dew (Tau)		
+020205	C	2		Hoarfrost (Reif)		
+020205	C	4		Rime (Raureif)		
+020205	C	8		Glaze (Raueis, Klareis)		
+020205	C	16		Glaze ice (Glatteis, Eisglaette)		
+020205	C	32		Covering of Snow and/or Graupel and/or Hail greater than or equal 50 percent		
+020205	C	64	126	Reserved		
+020205	C	127		Missing value		
+020206	C	0		No other weather phenomena		
+020206	C	1		Fog		
+020206	C	2		Thunderstorm		
+020206	C	4		Strong wind		
+020206	C	8		Stormy wind		
+020206	C	12	14	Reserved		
+020206	C	15		Missing value		
+020207	C	0		Sky clear		
+020207	C	1		Below cloud		
+020207	C	2		On top		
+020207	C	3		Between layers		
+020207	C	4		In and out of cloud		
+020207	C	5		In cloud		
+020207	C	6		Reserved		
+020207	C	7		Missing value		
+020208	C	0		Below haze layer		
+020208	C	1		Above haze layer		
+020208	C	2		Showers		
+020208	C	3		Drizzle		
+020208	C	4		Fog at surface		
+020208	C	5		Freezing rain		
+020208	C	6		Rain		
+020208	C	7		Snow		
+020208	C	8		Hail		
+020208	C	9		Thunderstorm		
+020208	C	10		No significant weather		
+020208	C	11	14	Reserved		
+020208	C	15		Missing value		
+020209	C	0		Reserved		
+020209	C	1		Arid		
+020209	C	2		Dry		
+020209	C	3		Average		
+020209	C	4		Wet		
+020209	C	5		Saturated		
+020209	C	6		Waterlogged		
+020209	C	7		Missing value		
+020210	C	0		No significant weather phenomena		
+020210	C	1		Blowing snow, sand storm, dust storm		
+020210	C	2		Fog, ice fog, thick haze (visibility < 4 km)		
+020210	C	3		Drizzle		
+020210	C	4		Rain		
+020210	C	5		Snow		
+020210	C	6		Showers of snow, rain, rain and snow mixed, hail		
+020210	C	7		Thunderstorm with or without precipitation		
+020210	C	8		Top of inversion layer < 800 m		
+020210	C	9		Top of inversion layer < 800 m (typo?)		
+020210	C	10		Top of inversion layer < 800 m (typo?)		
+020210	C	11	14	Reserved		
+020210	C	15		Missing value		
+020211	C	0		Precipitation less than 0.1 mm during the preceding hour		
+020211	C	1		Precipitation greater than or equal 0.1 mm during the preceding hour		
+020211	C	2		Precipitation not reported because recorder is not heated		
+020211	C	3		Missing value		
+020212	C	0		No ice		
+020212	C	1		< 1/10 - 2/10		
+020212	C	2		3/10 - 4/10		
+020212	C	3		5/10		
+020212	C	4		6/10		
+020212	C	5		7/10		
+020212	C	6		8/10		
+020212	C	7		9/10		
+020212	C	8		10/10		
+020212	C	9		Not determined or unknown		
+020212	C	10	14	Reserved		
+020212	C	15		Missing value		
+020213	C	0		Shore not observed		
+020213	C	1		Shore extensively clear		
+020213	C	2		Ice blocking less than half of the shore		
+020213	C	3		Ice blocking more than half of the shore but some opeings visible		
+020213	C	4		Ice blocking entire shore		
+020213	C	5		Not used		
+020213	C	6		Not used		
+020213	C	7		Not used		
+020213	C	8		Radar indications of shre ice but extent of caverage undetermined		
+020213	C	9		Not determined or unknown		
+020213	C	10	14	Reserved		
+020213	C	15		Missing value		
+020214	C	0		No sea ice		
+020214	C	1		Slush or pancake ice		
+020214	C	2		Level ice		
+020214	C	3		Rafted ice		
+020214	C	4		Pressure ridge/ridged ice		
+020214	C	5		Hummocks		
+020214	C	6		Pressure ice		
+020214	C	7		Rotten disintegrated ice		
+020214	C	8		Not used		
+020214	C	9		Not determined or unknown		
+020214	C	10	14	Reserved		
+020214	C	15		Missing value		
+020215	C	0		Open water		
+020215	C	1		Ice in belts or patches		
+020215	C	2		Ice evenly distributed		
+020215	C	3		Polynya(s) in combination with leads or cracks		
+020215	C	4		Lead(s) in combination with cracks		
+020215	C	5		Single polynya		
+020215	C	6		Single lead		
+020215	C	7		No openings in the ice		
+020215	C	8		Not used		
+020215	C	9		Not determined or unknown		
+020215	C	10	14	Reserved		
+020215	C	15		Missing value		
+020216	C	0		Equal in all directions		
+020216	C	1		NE		
+020216	C	2		E		
+020216	C	3		SE		
+020216	C	4		S		
+020216	C	5		SW		
+020216	C	6		W		
+020216	C	7		NW		
+020216	C	8		N		
+020216	C	9		Direction not observalbe or phemomena unequally distributed		
+020216	C	10	14	Reserved		
+020216	C	15		Missing value		
+020217	C	0		No significant weather phenomena		
+020217	C	1	2	Reserved		
+020217	C	3		Blowing snow, sand storm, dust storm		
+020217	C	4		Fog, ice fog, thick haze (visibility < 4 km)		
+020217	C	5		Drizzle		
+020217	C	6		Rain		
+020217	C	7		Snow		
+020217	C	8		Showers of snow, rain, rain and snow mixed, hail		
+020217	C	9		Thunderstorm with or without precipitation		
+020217	C	10		Top of inversion layer < 800 m		
+020217	C	11		Top of inversion layer < 800 m (typo?)		
+020217	C	12		Top of inversion layer < 800 m (typo?)		
+020217	C	13	14	Reserved		
+020217	C	15		Missing value		
+020218	C	0		Sky clear		
+020218	C	1		Clouded		
+020218	C	2		Overcast		
+020218	C	3		Missing value		
+020219	C	0		No significant weather		
+020219	C	1		Smoke or haze		
+020219	C	2		Fog in valley		
+020219	C	3		Sandstorm, duststorm or blowing snow		
+020219	C	4		Fog		
+020219	C	5		Drizzle		
+020219	C	6		Rain		
+020219	C	7		Snow or rain and snow mixed		
+020219	C	8		Shower(s)		
+020219	C	9		Thunderstorm(s) with or without precipitation		
+020219	C	10	14	Reserved		
+020219	C	15		Missing value		
+020220	C	0		No specification		
+020220	C	1		Light		
+020220	C	2		Heavy		
+020220	C	3		In the pat hour, but not at time of observation		
+020220	C	4		Within sight		
+020220	C	5		Freezing precipitation		
+020220	C	6	8	Reserved		
+020220	C	9		Hail or ice pellets		
+020220	C	10	14	Reserved		
+020220	C	15		Missing value		
+020221	C	0		Light (-)		
+020221	C	1		Moderate		
+020221	C	2		Heavy (+)		
+020221	C	3		In the vicinity (VC)		
+020221	C	4	6	Reserved		
+020221	C	7		Missing value		
+020224	C	0		Dry		
+020224	C	1		Wet		
+020224	C	2		Flooded		
+020224	C	3		Slush		
+020224	C	4		Ice patches		
+020224	C	5		Glazed ice		
+020224	C	6		Snow depth 0 - 19 cm		
+020224	C	7		Snow dipth 20 cm or more		
+020224	C	8		Snow drift		
+020224	C	9	14	Reserved		
+020224	C	15		Missing value		
+020225	C	0		Dry		
+020225	C	1		Wet		
+020225	C	2		Pools of water on the surface		
+020225	C	3		Flooded		
+020225	C	4		Ground frozen 0 - 4 cm (use of spade possible)		
+020225	C	5		Ground forzen >0 5 cm		
+020225	C	6		Snow depth 0 to 4 cm		
+020225	C	7		Snow depth 4 to 24 cm		
+020225	C	8		Snow depth 25 to 44 cm		
+020225	C	9		Snow depth >= 45 cm		
+020225	C	10	14	Reserved		
+020225	C	15		Missing value		
+020226	C	0		Not observed		
+020226	C	1		No significant weather		
+020226	C	2		Sleet		
+020226	C	3		Dust or smoke		
+020226	C	4		Fog or haze		
+020226	C	5		Drizzle		
+020226	C	6		Rain		
+020226	C	7		Snow		
+020226	C	8		Showers		
+020226	C	9		Thunderstorms		
+020226	C	10	14	Reserved		
+020226	C	15		Missing value		
+020228	C	0		N/A		
+020228	C	1		N/A		
+020228	C	2		N/A		
+020228	C	3		Missing value		
+020230	C	0		Mountain(s) free of cloud		
+020230	C	1		Mountain(s) partly or temporarily in clouds		
+020230	C	2		Mountain(s) in clouds		
+020230	C	3	8	Reserved		
+020230	C	9		Mountains(s) not visible due to precipitation, haze/mist, fog or fog in patches  in a sector <=30 degree		
+020230	C	10	14	Reserved		
+020230	C	15		Missing value		
+020240	C	0		< 0.05 km		
+020240	C	1		0.05 km		
+020240	C	2		0.2 km		
+020240	C	3		0.5 km		
+020240	C	4		1 km		
+020240	C	5		2 km		
+020240	C	6		4 km		
+020240	C	7		10 km		
+020240	C	8		20 km		
+020240	C	9		>= 50 km		
+020240	C	10	14	Reserved		
+020240	C	15		Missing value		
+020241	C	0		Dry		
+020241	C	1		Moist		
+020241	C	2		Wet		
+020241	C	3		Rime		
+020241	C	4		Snow		
+020241	C	5		Ice		
+020241	C	6		Glaze		
+020241	C	7		Not dry		
+020241	C	8	14	Reserved		
+020241	C	15		Missing value		
+021192	C	0		No report		
+021192	C	1		NNE - SSW		
+021192	C	2		NE - SW		
+021192	C	3		ENE - WSW		
+021192	C	4		E - W		
+021192	C	5		ESE - WNW		
+021192	C	6		SE - NW		
+021192	C	7		SSE -NNW		
+021192	C	8		S - N		
+021192	C	9		Uncertain		
+021192	C	10	14	Reserved		
+021192	C	15		Missing value		
+021195	C	0		Not reported/indeterminate		
+021195	C	1		Scattered		
+021195	C	2		Solid precipitation		
+021195	C	3		Scattered line		
+021195	C	4		Solid line		
+021195	C	5		Scattered, all quadrants		
+021195	C	6		Solid, all quadrants		
+021195	C	7		Missing value		
+021196	C	0		No report or unknown		
+021196	C	1		Weak		
+021196	C	2		Moderate		
+021196	C	3		Strong		
+021196	C	4	6	Reserved		
+021196	C	7		Missing value		
+022193	C	0		Water level normal		
+022193	C	1		Water level much below normal		
+022193	C	2		Water level high, but not overflowing		
+022193	C	3		Banks overflowing		
+022193	C	4		Floating ice (more than half)		
+022193	C	5		Thin ice, complete cover, impassable for persons, 0 - 4 cm thick		
+022193	C	6		Ice, complete cover, passable for persons, depth unknown		
+022193	C	7		Ice, complete cover, 5 - 9 cm thick		
+022193	C	8		Ice, complete cover, 10 - 24 cm thick		
+022193	C	9		Ice, complete cover, 25 cm or more thick		
+022193	C	10	14	Reserved		
+022193	C	15		Missing value		
+022194	C	0		Waves approaching from right side		
+022194	C	1		Waves approaching directly from rear		
+022194	C	2		Waves approaching from left side		
+022194	C	3		Missing value		
+022195	C	0		0 - 10 metres		
+022195	C	1		10 - 20 metres		
+022195	C	2		20 - 30 metres		
+022195	C	3		More than 30 metres		
+022195	C	4	6	Reserved		
+022195	C	7		Missing value		
+024192	C	0	9	See description of IMIS data format		
+024192	C	10	14	Reserved		
+024192	C	15		Missing value		
+024193	C	0	99	See description of IMIS data format		
+024193	C	100	109	National (DWD) code table 61, code figures 0 - 9, is used		
+024193	C	110	126	Reserved		
+024193	C	127		Missing value		
+024194	C	0	99	See description of IMIS data format		
+024194	C	100	126	Reserved		
+024194	C	127		Missing value		
+024195	C	0	999	See description of IMIS data format		
+024195	C	1000	1022	Reserved		
+024195	C	1023		Missing value		
+024198	C	0		Observed value reported		
+024198	C	1		Actual value less than reported value		
+024198	C	2		Actual value greater than reported value		
+024198	C	3		Missing value		
+024199	C	0	99	See description of IMIS data format		
+024199	C	100	126	Reserved		
+024199	C	127		Missing value		
+024201	C	0		Routine observation		
+024201	C	1		Special observation		
+024201	C	2		Test observation		
+024201	C	3		Missing value		
+025192	C	0		Dew point not measured/aircraft below 10000 m		
+025192	C	1		Dew point not measured/aircraft at or above 10000 m		
+025192	C	2		Dew point not measured/aircraft below 10000 m and flight level temperature -50 Celsius or colder		
+025192	C	3		Dew point not measured/aircraft at or above 10000 m and flight level temperature -50 Celsius or colder		
+025192	C	4		Dew point measured/aircraft below 10000 m		
+025192	C	5		Dew point measured/aircraft at or above 10000 m		
+025192	C	6		Dew point measured/aircraft below 10000 m and flight level temperature -50 Celsius or colder		
+025192	C	7		Dew point measured/aircraft at or above 10000 m and flight level temperature -50 Celsius or colder		
+025192	C	8	14	Reserved		
+025192	C	15		Missing value		
+033192	C	0		Not suspect (> 90%)		
+033192	C	1		Suspect (<= 90%)		
+033192	C	2		Reserved		
+033192	C	3		Missing value		
+055192	C	0	99	See description of national code PHAEN in DWD Publication VUB10		
+055192	C	100	126	Reserved		
+055192	C	127		Missing value		
+055193	C	0	99	See description of national code PHAEN in DWD Publication VUB10		
+055193	C	100	126	Reserved		
+055193	C	127		Missing value		
+055194	C	0	9	See description of national code PHAEN in DWD Publication VUB10		
+055194	C	10	14	Reserved		
+055194	C	15		Missing value		
+055195	C	0	9	See description of national code PHAEN in DWD Publication VUB10		
+055195	C	10	14	Reserved		
+055195	C	15		Missing value		
+055196	C	0		Unknown		
+055196	C	1		Water		
+055196	C	2		Bare		
+055196	C	3		Shrubs		
+055196	C	4		Woods		
+055196	C	5		Urban		
+055196	C	6		Reserved		
+055196	C	7		Missing value		
+056001	C	0		Total cloud amount less than 1/8		
+056001	C	1		Total cloud amount at least 1/8, with either 1/8 to 4/8 above or 1/8 to 4/8 below, or combinations thereof		
+056001	C	2		Cloud amount more than 4/8 above and 0 to 4/8 below		
+056001	C	3		Cloud amount 0 to 4/8 above and more than 4/8 below		
+056001	C	4		Cloud amount more than 4/8 above and more than 4/8 below		
+056001	C	5		Chaotic sky, many undefined layers		
+056001	C	6		In and out of clouds, Instrument Meteorological Conditions 25 percent of the time		
+056001	C	7		In and out of clouds, Instrument Meteorological Conditions 50 percent of the time		
+056001	C	8		In and out of clouds, Instrument Meteorological Conditions 75 percent of the time		
+056001	C	9		In clouds all the time, continuous Instrument Meteorological Conditions		
+056001	C	10	14	Reserved		
+056001	C	15		Missing value		
+056002	C	0		No significant weather		
+056002	C	1		Smoke, haze or volcanic ashes		
+056002	C	2		Hail or shower with hail		
+056002	C	3		Sandstorm, dust storm or blowing snow		
+056002	C	4		Fog		
+056002	C	5		Drizzle		
+056002	C	6		Rain		
+056002	C	7		Snow, or rain and snow mixed		
+056002	C	8		Shower		
+056002	C	9		Thunderstorm		
+056002	C	10	14	Reserved		
+056002	C	15		Missing value		
+056003	C	0		No change		
+056003	C	1		Marked wind shift		
+056003	C	2		Beginning or ending of marked turbulence		
+056003	C	3		Marked temperature change (not with altitude)		
+056003	C	4		Precipitation begins or ends		
+056003	C	5		Change in cloud forms		
+056003	C	6		For or ice fog bank begins or ends		
+056003	C	7		Warm front		
+056003	C	8		Cold front		
+056003	C	9		Front, type not specified		
+056003	C	10	14	Reserved		
+056003	C	15		Missing value		
+056004	C	0		No report		
+056004	C	1		Signs of hurricane		
+056004	C	2		Ugly, threatening sky		
+056004	C	3		Dust storm or sandstorm		
+056004	C	4		Fog or ice fog		
+056004	C	5		Waterspout		
+056004	C	6		Cirrastratus layer or bank		
+056004	C	7		Altostratus or altocumulus layer or bank		
+056004	C	8		Line of heavy cumulus		
+056004	C	9		Cumulonimbus heads or thunderstorm		
+056004	C	10	14	Reserved		
+056004	C	15		Missing value		
+056005	C	0		Light		
+056005	C	1		Moderate		
+056005	C	2		Severe		
+056005	C	3		Missing value		
+056006	C	0		None		
+056006	C	1		Rime ice in cloud		
+056006	C	2		Clear ice in cloud		
+056006	C	3		Combination rime and clear ice in cloud		
+056006	C	4		Rime ice in precipitation		
+056006	C	5		Clear ice in precipitation		
+056006	C	6		Combination rime and clear ine in precipitation		
+056006	C	7		Frost (icing in clear air)		
+056006	C	8		Non-persistatnt contrails (less than 1/4 nmi (nautical mile?) long)		
+056006	C	9		Persistent contrails		
+056006	C	10	14	Reserved		
+056006	C	15		Missing value		
+056009	C	0		In-flight visibility 0 to and including 1 nmi (nautical mile?)		
+056009	C	1		In-flight visibility > 1 to 3 nmi		
+056009	C	2		In-flight visibility > 3 nmi		
+056009	C	3		Missing value		
+056010	C	0		No ice		
+056010	C	1		< 1/10 to 2/10		
+056010	C	2		3/10 to 4/10		
+056010	C	3		5/10		
+056010	C	4		6/10		
+056010	C	5		7/10		
+056010	C	6		8/10		
+056010	C	7		9/10		
+056010	C	8		10/10		
+056010	C	9		Not determined or unknown		
+056010	C	10	14	Reserved		
+056010	C	15		Missing value		
+056011	C	0		No sea-ice		
+056011	C	1		Slush or pancake ice	Slush is an accumulation of ice crystals which may or may notbe frozen together. Pancake ice consists of pieces of newly formed ice usuallybetween 1 and 6 ft in diameter	
+056011	C	2		Level ice (ice having a flat and level surface)		
+056011	C	3		Rafted ice (a type of pressure ice formed by one cake overriding another)		
+056011	C	4		Pressure ridge/ridged ice (pressure ice in the form of a ridge or many ridges)		
+056011	C	5		Hummocks	Hummocked ice is ice piled haphazardly into mounds or hillocks. It issimilar to rafted ice except that hummocked ice required a greater degree of pressurethan rafted ice. A hummock or hillock is in reality an old pressure ridge, or raftedice which due to snow and weather, has fused into on ice mass and rounded out	
+056011	C	6		Pressure ice	This includes ice having any readily observed roughness of the surfacebut the observer is unable to determine type. Rafted, ridged and hummockedtypes of pressure ice will be reported by one of the foregoing code figure	
+056011	C	7		Rotten, disintegrating ice	Old ice that has become honeycombed in the course ofmelting and is in an advanced stage of disintegratio	
+056011	C	8		Not used		
+056011	C	9		Not determined or unknown		
+056011	C	10	14	Reserved		
+056011	C	15		Missing value		
+056012	C	0		No puddles		
+056012	C	1		Puddles joined, extensive cracking		
+056012	C	2		Puddles melted through		
+056012	C	3		Puddles cover 7 - 9 tenths of ice area		
+056012	C	4		Puddles cover 4 - 6 tenths of ice area		
+056012	C	5		Puddles cover 1 -3 tenths of ice area		
+056012	C	6		Puddles cover less than 1 tenth of ice area		
+056012	C	7		Puddles frozen		
+056012	C	8		Ice without puddles		
+056012	C	9		Not determined or unknown		
+056012	C	10	14	Reserved		
+056012	C	15		Missing value		
+056013	C	0		No distinct orientation		
+056013	C	1		NE - SW		
+056013	C	2		E - W		
+056013	C	3		SE - NW		
+056013	C	4		N - S		
+056013	C	5		Parallels shore at east		
+056013	C	6		Parallels shore at south		
+056013	C	7		Parallels shore at west		
+056013	C	8		Parallels shore at north		
+056013	C	9		Not determined or unknown		
+056013	C	10	14	Reserved		
+056013	C	15		Missing value		

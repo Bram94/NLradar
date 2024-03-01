@@ -1,0 +1,43 @@
+# libDWD sequence file (WMO table D), created: 2012-10-31 04:52:04
+# line format:
+# sequence names given in comments preceeding sequence
+# first line per sequence: "FXY1<tab>FXY2<lf>"
+# following lines per seq: "<tab>FXY2<lf>"
+# SEQUENCE OF NCEP 007 SUBCENTRE 003
+363225	301011
+	301013
+	001007
+	005040
+	005040
+	025071
+	301023
+	005043
+	013038
+	008012
+	013039
+	008013
+	025045
+	025048
+	025049
+	002022
+	007022
+	007024
+	013016
+	015001
+	020011
+	008003
+	010004
+	022043
+	012061
+	007001
+	008003
+	007004
+	012001
+	008003
+	102035
+	005042
+	012063
+	103040
+	007004
+	012001
+	013002

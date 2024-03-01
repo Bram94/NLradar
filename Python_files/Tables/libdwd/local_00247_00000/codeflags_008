@@ -1,0 +1,8 @@
+# libDWD code-/flag-table file (WMO codeflags), created: 2018-01-08 17:18:15
+# line format: "FXY<tab>libDWDType<tab>codeFigureFrom<tab>codeFigureTo<tab>entryname<tab>entryNameSub1<tab>entryNameSub2<lf>"
+002193	C	1		Clockwise rotation		
+002193	C	2		Counterclockwise rotation		
+002193	C	3		Counterclockwise		
+030197	C	0		zlib compression		
+030197	C	1		Reserved		
+030197	C	255		Missing value		

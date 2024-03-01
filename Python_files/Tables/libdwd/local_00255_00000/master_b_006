@@ -1,0 +1,6 @@
+# libDWD descriptor file (WMO table B), created: 2017-09-08 08:20:00
+# line format: "FXY<tab>libDWDType<tab>unit<tab>scale<tab>referenceValue<tab>dataWidth_Bits<tab>descriptor_name<lf>"
+# Opera3 BUFR Tables, Release from 08 June 2010 
+# (localtabb_65535_6.csv vom 24.8.2005)
+# Descriptor aus Mastertabelle 0 21 036 wird ueberschrieben !!
+021036	N	MM/H	2	0	16	OPERA: RADAR RAINFALL INTENSITY (ILLEGAL REPLACEMENT)

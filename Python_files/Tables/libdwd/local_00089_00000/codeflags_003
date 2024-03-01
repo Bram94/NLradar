@@ -1,0 +1,72 @@
+# libDWD code-/flag-table file (WMO codeflags), created: 2018-01-08 17:18:15
+# line format: "FXY<tab>libDWDType<tab>codeFigureFrom<tab>codeFigureTo<tab>entryname<tab>entryNameSub1<tab>entryNameSub2<lf>"
+002241	C	0		Reserved		
+002241	C	1		ANT/Bosch		
+002241	C	2		Boschung		
+002241	C	3		SSI/Scan (MicKS)		
+002241	C	4		Vaisala		
+002241	C	5		Vibrometer		
+002241	C	6		Malling		
+002241	C	7		Lufft		
+002241	C	8		Medipo		
+002241	C	9	14	Reserved		
+002241	C	15		Missing value		
+002242	C	0		Fast lane between the wheel tracks		
+002242	C	1		Fast lane between the wheel tracks in the opposite direction		
+002242	C	2		Fast lane in the wheel tracks		
+002242	C	3		Fast lane in the wheel tracks in the opposite direction		
+002242	C	4		Slow lane between the wheel tracks		
+002242	C	5		Slow lane between the wheel tracks in the opposite direction		
+002242	C	6		Slow lane in the wheel tracks		
+002242	C	7		Slow lane in the wheel tracks in the opposite direction		
+002242	C	8	14	Reserved		
+002242	C	15		Missing value		
+002243	F	1		Automatic		
+002243	F	2		Manned		
+002243	F	3		Event triggered		
+002243	F	4		Longer time period than the standard		
+002243	F	5		Reserved		
+002243	F	6	A	Missing value		
+002244	C	0		Free track without further information		
+002244	C	1		Free track, embankment		
+002244	C	2		Free track, flat relative to surroundings		
+002244	C	3		Free track, water basin(s) in vicinity		
+002244	C	4		Free track, forest		
+002244	C	5		Free track, cleft		
+002244	C	6		Free track on hilltop		
+002244	C	7		Free track on hilltop, forest		
+002244	C	8		Free track in valley		
+002244	C	9		Free track in valley, forest		
+002244	C	10		Free track, north inclination		
+002244	C	11		Free track, north inclination, forest		
+002244	C	12		Free track, south inclination		
+002244	C	13		Free track, south inclination, forest		
+002244	C	14	19	Reserved		
+002244	C	20		Bridge without further information		
+002244	C	21		Bridge across a valley in a urban area		
+002244	C	22		Bridge across a valley with forest/meadows/fielde		
+002244	C	23		Bridge across street/track		
+002244	C	24		Bridge across big river/canal		
+002244	C	25		Bridge across river/canal of medium size		
+002244	C	26		Bridge across a small stream/loading canal		
+002244	C	27	30	Reserved		
+002244	C	31		Missing value		
+002245	C	0		Asphalt		
+002245	C	1		Concrete		
+002245	C	2		Concrete construction		
+002245	C	3		Steel-girder construction		
+002245	C	4		Box girder bridge		
+002245	C	5		Orthotrope slab		
+002245	C	6		Drain asphalt		
+002245	C	7	14	Reserved		
+002245	C	15		Missing value		
+020241	C	0		Dry		
+020241	C	1		Moist		
+020241	C	2		Wet		
+020241	C	3		Rime		
+020241	C	4		Snow		
+020241	C	5		Ice		
+020241	C	6		Glaze		
+020241	C	7		Not dry		
+020241	C	8	14	Reserved		
+020241	C	15		Missing value		

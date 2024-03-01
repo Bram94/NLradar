@@ -1,0 +1,113 @@
+# libDWD sequence file (WMO table D), created: 2012-10-31 04:52:04
+# line format:
+# sequence names given in comments preceeding sequence
+# first line per sequence: "FXY1<tab>FXY2<lf>"
+# following lines per seq: "<tab>FXY2<lf>"
+# General information about radar product
+301192	301011
+	301012
+	301023
+	301023
+	301023
+	301023
+	029001
+	005002
+	005002
+	005033
+	006033
+	030021
+	030022
+# Heights of side view
+313192	101000
+	031001
+	010007
+# Radar rainfall intensities
+313210	021236
+	101000
+	031001
+	021236
+# 4 bit per pixel radar images (top view)
+321192	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030001
+	101000
+	031001
+	030001
+# 8 bit per pixel radar images (top view)
+321193	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030002
+	101000
+	031001
+	030002
+# 4 bit per pixel radar image (north-south view)
+321194	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030001
+	101000
+	031001
+	030001
+# 8 bit per pixel radar image (north-south view)
+321195	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030002
+	101000
+	031001
+	030002
+# 4 bit per pixel radar image (east-west view)
+321196	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030001
+	101000
+	031001
+	030001
+# 8 bit per pixel radar image (east-west view)
+321197	110000
+	031002
+	005031
+	107000
+	031001
+	102000
+	031001
+	031012
+	030002
+	101000
+	031001
+	030002
+# List of radars included in a composite
+321250	104000
+	031001
+	001001
+	001002
+	031031
+	033003

@@ -1,0 +1,373 @@
+# libDWD descriptor file (WMO table B), created: 2018-04-05 17:07:58
+# line format: "FXY<tab>libDWDType<tab>unit<tab>scale<tab>referenceValue<tab>dataWidth_Bits<tab>descriptor_name<lf>"
+001192	C	Code table	0	0	8	Indicateur des composites
+001193	C	Code table	0	0	8	Table des identificateurs des donnees combinees
+001194	A	CCITT IA5	0	0	72	CARRIER BALLOON/DROP TEMP
+001195	A	CCITT IA5	0	0	72	MOBIL LAND STATION IDENTIFIER
+001196	N	Numeric	0	0	8	NUMERO DE DEPARTEMENT
+001197	N	Numeric	0	0	21	NUMERO DE COMMUNE ET NUMERO DE STATION DANS LA COMMUNE
+001198	C	Code table	0	0	2	TYPE DE SPEMET
+001199	C	Code table	0	0	4	OBJET PRINCIPAL DU SPEMET
+001200	N	Numeric	0	0	4	Wmo region sub-area
+001201	N	Numeric	0	0	7	Identifiant de massif montagneux
+001202	N	Numeric	0	0	10	Numero de departement elargi
+001208	N	m/s	5	-1073741824	31	X-velocity from earth's centre in direction 0 est
+001209	N	m/s	5	-1073741824	31	Y-velocity from earth's centre in direction 90 est
+001210	N	m/s	5	-1073741824	31	Z-velocity from earth's centre in direction north pole
+001220	A	CCITT IA5	0	0	248	Identification mark of a cloud system ( format YYYYMMDDhhmm_Tb_lat_lon or ``FIRST'')
+001221	A	CCITT IA5	0	0	104	Modele de reference - reference producteur
+002192	N	deg	0	0	9	SAR azimuth angle
+002193	C	Code table	0	0	8	Type de calculateur
+002194	C	Code table	0	0	8	Indicateur du dernier etalonnage
+002195	N	Hz	-6	0	16	Frequence du dernier etalonnage
+002196	N	Numeric	0	0	16	Reglage bas du dernier etalonnage
+002197	N	Numeric	0	0	16	Reglage haut du dernier etalonnage
+002198	C	Code table	0	0	8	Indicateur d'arret ou de panne
+002199	N	dB	1	-1000	16	Constante radar
+002200	C	Code table	0	0	2	Indicateur de fonctionnement de l eliminateur echos fixes
+002201	C	Code table	0	0	4	INDICATOR FOR METHOD OF CALCULATION OF SPECTRAL DATA
+002202	C	Code table	0	0	3	INDICATOR FOR TYPE OF PLATFORM
+002203	C	Code table	0	0	2	WAVE MEASUREMENT INSTRUMENTATION
+002204	C	Code table	0	0	3	INDICATEUR DES UNITES DE VITESSE DU VENT ET DU TYPE D'INSTRUMENTS UTILISES
+002205	C	Code table	0	0	8	TYPE DE RADAR
+002206	C	Code table	0	0	2	Indicateur de positionnement en site inhibe
+002207	C	Code table	0	0	2	Sens de balayage en azimut
+002210	N	Numeric	0	0	6	TYPE DE SITE (pour les SYNOR)
+002211	N	h	0	0	8	TEMPS DE BON FONCTIONNEMENT DE LA STATION
+002212	N	min	0	0	8	TEMPS DE BON FONCTIONNEMENT DE LA STATION
+002213	N	K	0	0	2	PRECISION DE MESURE DE TEMPERA TURE AMDAR
+002214	N	Numeric	0	0	14	RENSEIGNEMENTS SUR L'ETAT DE FONCTIONNEMENT DE LA BOUEE
+002215	C	Code table	0	0	1	INDICATEUR DU TYPE D'ANCRE FLOT TANTE
+002216	N	m	4	0	3	Resolution du pluviometre
+004192	N	min	0	0	8	PERIODE A LAQUELLE SE RAPPORTE LA VALEUR SUIVANTE
+004193	N	h	0	0	5	HEURE EFFECTIVE DU LANCEMENT DE LA RADIOSONDE
+004194	N	min	0	0	6	MINUTES EFFECTIVES DU LANCEMENT DE LA RADIOSONDE
+004195	N	h	0	0	4	NOMBRE D'HEURES ECOULEES ENTRE L'HEURE D'OBSERVATION GGgg ET L'HEURE A LAQUELLE SE REFERE LA DERNIERE POSITION
+004196	C	Code table	0	0	7	Duree des phenomenes
+004197	N	min	0	-1440	12	Periode de reference pour les cumuls et extremums
+004198	N	min	0	0	11	Duree pendant laquelle l'humidite est >= 80%
+004199	N	min	0	0	11	Duree pendant laquelle l'humidite est <= 40%
+004200	N	min	0	0	11	Duree de gel sous abri
+004201	C	Code table	0	0	3	Periode d'observation
+005192	N	m	0	-1024000	24	Distance Ouest-Est du coin Nord-Ouest de l'image au radar
+005193	N	m	0	-1024000	24	Distance w-e sur le plan de projection du coin nw de l'image
+005194	C	Code table	0	0	8	Indicateur du centre de projection
+005195	N	deg	5	-9000000	25	Latitude de reference
+005196	N	deg	2	0	10	Increment de l'azimut entre chaque tir de l'image polaire
+005197	N	deg	2	0	10	Increment de l'azimut entre chaque tir de l'image polaire avant interpolation
+005217	N	m	2	-1073741824	31	X-location from earth's centre in direction 0 Est
+005232	N	deg	0	0	12	Direction (spectral)
+006192	N	m	0	-1024000	24	Distance Nord-Sud du coin Nord-Ouest de l'image au radar
+006193	N	m	-3	0	16	Distance d application de la correction en 1/r2
+006194	N	m	-3	0	16	Portee de debut de traitement d'un site
+006195	N	m	-3	0	16	Portee de fin de traitement d'un site
+006196	N	m	-3	0	16	Distance oblique maximal d'utilisation des donnees
+006197	N	m	0	-1024000	24	Distance NS sur le plan de projection du coin NW de l'image
+006198	N	deg	5	-18000000	26	Longitude du meridien parallele a l'axe des Y
+006199	N	m	-3	0	10	Portee hydrologique utile
+006217	N	m	2	-1073741824	31	Y-location from earth's centre in direction 90 est
+006232	N	rad/m	5	0	13	Wavenumber (spectral)
+007192	N	m	2	0	15	HAUTEUR AU DESSUS DU SOL
+007193	N	K	1	0	12	Brightness temperature
+007217	N	m	2	-1073741824	31	Z-location from earth's centre in direction north pole
+008192	C	Code table	0	0	4	Indicateur de changement d'une prevision de type tendance ou d'une prevision d'aerodrome
+008193	C	Code table	0	0	5	Phase of the life cycle of the cloud system
+008194	F	Flag table	0	0	23	Caracteristique de l'alerte
+008195	C	Code table	0	0	2	Caracteristique de la donnee qui suit
+008200	C	Code table	0	0	2	Nature (convective or not) of the cloud system
+008201	C	Code table	0	0	3	Qualitative value
+008202	C	Code table	0	0	5	type de prevision
+008203	C	Code table	0	0	5	Caracteristique temporelle MF
+008204	C	Code table	0	0	5	Caracteristique meteorologique MF
+010192	N	Pa	-1	0	14	Pression minimum reduite au niveau de la mer
+010193	N	Pa	-1	0	14	Pression maximum reduite au niveau de la mer
+011195	N	Bft	0	0	4	FORCE MAXI DU VENT PENDANT W1W2
+011196	N	degree true	0	0	9	DIRECTION D'OU SOUFFLE LE VENT EN ALTITUDE
+011197	N	m/s	1	0	12	VITESSE DU VENT EN ALTITUDE
+011198	N	deg	0	0	9	Direction du vent maximal instantane
+011199	N	m/s	1	0	12	Vitesse du vent maximal instantane
+011200	N	deg	0	0	9	Direction associee a la vitesse qui suit
+011201	N	m/s	1	0	12	Vitesse maximale du vent instantane sur 10mn
+011202	N	m/s	1	0	12	Vitesse maximale du vent instantane sur 24 heures
+011203	N	m/s	1	0	12	Vitesse du vent a 2m
+012192	N	K	2	0	16	Temperature/dry-bulb temperature
+012193	N	K	2	0	16	Wet-bulb temperature
+012194	N	K	2	0	16	Dew-point temperature
+012195	N	K	2	0	16	Dry-bulb temperature at 2m
+012196	N	K	2	0	16	Wet-bulb temperature at 2m
+012197	N	K	2	0	16	Dew-point temperature at 2m
+012198	N	K	2	0	16	Virtual temperature
+012202	N	K	2	0	16	Maximum temperature,at height and over period specified
+012203	N	K	2	0	15	Minimum temperature,at height and over period specified
+012204	N	K	2	0	15	Ground minimum temperature, past 12 hours
+012205	N	K	2	0	16	Maximum temperature at 2m, past 12 hours
+012206	N	K	2	0	15	Minimum temperature at 2m, past 12 hours
+012207	N	K	2	0	16	Maximum temperature at 2m, past 24 hours
+012208	N	K	2	0	15	Minimum temperature at 2m, past 24 hours
+012209	N	K	2	0	16	Temperature non specifiee (voie 1)
+012210	N	K	2	0	16	Temperature non specifiee (voie 2)
+012221	N	K	2	0	16	Minimum soil temperature
+012222	N	K	2	0	15	TEMPERATURE DE LA SURFACE DE LA NEIGE
+012223	N	K	2	0	16	Temperature de l'air maximale
+012224	N	K	2	0	16	Temperature de l'air minimale
+012225	N	K	2	0	16	Temperature de l'air a -10cm
+012226	N	K	2	0	16	Temperature de l'air a -20cm
+012227	N	K	2	0	16	Temperature de l'air a -50cm
+012228	N	K	2	0	16	Temperature de l'air a -100cm
+012229	N	K	2	0	16	Temperature minimale a 50cm
+012230	N	K	2	0	16	Temperature minimale a 10cm
+012231	N	Numeric	1	0	9	Largeur de l'intervalle Tmin
+012232	N	Numeric	1	0	9	Largeur de l'intervalle Tmax
+012250	N	K/s	4	-1024	11	Cooling rate of the cloud system
+012252	N	K	2	0	16	Skin temperature
+012253	N	K	2	0	16	Equivalent black body temperature
+013192	C	Code table	0	0	4	Precipitations code TR
+013193	N	kg m-2	1	-1	14	Cumul de precipitation sur 6 mn
+013194	N	kg m-2	1	-1	14	QUANTITE TOTALE DE PRECIPITATION AU COURS D'UNE CERTAINE PERIODE
+013195	N	m	2	-2	16	HAUTEUR TOTALE DE LA COUCHE DE NEIGE AU SOL AU POINT DE MESURE D'ALTITUDE
+013196	N	m	2	-2	12	EPAISSEUR DE LA NEIGE FRAICHE TOMBEE EN ALTITUDE
+013197	N	%	1	0	7	TENEUR EN EAU LIQUIDE VOLUMIQUE DE LA NEIGE
+013198	N	kg m-3	0	0	9	MASSE VOLUMIQUE DE LA NEIGE
+013199	N	kg m-2	1	0	12	Depot de verglas
+013200	N	kg m-2	1	0	12	Depot de givre
+013201	N	%	0	0	7	Humidite relative minimale
+013202	N	%	0	0	7	Humidite relative maximale
+013204	N	m	2	-2	12	Hauteur maximale de neige au sol mesuree ou estimee
+013209	N	%	0	0	7	Pourcentage de neige dans les precipitations
+014192	N	min	0	0	6	INSOLATION HORAIRE
+014193	N	min	0	0	11	Insolation sur la periode definie
+014194	N	J m-2	-2	0	16	Rayonnement global (tres precis) integre sur une periode determinee
+014195	N	J m-2	-2	0	16	Rayonnement diffus (tres precis) integre sur une periode determinee
+014196	N	J m-2	-2	0	16	Rayonnement direct (tres precis) integre sur une periode determinee
+014197	N	J m-2	-2	0	16	Rayonnement infra rouge (tres precis) integre sur une periode determinee
+015202	N	log (m-2)	3	13000	12	Log of electron density
+016193	N	Numeric	0	0	16	Number of negative cloud-to-ground lightning flashes
+016194	N	Numeric	0	0	16	Number of positive cloud-to-ground lightning flashes
+016195	N	Numeric	0	0	16	Number of intracloud lightning flashes
+019192	N	m	-3	0	25	Length of the small axis of the fitting ellipse of the cloud system
+019193	N	degree true	0	0	9	Angle of the fitting ellipse of the cloud system
+019194	N	m2	-6	0	28	Area of the cloud system at this brightness temperature threshold
+019200	N	/s	5	-1048576	21	Area expansion rate of the cloud system
+020192	C	Code table	0	0	3	Classe de nebulosite SYMPO
+020193	N	m	-1	0	13	VISIBILITE VERS LA MER A PARTIR D'UNE STATION COTIERE
+020194	C	Code table	0	0	4	ETAT DE LA NEIGE
+020195	N	m	2	0	7	PROFONDEUR DE PENETRATION DE LA SONDE DE BATTAGE
+020196	C	Code table	0	0	4	NUAGES DANS LA VALLEE
+020197	C	Code table	0	0	4	CHASSE-NEIGE EN ALTITUDE
+020198	C	Code table	0	0	4	DESCRIPTION AVALANCHES OBSERVEES
+020199	C	Code table	0	0	4	GENRE D'AVALANCHES
+020200	C	Code table	0	0	4	ALTITUDE DEPART DE L'AVALANCHE
+020201	C	Code table	0	0	4	EXPOSITION DE L'AVALANCHE
+020202	C	Code table	0	0	4	ESTIMATION DU RISQUE D'AVALANCHE
+020203	C	Code table	0	0	4	TYPE DES GRAINS DE SURFACE PREDOMINANT DANS LA COUCHE
+020204	C	Code table	0	0	4	TYPE DES GRAINS DE SURFACE LES PLUS NOMBREUX APRES LES GRAINS PREDOMINANTS
+020205	N	m	4	0	7	DIAMETRE MOYEN DES GRAINS
+020206	C	Code table	0	0	2	INDICATEUR D'HOMOGENEITE DE LA COUCHE
+020207	C	Code table	0	0	4	Epaisseur de la couche
+020209	C	Code table	0	0	3	Classes de nebulosite pour Approche
+020210	F	Flag table	0	0	16	Occurence de phenomene
+020211	C	Code table	0	0	4	Nebulosite maximale >4/8 pour une hauteur < 300m
+020212	N	m	-1	-40	7	Hauteur < 300m de la base des nuages pour une nebul>4
+020215	C	Code table	0	0	2	Indicateur de grain
+020220	C	Code table	0	0	6	W1 (Temps present SYMPO)
+020221	C	Code table	0	0	5	W2 (W1 SYMPO simplifie)
+020222	C	Code table	0	0	6	Temps sensible
+020223	N	Numeric	1	0	7	Etendue de la couche nuageuse en octas
+021192	N	dB	2	-5000	13	Radar back scatter
+021193	N	%	0	0	7	Noise figure
+021194	N	Numeric	0	0	8	Background noise level
+021195	N	Numeric	0	-127	8	Missing packet counter
+021196	F	Flag table	0	0	12	Uwa product confidence
+021197	F	Flag table	0	0	12	Uwi product confidence
+021198	F	Flag table	0	0	8	Ura product confidence
+021199	F	Flag table	0	0	7	Uat quality analysis tests
+021201	N	Numeric	0	0	16	Peakiness
+021202	F	Flag table	0	0	4	Altimeter calibration status
+021203	F	Flag table	0	0	9	Altimeter instrument mode
+021204	N	K	2	-512	10	Multi/single view difference
+021205	N	Numeric	0	0	8	Spectral intensity
+021206	C	Code table	0	0	3	Representation of intensity
+021207	N	m	3	0	14	Altitude correction (ionosphere)
+021208	N	m	3	0	9	Altitude correction (dry troposphere)
+021209	N	m	3	2000	10	Altitude correction (wet troposphere)
+021210	N	m	3	0	11	Altitude correction (calibration constant)
+021211	N	m	3	0	10	Open loop correction (htl)
+021212	N	dB	3	-3000	14	Open loop correction (agc)
+021214	C	Code table	0	0	3	Uat quality summary
+021215	N	Numeric	0	0	4	Uat across-track band number
+021216	N	dB	1	0	16	Reflectivite pour la valeur du pixel
+021217	N	dB	1	0	16	Reflectivite theorique
+021218	N	dB	1	0	16	Reflectivite mesuree
+021219	N	dB	0	-127	8	Reflectivite minimale pour la valeur du pixel
+021222	N	dB	0	0	7	DOPPLER SPECTRUM 0 TH MOMENT (AMPLITUDE)
+021225	F	Flag table	0	0	10	PRESCAT PRODUCT CONFIDENCE
+021226	N	%	0	0	7	Pourcentage de masque
+022192	C	Code table	0	0	4	State of the sea
+022200	N	m	2	0	13	SIGNIFICANT WAVE HEIGHT (NOTE 1)
+022201	N	s	1	0	9	SPECTRAL PEAK PERIOD
+022202	N	m	0	0	13	SPECTRAL PEAK WAVE LENGTH
+022203	N	m	2	0	13	MAXIMUM WAVE HEIGHT
+022204	N	s	1	0	9	AVERAGE WAVE PERIOD
+022205	N	m	0	0	12	AVERAGE WAVE LENGTH
+022206	N	degree true	0	0	9	DIRECTION OF DOMINANT WAVE (NOTE 2)
+022207	N	degree true	0	0	8	DIRECTIONNAL SPREAD OF DOMINANT WAVE (NOTE 2)
+022210	N	s	0	0	12	DURATION OF WAVE RECORD
+022211	N	m	0	0	16	LENGTH OF WAVE RECORD
+022212	N	Hz	3	0	10	WAVEBAND CENTRAL FREQUENCY
+022213	N	m-1	5	0	13	WAVEBAND CENTRAL WAVE NUMBER
+022214	N	m2/Hz	2	0	20	MAXIMUM NON-DIRECTIONAL SPECTRAL DENSITY FREQUENCY
+022215	N	m3	2	0	20	MAXIMUM NON-DIRECTIONAL SPECTRAL DENSITY WAVE NUMBER
+022216	N	Numeric	0	0	7	NUMBER OF THE BAND IN WHICH THE MAXIMUM NON-DIRECTIONAL SPECTRAL DENSITY LIES
+022217	N	Numeric	0	0	7	SPECTRAL DENSITY RATIO
+022218	N	degree true	0	0	9	MEAN DIRECTION FROM WHICH WAVES ARE COMING
+022219	N	degree true	0	0	9	PRINCIPAL DIRECTION FROM WHICH WAVES ARE COMING (NOTE 3)
+022220	N	Numeric	2	0	7	FIRST NORMALISED POLAR CO-ORDINATE DERIVED FROM FOURIER COEFFICIENTS
+022221	N	Numeric	2	0	7	SECOND NORMALISED POLAR CO-ORDINATE DERIVED FROM FOURIER COEFFICIENTS
+022222	N	m2/Hz	2	0	20	NON-DIRECTIONAL SPECTRAL ESTIMATE OF FREQUENCY
+022223	N	m3	2	2	20	NON-DIRECTIONAL SPECTRAL ESTIMATE OF WAVE NUMBER
+022224	N	m2 rad-1 s	2	0	20	DIRECTIONAL SPECTRAL ESTIMATE OF FREQUENCY
+022225	N	m4	2	0	20	DIRECTIONAL SPECTRAL ESTIMATE OF WAVE NUMBER
+022226	N	Numeric	0	0	7	TOTAL NUMBER OF BANDS
+022227	N	degree true	0	0	8	DIRECTIONAL SPREAD OF INDIVIDUAL WAVES
+022228	C	Code table	0	0	2	INDICATEUR DE FOND
+022230	N	m	2	-1000	12	Seuil de dangerosite par rapport au niveaux moyen
+022231	N	m	2	-1000	12	Hauteur des marees par rapport au niveau moyen
+022232	N	m	2	-1000	12	Somme de la maree astronomique et de la surcote
+022233	N	m	2	-1000	12	Surcote-decote par rapport au niveau moyen
+022243	N	m	2	0	10	Standard deviation significant wave height
+025192	C	Code table	0	0	8	Methode de composition dans les zones de recouvrement
+025193	N	Numeric	2	0	16	Numero de version logicielle du calculateur
+025194	N	Numeric	2	0	16	Numero de version de composite
+025195	N	Numeric	0	0	8	Numero de version de carte utilisee pour composition
+025196	C	Code table	0	0	8	Methode de cumul
+025197	N	Numeric	0	0	24	Nombre d'images prises en compte
+025198	N	Numeric	0	0	16	Nombre de portes par tir
+025199	C	Code table	0	0	4	Methode d'integration distance
+025200	C	Code table	0	0	4	Methode d'integration azimut
+025207	N	kg m-2	3	0	18	Correction d'intensite de precipitation
+025208	N	s	4	0	15	SAMPLING INTERVAL (TIME)
+025209	N	m	2	0	12	SAMPLING INTERVAL (SPACE)
+025210	N	Numeric	2	0	10	Facteur de correction global (pluie pluviometre)/(pluie radar)
+025211	N	dB	0	0	7	Seuil de reflectivite pour le calcul des deplacements d'echos radar
+025212	N	Numeric	0	0	7	Seuil d'occurrence pour la definition des echos fixes (%)
+025213	N	Numeric	0	0	7	Seuil de presence minimal des echos fixes pour valider l'image (%)
+025214	N	K	1	0	12	Seuil de temperature des images satellitales IR pour le filtrage
+025215	N	K	1	0	12	Marge de temperature pour le filtrage IR
+025216	N	Numeric	0	0	8	Seuil de radiance des images satellitales visibles pour le filtrage
+025217	C	Code table	0	0	3	Mode de fonctionnement du filtrage des echos non meteorologiques
+025218	C	Code table	0	0	4	Correction par un profil vertical de reflectivite
+025219	C	Code table	0	0	3	Methode d'elaboration du masque d'echos fixes
+025228	C	Code table	0	0	5	Data used for diagnostic
+025229	A	CCITT IA5	0	0	24	Method used to diagnose the nature of a cloud system
+026192	N	min	0	0	11	Duree d'humectation
+030192	F	Flag table	0	0	8	Mode de balayage
+031192	N	Numeric	0	0	32	Facteur super elargi de repetition differe du descripteur
+033192	C	Code table	0	0	3	FLAG DE QUALITE SUR PARAMETRE
+033193	C	Code table	0	0	2	Attribut de la valeur qui suit
+033212	C	Code table	0	0	2	QUALITE DE LA MESURE DE PRESSION
+033213	C	Code table	0	0	2	QUALITE DU PARAMETRE TECHNOLOGI QUE(DEUXIEME VARIABLE DU PREMIERBLOC DE DONNEES CAPTEURS DES PLATES-FORMES ARGOS)
+033214	C	Code table	0	0	2	QUALITE DE LA MESURE DE LA TEMPERATURE DE L'EAU EN SURFACE
+033215	C	Code table	0	0	2	QUALITE DE LA MESURE DE LA TEMPERATURE DE L'AIR
+033216	C	Code table	0	0	2	QUALITE DES TRANSMISSIONS ENTRE LA BOUEE ET LE SATELLITE
+033217	C	Code table	0	0	2	QUALITE DE LA POSITION
+033218	C	Code table	0	0	3	INDICATEUR CONTROLE DE QUALITE DES DONNEES RELATIVES A LA POSI TION
+033219	C	Code table	0	0	3	INDICATEUR CONTROLE DE QUALITE DES DONNEES RELATIVES A L'HEURE
+033220	C	Code table	0	0	3	INDICATEUR CONTROLE DE QUALITE DES DONNEES METEOROLOGIQUES
+033221	C	Code table	0	0	4	INDICATEUR DE POSITION DU GROUPE
+033222	C	Code table	0	0	3	INDICATEUR CONTROLE DE QUALITE DES DONNEES MARINES
+033223	C	Code table	0	0	3	INDICATEUR DE CONTROLE DE QUALI TE DES DONNEES RELATIVES AUX PROFILS DE TEMPERATURE ET DE SALINITE
+033224	C	Code table	0	0	3	INDICATEUR CONTROLE DE QUALITE DES DONNEES RELATIVES AUX PROFILS DES COURANTS
+033230	C	Code table	0	0	3	Spatial quality indicator of the cloud system
+033231	C	Code table	0	0	4	Temporal quality indicator of the tracking of the cloud system
+033232	C	Code table	0	0	3	Quality indicator of the height of top of the cloud system
+033233	N	%	0	0	7	Degre de confiance associe au parametre defini par l'intervalle qui suit
+033234	N	%	0	0	7	Probabilite d'orage
+033235	N	%	0	0	7	Probabilite de pluie faible
+033236	N	%	0	0	7	Probabilite de pluie moderee
+033237	N	%	0	0	7	Probabilite de pluie forte
+035192	N	Numeric	0	0	7	Numero de l'amendement
+048192	N	Numeric	0	0	1	Bit de calage
+049192	C	Code table	0	0	4	Cq integrite du message
+049193	C	Code table	0	0	4	Code de qualite arret-panne
+049194	C	Code table	0	0	4	Code de qualite etalonnage
+049195	C	Code table	0	0	4	Code de qualite eliminateur d'echos fixes
+049196	C	Code table	0	0	4	Cq controle temporel
+049197	C	Code table	0	0	4	Cq controle spatial
+049198	C	Code table	0	0	4	Cq controle de coherence echos fixes
+049199	C	Code table	0	0	4	Cq comparaison avec les donnees satellitaires
+049200	N	Numeric	1	-10	14	Taux de pixels identifies propagation anormale
+049201	C	Code table	0	0	4	Code detection de propagation anormale
+049204	N	%	0	0	8	Statut de la donnee
+049206	N	m/s	1	-600	11	Valeur de la composante ouest/est du vecteur advection
+049207	N	m/s	1	-600	11	Valeur de la composante nord/sud du vecteur advection
+049208	F	Flag table	0	0	2	Donnees avec/sans correction d advection
+049209	C	Code table	0	0	8	Code pour l'unite de mesure de la lame d'eau
+049210	C	Code table	0	0	2	Numero de PVR
+049211	C	Code table	0	0	16	Cptq images emises par le calculateur radar
+049212	C	Code table	0	0	16	Cptq images recues par le concentrateur
+049213	C	Code table	0	0	16	Cptq images emises par le concentrateur radar
+049214	C	Code table	0	0	16	Cptq images recues par le systeme de diffusion
+049215	C	Code table	0	0	16	Cptq images emises par le systeme de diffusion
+049216	C	Code table	0	0	16	Cptq images recues par la machine d'archivage
+049220	N	m	-2	0	7	Altitude de l'isotherme 0 degre du PVR
+049221	N	dB/km	1	-100	7	Taux de decroissance du PVR au dessus de l'isotherme 0 degre
+049222	N	m	-2	0	5	Largeur de la bande brillante du PVR
+049223	N	Numeric	1	0	7	Facteur du renforcement du PVR
+049224	F	Flag table	0	0	2	Indicateur radar DOPPLER
+049225	F	Flag table	0	0	2	Indicateur radar double polarisation
+049227	C	Code table	0	0	8	Statut de la donnee dans les fichiers pour la pr¿vision numerique
+049228	N	Numeric	0	0	8	Code vitesse radiale
+049229	N	m/s	1	-600	11	Valeur minimale de la vitesse radiale en m/s
+049230	N	m/s	1	-600	11	Valeur maximale de la vitesse radiale en m/s
+049231	N	m/s	1	0	8	Ecart entre deux valeurs consecutives des vitesses radiales
+049235	N	Numeric	0	0	8	Numero de colonne du pixel d'application du premier vecteur advection
+049236	N	Numeric	0	0	8	Numero de ligne du pixel d application du premier vecteur advection
+049237	N	Numeric	0	0	8	Resolution en X (nombre de colonnes)du champ d advection
+049238	N	Numeric	0	0	8	Resolution en Y (nombre de lignes) du champ d advection
+049239	N	dB	1	-160	9	Correction globale mensuelle (pluviometre/radar) en dBZ
+049240	F	Flag table	0	0	2	Donnees avec/sans correction de l'attenuation par les precipitations
+049241	N	m/s	1	-700	11	Valeur minimale de la vitesse radiale en m/s
+049242	N	m/s	1	-700	11	Valeur maximale de la vitesse radiale en m/s
+049243	N	m/s	1	-600	11	Valeur de la composante sud/nord du vecteur advection en m/s
+055192	C	Code table	0	0	2	Filtrage Elephant
+055193	N	Numeric	2	0	9	Coefficient pc_rassur du filtre Elephant
+055194	N	Numeric	2	0	9	Coefficient pc_ecart du filtre Elephant
+055195	N	Numeric	0	0	8	Seuil (% d'occurrence) de caracterisation des echos fixes
+055196	N	Numeric	0	0	20	Nombre de pixels detectes aberrants
+055197	N	Numeric	0	0	20	Nombre de pixels traites par le filtre (valeur > seuil de traitement)
+055198	?	-	1	0	16	Seuil de traitement du filtre
+055199	N	Numeric	1	0	9	Pourcentage (en nombre) des valeurs supprimees par le filtre
+055200	C	Code table	0	0	3	Signalisation des valeurs aberrantes detectees par le filtre
+055201	N	Numeric	0	0	16	Valeur de signalisation des pixels aberrants
+055202	N	Numeric	0	0	5	Bit de signalisation des pixels aberrants
+055203	C	Code table	0	0	4	Etat de l'eliminateur d'echos fixes lors de la constitution du masque d'echos fixes
+055204	N	deg	2	0	15	Site utilise lors de la constitution du masque d'echos fixes
+055205	N	m	-3	0	16	Portee utilisee lors de la constitution du masque d'echos fixes
+055206	N	Numeric	0	0	16	Nombre de portes par tir
+055207	N	m	0	0	16	Nombre de tirs integres
+055208	N	Numeric	0	0	16	Nombre de tirs dans l'image
+055209	N	deg	2	-9000	15	Angle de site reel moyen sur la periode de cumul
+055210	N	a	0	0	12	Annee de fin de constitution du masque d'echos fixes
+055211	N	mon	0	0	4	Mois de fin de constitution du masque d'echos fixes
+055212	N	d	0	0	6	Jour de fin de constitution du masque d'echos fixes
+055213	N	h	0	0	5	Heure de fin de constitution du masque d'echos fixes
+055214	N	min	0	0	6	Minute de fin de constitution du masque d'echos fixes
+055215	N	s	0	0	6	Seconde de fin de constitution du masque d'echos fixes
+055216	N	d	0	-1024	11	Duree de constitution du masque d'echos fixes (Jours)
+055217	N	h	0	-1024	11	Duree de constitution du masque d'echos fixes (Heures)
+055218	N	min	0	-2048	12	Duree de constitution du masque d'echos fixes (Minutes)
+055219	A	CCITT IA5	0	0	80	Nom du fichier contenant le masque d'echos fixes
+055220	N	min	0	-2048	12	Duree utilisee pour le calcul duprofil vertical de reflectivite
+055221	N	Numeric	0	0	8	Pourcentage d'images valides necessaire au calcul du profil vertical de reflectivite
+055222	N	dB	0	-64	7	Seuil de reflectivite utilise pour le calcul du champ de deplacement
+055223	N	Numeric	0	0	8	Pourcentage minimum (echos fixes presents/echos fixes attendus) pour valider l'image
+055224	N	Numeric	2	0	16	Facteur de correction (reflectivite sol/reflectivite a l'altitude de mesure)
+055225	N	dB	1	-64	12	Correction de reflectivite
+055226	C	Code table	0	0	3	Signalisation des valeurs modifiees
+055227	N	Numeric	0	0	16	Valeur de signalisation des pixels modifiees
+055228	N	Numeric	0	0	5	Bit de signalisation des pixels modifiees
+055229	N	Numeric	7	0	10	Facteur de la loi exprimant A (attenuation) en fonction de Z (reflectivite)
+055230	N	Numeric	2	0	8	Exposant de la loi exprimant A (attenuation) en fonction de Z (reflectivite)
+055231	N	Numeric	0	0	16	Nombre d'images cumulees lors de la constitution du masque d'echos fixes
+055232	C	Code table	0	0	3	Mode de constitution du masque d'echos fixes
+055233	N	m	0	0	16	Longueur de la porte distance apres integration

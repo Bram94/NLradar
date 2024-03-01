@@ -1,0 +1,30 @@
+# libDWD descriptor file (WMO table B), created: 2014-10-14 15:55:31
+# line format: "FXY<tab>libDWDType<tab>unit<tab>scale<tab>referenceValue<tab>dataWidth_Bits<tab>descriptor_name<lf>"
+001230	A	CCITT IA5	0	0	2048	UNIQUE PRODUCT DESCRIPTION
+002193	C	Code table	0	0	2	ANTENNA ROTATION DIRECTION
+002194	C	Code table	0	0	4	DualPRF ratio
+005230	N	Numeric	0	0	12	MAXIMUM SIZE OF X DIMENSION IN A VOLUME SCAN OR DATA CUBE
+006230	N	Numeric	0	0	12	MAXIMUM SIZE OF Y DIMENSION IN A VOLUME SCAN OR DATA CUBE
+007230	N	Numeric	0	0	12	MAXIMUM SIZE OF Z DIMENSION IN A VOLUME SCAN OR DATA CUBE
+007231	N	Numeric	0	0	16	LEVEL INDEX OF Z
+021200	N	m	0	-1000	15	Height of CAPPI above seal level
+021201	N	m	0	0	14	RANGE-BIN SIZE
+021202	N	deg	1	0	8	AZIMUTHAL RESOLUTION
+021203	N	m	-1	0	14	RANGE-BIN OFFSET
+021204	N	deg	1	0	12	AZIMUTH OFFSET
+021210	N	Numeric	2	0	10	Version of algorithm for quality assurance
+021211	N	Numeric	0	0	14	Number of Blacklist
+021212	C	Code table	0	0	2	Radar maintenance
+021213	C	Code table	0	0	2	Radarhardware
+021214	C	Code table	0	0	2	Corrupt image
+021215	C	Code table	0	0	2	German Pancake
+021216	C	Code table	0	0	2	Radome attenuation
+021217	F	Flag table	0	0	16	Checked algorithm
+021218	F	Flag table	0	0	16	Radar quality flag
+021236	N	m/s	0	0	8	extended NYQUIST Velocity
+021237	N	m/s	0	0	8	high Nyquist Velocity
+030192	C	Code table	0	0	3	North south view organisation
+030193	C	Code table	0	0	3	East west view organisation
+030194	N	Numeric	0	0	12	NUMBER OF BINS ALONG THE RADIAL
+030195	N	Numeric	0	0	11	NUMBER OF AZIMUTHS
+030196	C	Code table	0	0	16	TYPE OF PRODUCT

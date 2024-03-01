@@ -1,0 +1,212 @@
+pabc|pafc|60.79198|-161.87648|  57|1|AK|Bethel
+pacg|pajk|56.85264|-135.52875|  82|1|AK|Biorka Island
+pahg|pafc|60.72598|-151.35155| 108|1|AK|Kenai
+pakc|pafc|58.67962|-156.62949|  43|1|AK|King Salmon
+paih|pafc|59.46127|-146.30351|  40|1|AK|Middleton Island
+paec|pafg|64.51152|-165.29547|  27|1|AK|Nome
+papd|pafg|65.03508|-147.50156| 825|1|AK|Pedro Dome
+kbmx|kbmx|33.17216| -86.76974| 231|1|AL|Birmingham
+keox|ktae|31.46054| -85.45937| 163|1|AL|Fort Rucker
+khtx|khun|34.93048| -86.08347| 566|1|AL|Huntsville
+kmxx|kbmx|32.53668| -85.78975| 170|1|AL|Maxwell AFB
+kmob|kmob|30.67955| -88.23988|  88|1|AL|Mobile
+ksrx|ktsa|35.29044| -94.36192| 224|1|AR|Fort Smith
+klzk|klzk|34.83653| -92.26219| 197|1|AR|Little Rock
+kfsx|kfgz|34.57437|-111.19840|2290|1|AZ|Flagstaff
+kiwa|kpsr|33.28996|-111.66997| 434|1|AZ|Phoenix
+tphx|kpsr|33.42058|-112.16288| 331|3|AZ|TDWR Phoenix
+kemx|ktwc|31.89365|-110.63037|1621|1|AZ|Tucson
+kyux|kpsr|32.49519|-114.65670|  72|1|AZ|Yuma
+kbbx|ksto|39.49564|-121.63176|  67|1|CA|Beale AFB
+keyx|kvef|35.09783|-117.56094| 875|1|CA|Edwards AFB
+kbhx|keka|40.49863|-124.29204| 766|1|CA|Eureka
+kvtx|klox|34.41161|-119.17963| 855|1|CA|Los Angeles
+kdax|ksto|38.50114|-121.67791|  43|1|CA|Sacramento
+knkx|ksgx|32.91896|-117.04178| 320|1|CA|San Diego
+kmux|kmtr|37.15556|-121.89845|1082|1|CA|San Francisco
+khnx|khnx|36.31421|-119.63211| 103|1|CA|San Joaquin Valley
+ksox|ksgx|33.81766|-117.63599| 946|1|CA|Santa Ana Mountains
+kvbx|klox|34.83831|-120.39805| 412|1|CA|Vandenberg AFB
+kftg|kbou|39.78661|-104.54572|1709|1|CO|Denver/Boulder
+kgjx|kgjt|39.06214|-108.21375|3078|1|CO|Grand Junction
+kpux|kpub|38.45964|-104.18135|1634|1|CO|Pueblo
+tden|kbou|39.72742|-104.52649|1737|3|CO|TDWR Denver
+kdox|kakq|38.82574| -75.44004|  49|1|DE|Dover AFB
+kevx|kmob|30.56503| -85.92174|  67|1|FL|Eglin AFB
+kjax|kjax|30.48459| -81.70189|  48|1|FL|Jacksonville
+kbyx|kkey|24.59745| -81.70316|  27|1|FL|Key West
+kmlb|kmlb|28.11311| -80.65357|  45|1|FL|Melbourne
+kamx|kmfl|25.61122| -80.41267|  33|1|FL|Miami
+tfll|kmfl|26.14320| -80.34397|  36|3|FL|TDWR Fort Lauderdale
+tmia|kmfl|25.75753| -80.49116|  38|3|FL|TDWR Miami
+tmco|kmlb|28.34367| -81.32575|  51|3|FL|TDWR Orlando International
+ttpa|ktbw|27.85955| -82.51778|  28|3|FL|TDWR Tampa Bay
+tpbi|kmfl|26.68790| -80.27330|  40|3|FL|TDWR West Palm Beach
+ktlh|ktae|30.39768| -84.32887|  53|1|FL|Tallahassee
+ktbw|ktbw|27.70544| -82.40178|  37|1|FL|Tampa
+kffc|kffc|33.36354| -84.56602| 296|1|GA|Atlanta
+kvax|kjax|30.89025| -83.00169| 100|1|GA|Moody AFB
+kjgx|kffc|32.67557| -83.35094| 188|1|GA|Robins AFB
+tatl|kffc|33.64661| -84.26217| 327|3|GA|TDWR Atlanta
+pgua|pgum|13.45590| 144.81104| 117|1|GU|Andersen AFB
+phki|phfo|21.89389|-159.55250| 103|1|HI|Kauai
+phkm|phfo|20.12535|-155.77801|1208|1|HI|Kohala
+phmo|phfo|21.13284|-157.18013| 440|1|HI|Molokai
+phwa|phfo|19.09498|-155.56886| 445|1|HI|South Shore
+kdmx|kdmx|41.73120| -93.72296| 333|1|IA|Des Moines
+kdvn|kdvn|41.61237| -90.58207| 259|1|IA|Quad Cities
+kcbx|kboi|43.49026|-116.23613| 966|1|ID|Boise
+ksfx|kpih|43.10558|-112.68633|1383|1|ID|Pocatello
+klot|klot|41.60445| -88.08451| 231|1|IL|Chicago
+kilx|kilx|40.15056| -89.33698| 222|1|IL|Lincoln
+tmdw|klot|41.65134| -87.72955| 232|3|IL|TDWR Chicago Midway
+tord|klot|41.79709| -87.85824| 226|3|IL|TDWR Chicago O'Hare
+kvwx|kpah|38.26038| -87.72454| 191|1|IN|Evansville
+kiwx|kiwx|41.35867| -85.69980| 321|1|IN|Fort Wayne
+kind|kind|39.70750| -86.28026| 270|1|IN|Indianapolis
+tids|kind|39.63722| -86.43547| 258|3|IN|TDWR Indianapolis
+rodn|pafc|26.30781| 127.90329| 125|1|JP|Kadena AFB
+rksg|pafc|37.20762| 127.28575| 463|1|KR|Camp Humphreys
+rkjk|pafc|35.92436| 126.62214|  58|1|KR|Kunsan AFB
+kddc|kddc|37.76083| -99.96887| 814|1|KS|Dodge City
+kgld|kgld|39.36684|-101.70033|1132|1|KS|Goodland
+tich|kict|37.50714| -97.43697| 411|3|KS|TDWR Wichita
+ktwx|ktop|38.99694| -96.23251| 431|1|KS|Topeka
+kict|kict|37.65457| -97.44312| 427|1|KS|Wichita
+khpx|kpah|36.73696| -87.28555| 190|1|KY|Fort Campbell
+kjkl|kjkl|37.59079| -83.31299| 445|1|KY|Jackson
+klvx|klmk|37.97528| -85.94360| 253|1|KY|Louisville
+kpah|kpah|37.06848| -88.77232| 153|1|KY|Paducah
+tsdf|klmk|38.04590| -85.61061| 222|3|KY|TDWR Louisville
+kpoe|klch|31.15574| -92.97607| 143|1|LA|Fort Polk
+klch|klch|30.12532| -93.21586|  41|1|LA|Lake Charles
+klix|klix|30.33677| -89.82545|  54|1|LA|New Orleans
+kshv|kshv|32.45079| -93.84132| 117|1|LA|Shreveport
+tmsy|klix|30.02163| -90.40331|  30|3|LA|TDWR New Orleans
+kbox|kbox|41.95585| -71.13699|  70|1|MA|Boston
+tbos|kbox|42.15830| -70.93343|  80|3|MA|TDWR Boston
+tadw|klwx|38.69531| -76.84489| 105|3|MD|TDWR Andrews Air Force Base
+tbwi|klwx|39.08961| -76.63018| 104|3|MD|TDWR Baltimore/Wash
+tdca|klwx|38.75902| -76.96178| 105|3|MD|TDWR Washington National
+kcbw|kcar|46.03928| -67.80636| 261|1|ME|Caribou
+kgyx|kgyx|43.89135| -70.25642| 144|1|ME|Portland
+kdtx|kdtx|42.69997| -83.47167| 370|1|MI|Detroit
+kapx|kapx|44.90712| -84.71960| 475|1|MI|Gaylord
+kgrr|kgrr|42.89390| -85.54479| 266|1|MI|Grand Rapids
+kmqt|kmqt|46.53115| -87.54829| 464|1|MI|Marquette
+tdtw|kdtx|42.11135| -83.51485| 235|3|MI|TDWR Detroit
+kdlh|kdlh|46.83689| -92.21005| 470|1|MN|Duluth
+kmpx|kmpx|44.84877| -93.56541| 335|1|MN|Minneapolis
+tmsp|kmpx|44.87144| -92.93295| 341|3|MN|TDWR Minneapolis
+keax|keax|38.81023| -94.26426| 334|1|MO|Kansas City
+ksgf|ksgf|37.23521| -93.40067| 419|1|MO|Springfield
+klsx|klsx|38.69868| -90.68259| 219|1|MO|St. Louis
+tmci|keax|39.49851| -94.74210| 332|3|MO|TDWR Kansas City
+tstl|klsx|38.80537| -90.48883| 197|3|MO|TDWR St Louis
+kgwx|kjan|33.89690| -88.32911| 179|1|MS|Columbus AFB
+kdgx|kjan|32.27982| -89.98447| 185|1|MS|Jackson
+kblx|kbyz|45.85389|-108.60686|1128|1|MT|Billings
+kggw|kggw|48.20647|-106.62489| 726|1|MT|Glasgow
+ktfx|ktfx|47.45965|-111.38552|1159|1|MT|Great Falls
+kmsx|kmso|47.04103|-113.98624|2431|1|MT|Missoula
+kmhx|kmhx|34.77594| -76.87627|  43|1|NC|Morehead City
+krax|krah|35.66558| -78.48976| 140|1|NC|Raleigh/Durham
+tclt|kgsp|35.33737| -80.88487| 265|3|NC|TDWR Charlotte
+trdu|krah|36.00207| -78.69736| 156|3|NC|TDWR Raleigh Durham
+kltx|kilm|33.98917| -78.42900|  44|1|NC|Wilmington
+kbis|kbis|46.77104|-100.76064| 534|1|ND|Bismarck
+kmvx|kfgf|47.52890| -97.32525| 329|1|ND|Grand Forks
+kmbx|kbis|48.39305|-100.86457| 484|1|ND|Minot AFB
+kuex|kgid|40.32096| -98.44204| 626|1|NE|Hastings
+klnx|klbf|41.95786|-100.57639| 948|1|NE|North Platte
+koax|koax|41.32029| -96.36686| 384|1|NE|Omaha
+tewr|kokx|40.59357| -74.27018|  41|3|NJ|TDWR Newark
+kabx|kabq|35.14974|-106.82412|1813|1|NM|Albuquerque
+kfdx|kabq|34.63406|-103.61879|1431|1|NM|Cannon AFB
+khdx|kepz|33.07701|-106.12010|1301|1|NM|Holloman AFB
+klrx|klkn|40.73973|-116.80283|2101|1|NV|Elko
+kesx|kvef|35.70120|-114.89212|1508|1|NV|Las Vegas
+krgx|krev|39.75412|-119.46219|2559|1|NV|Reno
+tlas|kvef|36.14356|-115.00739| 627|3|NV|TDWR Las Vegas
+kenx|kaly|42.58654| -74.06390| 589|1|NY|Albany
+kbgm|kbgm|42.19966| -75.98480| 519|1|NY|Binghamton
+kbuf|kbuf|42.94875| -78.73671| 240|1|NY|Buffalo
+ktyx|kbtv|43.75564| -75.67946| 597|1|NY|Montague
+tjfk|kokx|40.58884| -73.88023|  34|3|NY|TDWR New York City
+kokx|kokx|40.86554| -72.86387|  60|1|NY|Upton
+kcle|kcle|41.41318| -81.85951| 262|1|OH|Cleveland
+tcvg|kiln|38.89809| -84.57966| 320|3|OH|TDWR Cincinnati
+tlve|kcle|41.28979| -82.00743| 283|3|OH|TDWR Cleveland
+tcmh|kiln|40.00566| -82.71532| 349|3|OH|TDWR Columbus
+tday|kiln|40.02212| -84.12331| 310|3|OH|TDWR Dayton
+kiln|kiln|39.42024| -83.82189| 356|1|OH|Wilmington
+kfdr|koun|34.36218| -98.97682| 399|1|OK|Frederick
+ktlx|koun|35.33335| -97.27776| 389|1|OK|Oklahoma City
+tokc|koun|35.27608| -97.50977| 398|3|OK|TDWR Oklahoma City
+ttul|ktsa|36.07051| -95.82645| 250|3|OK|TDWR Tulsa
+kinx|ktsa|36.17509| -95.56416| 228|1|OK|Tulsa
+kvnx|koun|36.74059| -98.12763| 383|1|OK|Vance AFB
+kmax|kmfr|42.08112|-122.71729|2302|1|OR|Medford
+kpdt|kpdt|45.69059|-118.85294| 481|1|OR|Pendleton
+krtx|kpqr|45.71498|-122.96487| 526|1|OR|Portland
+kdix|kphi|39.94703| -74.41076|  70|1|PA|Philadelphia
+kpbz|kpbz|40.53190| -80.21773| 385|1|PA|Pittsburgh
+kccx|kctp|40.92318| -78.00381| 757|1|PA|State College
+tphl|kphi|39.94921| -75.06984|  46|3|PA|TDWR Philadelphia
+tpit|kpbz|40.50134| -80.48611| 422|3|PA|TDWR Pittsburgh
+tjua|tjsj|18.11569| -66.07817| 901|1|PR|Puerto Rico
+tsju|tjsj|18.47401| -66.17958|  47|3|PR|TDWR San Juan
+kclx|kchs|32.65551| -81.04227|  69|1|SC|Charleston
+kcae|kcae|33.94874| -81.11825| 104|1|SC|Columbia
+kgsp|kgsp|34.88330| -82.21964| 325|1|SC|Greer
+kabr|kabr|45.45578| -98.41325| 421|1|SD|Aberdeen
+kudx|kunr|44.12486|-102.82964| 973|1|SD|Rapid City
+kfsd|kfsd|43.58772| -96.72948| 455|1|SD|Sioux falls
+kmrx|kmrx|36.16851| -83.40176| 437|1|TN|Knoxville
+knqa|kmeg|35.34475| -89.87342| 132|1|TN|Memphis
+kohx|kohx|36.24723| -86.56282| 206|1|TN|Nashville
+tmem|kmeg|34.89580| -89.99269| 147|3|TN|TDWR Memphis
+tbna|kohx|35.97968| -86.66166| 249|3|TN|TDWR Nashville
+kama|kama|35.23352|-101.70934|1128|1|TX|Amarillo
+kbro|kbro|25.91600| -97.41900|  26|1|TX|Brownsville
+kgrk|kfwd|30.72179| -97.38298| 183|1|TX|Central Texas
+kcrp|kcrp|27.78400| -97.51124|  43|1|TX|Corpus Christi
+kfws|kfwd|32.57300| -97.30300| 236|1|TX|Dallas/Fort Worth
+kdyx|ksjt|32.53860| -99.25424| 481|1|TX|Dyess AFB
+kepz|kepz|31.87313|-106.69791|1285|1|TX|El Paso
+khgx|khgx|29.47189| -95.07856|  35|1|TX|Houston
+kdfx|kewx|29.27308|-100.28039| 364|1|TX|Laughlin AFB
+klbb|klub|33.65413|-101.81415|1029|1|TX|Lubbock
+kmaf|kmaf|31.94339|-102.18925| 902|1|TX|Midland/Odessa
+ksjt|ksjt|31.37127|-100.49240| 610|1|TX|San Angelo
+kewx|kewx|29.70395| -98.02851| 233|1|TX|San Antonio
+tdal|kfwd|32.92576| -96.96822| 189|3|TX|TDWR Dallas Love Field
+tdfw|kfwd|33.06481| -96.91816| 178|3|TX|TDWR Dallas/Ft Worth
+thou|khgx|29.51631| -95.24160|  35|3|TX|TDWR Houston Hobby
+tiah|khgx|30.06484| -95.56697|  77|3|TX|TDWR Houston International
+kicx|kslc|37.59100|-112.86242|3278|1|UT|Cedar City
+kmtx|kslc|41.26276|-112.44801|2009|1|UT|Salt Lake City
+tslc|kslc|40.96733|-111.92974|1309|3|UT|TDWR Salt Lake City
+kfcx|krnk|37.02442| -80.27379| 903|1|VA|Blacksburg
+klwx|klwx|38.97625| -77.48746| 123|1|VA|Sterling
+tiad|klwx|39.08385| -77.52944| 144|3|VA|TDWR Dulles
+kakq|kakq|36.98404| -77.00747|  77|1|VA|Wakefield
+kcxx|kbtv|44.51100| -73.16650| 131|1|VT|Burlington
+klgx|ksew|47.11693|-124.10659| 111|1|WA|Langley Hill
+katx|ksew|48.19460|-122.49586| 195|1|WA|Seattle/Tacoma
+kotx|kotx|47.68038|-117.62688| 746|1|WA|Spokane
+kgrb|kgrb|44.49958| -88.11115| 250|1|WI|Green Bay
+karx|karx|43.82278| -91.19112| 413|1|WI|La Crosse
+kmkx|kmkx|42.96785| -88.55058| 311|1|WI|Milwaukee
+tmke|kmkx|42.81952| -88.04645| 284|3|WI|TDWR Milwaukee
+krlx|krlx|38.31101| -81.72287| 369|1|WV|Charleston
+kcys|kcys|41.15193|-104.80605|1887|1|WY|Cheyenne
+kriw|kriw|43.06606|-108.47720|1716|1|WY|Riverton
+KOUN, KOUN, 35.236000, -97.462219, 360, 1, OK, Norman Testbed
+DAN1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed DAN1
+DOP1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed DOP1
+FOP1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed FOP1
+NOP3,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed NOP3
+NOP4,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed NOP4
+ROP3,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed ROP3
+ROP4,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed ROP4
