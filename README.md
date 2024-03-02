@@ -1,6 +1,6 @@
 Installation/Setup:
 If you use Anaconda, then I suggest creating a new environment with python 3.8.
-In your command prompt: "<i>conda create -n NLradar python=3.8</i>".
+In your command line: "<i>conda create -n NLradar python=3.8</i>".
 Activate that environment with "<i>conda activate NLradar</i>".
 Then go to directory in which you want to install NLradar. 
 There, clone the git repository with "<i>git clone https://github.com/Bram94/NLradar.git</i>".
