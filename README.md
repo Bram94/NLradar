@@ -1,4 +1,4 @@
-![image](https://github.com/Bram94/NLradar/assets/24604991/e61bded5-7107-4922-9a62-55aa8f5474ef)<b>Installation/Setup</b>:
+<b>Installation/Setup</b>:
 If you use Anaconda, then I suggest creating a new environment with python 3.8.
 In your command line: "<i>conda create -n NLradar python=3.8</i>".
 Activate that environment with "<i>conda activate NLradar</i>".
