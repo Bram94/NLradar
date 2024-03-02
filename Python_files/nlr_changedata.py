@@ -58,8 +58,12 @@ class Change_RadarData(QObject):
         self.ani=Animate(crd_class=self)
         
         self.directory=None
+        self.selected_radar=radar; self.selected_date=date; self.selected_time=time
         self.radar=radar; self.date=date; self.time=time
-        self.selected_radar=self.radar; self.selected_date=self.date; self.selected_time=self.time
+        if date == 'c':
+            # self.date and self.time should not be 'c'
+            datetime = ft.get_datetimes_from_absolutetimes(pytime.time())
+            self.date, self.time = datetime[:8], datetime[-4:]
         self.products=products.copy(); self.scans = scans.copy()
         
         self.plot_mode=plot_mode
@@ -1123,7 +1127,9 @@ class Change_RadarData(QObject):
             # When scans are delivered in multiple files, it is well possible that the desired scans are not yet available for the newest
             # datetime. So in that case choose the 2nd-newest datetime, because when no 1st plot has been performed it is not possible to 
             # check whether these desired scans are already available.
-            _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.radar,self.selected_dataset)
+            _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
+            if not second_newest_datetime:
+                return
             date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
             
         self.signal_set_datetimewidgets.emit(date, time)
@@ -1165,7 +1171,7 @@ class Change_RadarData(QObject):
                         
             if not all(availibility_scans_panels.values()):
                 if date == 'c' and time == 'c':
-                    _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.radar,self.selected_dataset)
+                    _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
                     if not second_newest_datetime is None:
                         date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
                         if not (date == save_date and time == save_time):

@@ -729,41 +729,28 @@ def determine_latlon_from_inputstring(input_marker_latlon):
     
 # print(determine_latlon_from_inputstring('33.52° N, 86.93° W'))
 # print(determine_latlon_from_inputstring('32.733°N 98.3358°W'))
+
+previous_radar_latlon = None
+proj = None
+def get_proj(radar_latlon):
+    global previous_radar_latlon, proj
+    if not previous_radar_latlon or np.any(radar_latlon != previous_radar_latlon):
+        lat, lon = radar_latlon
+        proj = pyproj.Proj('+proj=aeqd +lat_0='+str(lat)+' +lon_0='+str(lon)+' +a=6378140 +b=6356750 +x_0=0 y_0=0 +units=km')
+        previous_radar_latlon = radar_latlon.copy()
+    return proj
             
-def aeqd(latlon_0,latlon_or_xy_1,degrees=True,inverse=False):
-    R_earth=6371
-    if degrees==True: 
-        latlon_0=np.array(latlon_0)*np.pi/180
-    lat_0,lon_0=latlon_0[0],latlon_0[1]
-    warnings.filterwarnings('ignore') #Avoid warnings for errors caused by division by zero, because they are later corrected
-    if inverse==False:
-        latlon_1=np.array(latlon_or_xy_1)
-        if degrees==True: latlon_1=latlon_1*np.pi/180
-        if not hasattr(latlon_1[0], "__len__"): lat_1,lon_1=latlon_1[0],latlon_1[1]
-        else: lat_1,lon_1=latlon_1[:,0],latlon_1[:,1]
-            
-        rho=R_earth*np.arccos(np.sin(lat_0)*np.sin(lat_1)+np.cos(lat_0)*np.cos(lat_1)*np.cos(lon_1-lon_0))
-        theta=np.arctan(np.divide(np.cos(lat_1)*np.sin(lon_1-lon_0),np.cos(lat_0)*np.sin(lat_1)-np.sin(lat_0)*np.cos(lat_1)*np.cos(lon_1-lon_0)))
-        if type(theta)==np.ndarray:
-            theta[((lon_1<lon_0) & (theta>0)) | ((lon_1>lon_0) & (theta<0)) | ((lon_1==lon_0) & (lat_1<lat_0))]=theta[((lon_1<lon_0) & (theta>0)) | ((lon_1>lon_0) & (theta<0)) | ((lon_1==lon_0) & (lat_1<lat_0))]+np.pi
-        elif (lon_1<lon_0 and theta>0) or (lon_1>lon_0 and theta<0) or (lon_1==lon_0 and lat_1<lat_0): theta=theta+np.pi
-        
-        xy_1=np.transpose(rho*np.array([np.sin(theta),np.cos(theta)]))
-        xy_1[np.isnan(xy_1)]=0.0 #This happens for latlons in latlon_1 that are equal to latlon_0
+def aeqd(latlon_0, latlon_or_xy_1, degrees=True, inverse=False):
+    latlon_or_xy_1 = np.asarray(latlon_or_xy_1)
+    proj = get_proj(latlon_0)
+    if not inverse:
+        output = np.array(proj(latlon_or_xy_1[...,1], latlon_or_xy_1[...,0], inverse=False))
     else:
-        xy_1=np.array(latlon_or_xy_1)
-        if not hasattr(xy_1[0], "__len__"): x_1,y_1=xy_1[0],xy_1[1]
-        else: x_1,y_1=xy_1[:,0],xy_1[:,1]
-        c=np.linalg.norm(xy_1, axis=-1)/R_earth
-        lat=np.arcsin(np.cos(c)*np.sin(lat_0)+np.divide(y_1*np.sin(c)*np.cos(lat_0),c*R_earth))
-        lon=lon_0+np.arctan(np.divide(x_1*np.sin(c),c*R_earth*np.cos(lat_0)*np.cos(c)-y_1*np.sin(lat_0)*np.sin(c)))
-        latlon_1=np.transpose([lat,lon])
-        if len(latlon_1[np.isnan(latlon_1)])>0:
-            latlon_1[np.isnan(latlon_1)]=np.array([lat_0,lon_0])
-        if degrees==True: latlon_1=latlon_1*180/np.pi
-    warnings.resetwarnings() #Remove the warnings filter
-    return xy_1 if not inverse else latlon_1
-        
+        output = np.array(proj(latlon_or_xy_1[...,0], latlon_or_xy_1[...,1], inverse=True))[::-1]
+    if len(latlon_or_xy_1.shape) == 2:
+        output = np.transpose(output)
+    return output
+
 def calculate_great_circle_distance_from_latlon(latlon_0, latlon_1): #latlon_0 should be a list/array with a single latitude 
     #and longitude, and latlon_1 can either also be a List/array that contains a single latitude and longitude, 
     #or it can be a list/array of lat, lon pairs.
@@ -778,13 +765,8 @@ def calculate_great_circle_distance_from_latlon(latlon_0, latlon_1): #latlon_0 s
     else:
         return geod.inv(lon0, lat0, lon1, lat1)[2] / 1e3
 
-previous_radar_latlon = None
-proj = None
 def calculate_great_circle_distance_from_xy(radar_latlon, xy_0, xy_1):
-    global previous_radar, proj
-    if not radar_latlon == previous_radar_latlon:
-        lat, lon = radar_latlon
-        proj = pyproj.Proj('+proj=aeqd +lat_0='+str(lat)+' +lon_0='+str(lon)+' +a=6378140 +b=6356750 +x_0=0 y_0=0 +units=km')
+    proj = get_proj(radar_latlon)
     latlon_0 = proj(xy_0[0], xy_0[1], inverse=True)[::-1]
     latlon_1 = proj(xy_1[0], xy_1[1], inverse=True)[::-1]
     return calculate_great_circle_distance_from_latlon(latlon_0, latlon_1)

@@ -115,7 +115,7 @@ apply_dealiasing = {j:True for j in range(10)}
 dealiasing_setting = gv.velocity_dealiasing_settings[-1]
 dualprfdealiasing_n_it = 50
 cartesian_product_res = 1.
-scans=[2,4,6,8,10,2,4,6,8,10]
+scans=[1,2,3,4,5,1,2,3,4,5]
 plot_mode='Single'
 
 animation_duration=60
@@ -151,9 +151,10 @@ vwp_sm_display = {j: True for j in ('MW', 'LM', 'RM')}
 base_url_obs = 'https://kachelmannwetter.com/de/messwerte/18584bea4ec779beb796d3770ed37f8e/'
 
 cmaps_minvalues={j:'' for j in gv.products_all}
-cmaps_minvalues['a']=-10; cmaps_minvalues['v']=cmaps_minvalues['s']=-120/gv.scale_factors_velocities['kts']
+for p in gv.products_all:
+    if gv.i_p[p] == 'z':
+        cmaps_minvalues[p] = -20
 cmaps_maxvalues={j:'' for j in gv.products_all}
-cmaps_maxvalues['v']=cmaps_maxvalues['s']=120/gv.scale_factors_velocities['kts']
 
 PP_parameter_values={}
 PP_parameter_values['e']={1:18.5,2:30.,3:40.,4:50.}
@@ -169,26 +170,26 @@ sleeptime_after_plotting=0.01
 """
 use_scissor=2
 
-dimensions_main={'height':0.37,'width':0.93} #Dimensions of the areas of the screen that are occupied by the color bars and titles
-fontsizes_main={'titles':10.0,'cbars_labels':8.5,'cbars_ticks':7.5}
+dimensions_main={'height':0.32,'width':0.8} #Dimensions of the areas of the screen that are occupied by the color bars and titles
+fontsizes_main={'titles':8,'cbars_labels':7,'cbars_ticks':6}
 bgcolor=0.92*np.array([255,255,255])
-panelbdscolor=np.array([0,0,0])
+panelbdscolor=np.array([75,75,75])
 
-bgmapcolor=np.array([155,155,155])
+bgmapcolor=np.array([0,0,0])
 mapvisibility=False
-mapcolorfilter=(1.01, 1.01, 1.01, 0.96) #Color display can differ per OS
+mapcolorfilter=(1.0,1.0,1.0,0.975) #Color display can differ per OS
 maptiles_update_time = 0.1 #In seconds
 radar_markersize=7.5
 radar_colors={'Default':np.array([0,255,255]),'Selected':np.array([255,0,0]),'Automatic download':np.array([255,255,0]),'Automatic download + selected':np.array([255,128,0])}
 lines_names=['countries','provinces','rivers','grid','heightrings']
-lines_colors={'countries':np.array([255,255,255,255]),'provinces':np.array([255,255,0,150]),'rivers':np.array([0,255,255,130]),'grid':np.array([0,0,0,72]),'heightrings':np.array([0,0,0,255])}
+lines_colors={'countries':np.array([255,255,255,255]),'provinces':np.array([255,255,0,150]),'rivers':np.array([0,255,255,130]),'grid':np.array([74,74,74,170]),'heightrings':np.array([74,74,74,220])}
 lines_width=1.35
 lines_antialias=True
 show_heightrings_derivedproducts={j:not j in gv.plain_products_show_max_elevations for j in gv.plain_products}
 showgridheightrings_panzoom=False
 showgridheightrings_panzoom_time=0.6
 gridheightrings_fontcolor={'bottom':np.array([0,0,0]),'top':np.array([255,255,255])}
-gridheightrings_fontsize=10.75
+gridheightrings_fontsize=10.8
 grid_showtext=True 
 lines_show=[j for j in lines_names if not j in ('rivers',)]
 ghtext_names=['grid','heightrings']
@@ -487,9 +488,9 @@ class GUI(QWidget):
         
         
 
-        self.datew=QLineEdit(self.crd.date)
+        self.datew=QLineEdit(self.crd.selected_date)
         self.datew.setToolTip('Date (YYYYMMDD or c, if the time is also c)')
-        self.timew=QLineEdit(self.crd.time)
+        self.timew=QLineEdit(self.crd.selected_time)
         self.timew.setToolTip('Time (HHMM or c, if the date is also c)')
         
         self.download_startstopw=QPushButton('Start', autoDefault=True)

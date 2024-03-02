@@ -1092,6 +1092,7 @@ class Plotting(QObject,app.Canvas):
             dataset_changed = self.crd.dataset != self.crd.selected_dataset
             
             if radar_changed:
+                print('change map center')
                 old_radar=self.crd.radar; self.crd.radar=self.crd.selected_radar #self.crd.radar must be updated before calling self.change_map_center,
                 #because there self.update_combined_lineproperties is called, which requires self.crd.radar to be updated.
                 self.change_map_center(old_radar,self.crd.radar)
@@ -1379,11 +1380,13 @@ class Plotting(QObject,app.Canvas):
             
             
     def change_map_center(self,old_radar,new_radar):
+        print(old_radar, new_radar)
         center_screencoords=self.panel_centers[0]
         center_xycoord_before=self.screencoord_to_xy(center_screencoords)
         center_latlon=np.array(ft.aeqd(gv.radarcoords[old_radar],center_xycoord_before,inverse=True))
+        print(center_latlon)
         center_xycoord_after=ft.aeqd(gv.radarcoords[new_radar],center_latlon) 
-        
+        print(center_xycoord_before, center_xycoord_after)
         for j in self.panellist:
             self.panels_sttransforms[j].move(np.array([1,-1])*(center_xycoord_before-center_xycoord_after)*np.array(self.panels_sttransforms[j].scale[:2]))
         #The view is changed in such a way that the center of the view is not displaced under the change of projection.
