@@ -5,7 +5,6 @@ from nlr_plotting import Plotting
 from nlr_changedata import Change_RadarData
 from nlr_currentdata import AutomaticDownload, DownloadOlderData, CurrentData
 from VWP.nlr_vwp import GUI_VWP
-# from external.soundings_obs import SoundingsObs
 import nlr_background as bg
 import nlr_functions as ft
 import nlr_globalvars as gv
@@ -486,7 +485,6 @@ class GUI(QWidget):
         self.vwp = self.pb.vwp
         self.gui_vwp = GUI_VWP(gui_class=self)
         
-        # self.so = SoundingsObs(gui_class=self)
         
 
         self.datew=QLineEdit(self.crd.date)
@@ -495,9 +493,9 @@ class GUI(QWidget):
         self.timew.setToolTip('Time (HHMM or c, if the date is also c)')
         
         self.download_startstopw=QPushButton('Start', autoDefault=True)
-        self.download_startstopw.setToolTip('Start/Stop download of data, for the specified time range')
+        self.download_startstopw.setToolTip('Start/Stop download of data, for the time range specified in the widget to the right')
         self.download_timerangew=QLineEdit('Download')
-        self.download_timerangew.setToolTip('Time range for which to download data (minutes). Download starts at selected date and time, and continues backward until time range is spanned.')
+        self.download_timerangew.setToolTip('Time range (minutes) for which data is downloaded when clicking Start. Download starts at input date and time, and continues backward until time range is spanned.')
                 
         self.animation_settingsw=QPushButton('Ani', autoDefault=True)
         self.animation_settingsw.setToolTip('Animation settings')
@@ -1946,7 +1944,7 @@ class GUI(QWidget):
                 with open(opa(os.path.join(gv.programdir+'/Generated_files/','saved_choices.pkl')),'rb') as f:
                     choices = pickle.load(f)
             except Exception: 
-                with open(opa(os.path.join(gv.programdir+'/Generated_files/','saved_choices_default.pkl')),'rb') as f:
+                with open(opa(os.path.join(gv.programdir+'/Input_files/','saved_choices_default.pkl')),'rb') as f:
                     choices = pickle.load(f)
         except Exception:
             choices = {}

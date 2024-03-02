@@ -1110,7 +1110,7 @@ class Change_RadarData(QObject):
         A date and time should be given when requesting the second-newest datetime (as is done below when the desired scans are not yet 
         available for the newest datetime).
         """
-        print('update current', radar == self.selected_radar)
+        print('update current')
         if not radar == self.selected_radar:
             #It could be that the radar changes in between emitting the signal in nlr_currentdata.py and actually calling this function.
             self.update_current_call_ID=call_ID
@@ -1169,6 +1169,7 @@ class Change_RadarData(QObject):
                     if not second_newest_datetime is None:
                         date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
                         if not (date == save_date and time == save_time):
+                            print('use second newest time')
                             return self.update_current(radar, call_ID, ani_iteration_end, date, time)
                 if call_ID is None:
                     return self.reset_datetime(save_date, save_time)

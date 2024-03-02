@@ -192,16 +192,15 @@ class DataSource_General():
         which occurs in the function closeEvent in nlr.py.
         """
 
-        if set_data:
-            # (deep) copy of attributes is not needed, since any change of the current volume attributes will come either with a deep copy
-            # of attributes stored in a file, or in case of newly determining attributes will start with initialization of empty dictionary.
-            # Should only be updated when setting data
-            self.attrs_before = {j:self.__dict__[j] for j in gv.volume_attributes_all}
-            if len(self.scannumbers_all.get('z', [])) == 0:
-                print('attrs_before scannumbers_all length 0!!!')
-            self.attrs_before['scannumbers_forduplicates'] = self.scannumbers_forduplicates
-            self.scanpair_present_before = self.check_presence_large_range_large_nyquistvelocity_scanpair() if\
-                                           self.attrs_before['scannumbers_all'] else False
+        # (deep) copy of attributes is not needed, since any change of the current volume attributes will come either with a deep copy
+        # of attributes stored in a file, or in case of newly determining attributes will start with initialization of empty dictionary.
+        # Should only be updated when setting data
+        self.attrs_before = {j:self.__dict__[j] for j in gv.volume_attributes_all}
+        if len(self.scannumbers_all.get('z', [])) == 0:
+            print('attrs_before scannumbers_all length 0')
+        self.attrs_before['scannumbers_forduplicates'] = self.scannumbers_forduplicates
+        self.scanpair_present_before = self.check_presence_large_range_large_nyquistvelocity_scanpair() if\
+                                       self.attrs_before['scannumbers_all'] else False
                       
         attributes_available = self.restore_volume_attributes()            
             
@@ -237,7 +236,7 @@ class DataSource_General():
                 self.restore_previous_attributes()
                 # This exception should be catched in the function self.pb.set_newdata
                 raise Exception('get_scans_information', e)
-                
+
         self.get_derived_volume_attributes()
                 
         if set_data:
@@ -722,6 +721,7 @@ class DataSource_General():
         
         if not set_data:
             retrieved_attrs = {j:self.__dict__[j] for j in gv.volume_attributes_all}
+            print('restore_previous_attrs not set_data')
             self.restore_previous_attributes()
             return retrieved_attrs, self.total_files_size
         
