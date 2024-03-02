@@ -17,13 +17,8 @@ Note: This is a first release of NLradar. More expansive documentation will foll
 
 Created by Bram van 't Veen (2016-2024).
 
-![KJKL_2402281310_z1v](https://github.com/Bram94/NLradar_private/assets/24604991/c3633882-ba65-46aa-9a25-89a62fb0da57)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/f0dc4cf3-9f3e-45d0-960b-b624c5264aa1)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/12a9ece0-6e63-4cc2-98d7-b7bb35dc7f61)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/0638f1a6-9bbe-4a7a-940e-314441094e41)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/d2ec4bec-cd57-477f-b0c4-4a6eb2405f47)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/f087f584-2bda-4e2e-a0c6-7904688f4c11)
-![image](https://github.com/Bram94/NLradar_private/assets/24604991/217b2efc-cf41-4d15-a5ff-521f3dcc7568)
-![DAN1_1305312327_z1581011V_1](https://github.com/Bram94/NLradar_private/assets/24604991/84066044-b455-47ae-b51e-36daec49fe5c)
-![KJKL_1203022243_z1mlhVeee](https://github.com/Bram94/NLradar_private/assets/24604991/59cbf4f7-3916-41e3-a8c0-25c19b38ccad)
-![Flechtdorf_V_2205201440_z123mlV3ee](https://github.com/Bram94/NLradar_private/assets/24604991/27227914-90ad-4f15-98c4-3c7e6a542595)
+![image](https://github.com/Bram94/NLradar/assets/24604991/eabaeef3-5c1d-4561-9dd8-40d5007087d6)
+![image](https://github.com/Bram94/NLradar/assets/24604991/8811126b-f541-4458-9597-34b033f20df2)
+
+
+
