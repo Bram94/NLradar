@@ -105,7 +105,8 @@ class AutomaticDownload(QThread):
         self.timer_info=('0' if minutes<10 else '')+str(minutes)+':'+('0' if seconds<10 else '')+str(seconds)
         #Emit info about the time until the next attempt to find a new file.
         while time_seconds>0 and self.running:
-            self.textbar_signal.emit()
+            if self.radar == self.crd.selected_radar:
+                self.textbar_signal.emit()
             pytime.sleep(1)
             
             time_seconds=round(self.starttime-pytime.time())
