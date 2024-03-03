@@ -210,8 +210,8 @@ class PlottingVWP(QObject):
         
     def update_hodo_clipper(self):
         sx, sy = self.pb.physical_size
-        hodo_size_px = self.hodo_size_px*self.gui.device_pixel_ratio
-        title_px = self.pb.wbounds['main'][1,0]*self.gui.device_pixel_ratio
+        hodo_size_px = self.hodo_size_px*self.gui.device_pixel_ratio()
+        title_px = self.pb.wbounds['main'][1,0]*self.gui.device_pixel_ratio()
         self.hodo_clipper.bounds = (sx-hodo_size_px, sy-hodo_size_px-title_px, hodo_size_px, hodo_size_px)
                           
     def plot_title(self):
