@@ -413,9 +413,6 @@ class CurrentData(QObject):
 
     def display_dlProgress(self, current_size, total_size, download_datetime):
         MBs_alreadydownloaded = current_size/1048576
-        if self.download_start_time == 0: 
-            self.download_start_time = pytime.time()
-            self.time_last_message = 0
         timePassed = pytime.time()-self.download_start_time             
         transferRate = MBs_alreadydownloaded/timePassed*60 if timePassed>0 else 1000 # mbytes per minute
         
@@ -425,9 +422,9 @@ class CurrentData(QObject):
             message = '%3s%%' % percent+' ('+time+'Z, '+self.radar+')'
         else:
             message = '%.1f MB' % MBs_alreadydownloaded+' ('+time+'Z, '+self.radar+')'
-        if self.cd_message_type!='Error_info' and pytime.time()-self.time_last_message > 1:
+        if self.cd_message_type!='Error_info' and pytime.time()-self.time_last_download_message > 1:
             # Emitting this info too often interferes with other activity in the GUI thread
-            self.time_last_message = pytime.time()
+            self.time_last_download_message = pytime.time()
             self.emit_info(message, 'Download_info')
                                                 
         if transferRate < self.gui.minimum_downloadspeed and timePassed > 5: # download will be slow at the beginning, hence wait 5 seconds
@@ -443,11 +440,7 @@ class CurrentData(QObject):
                 raise CustomException(self.cd_message_tooslow)
 
     def download_file(self,index,file_index): 
-        """I have slightly changed the function urlretrieve in urllib, by adding the possibility to add keyword arguments
-        to the reporthook. This allows me to give the index as argument."""
-        try:
-            self.download_start_time = 0
-            
+        try:            
             download_directory=os.path.dirname(self.download_savenames[index][file_index])
             if not os.path.exists(download_directory):
                 os.makedirs(download_directory)
@@ -527,6 +520,8 @@ class CurrentData(QObject):
         self.emit_info(f'   % ({time}Z, {self.radar})', 'Progress_info')
         self.errors_tooslow = 0
         self.errors_nottooslow = 0
+        self.download_start_time = pytime.time()
+        self.time_last_download_message = pytime.time()
         self.download_file(index,file_index)
         
         

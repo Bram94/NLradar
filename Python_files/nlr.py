@@ -120,7 +120,7 @@ plot_mode='Single'
 
 animation_duration=60
 animation_speed_minpsec=90
-animation_hold_lastframe=1
+animation_hold_lastframe=0.5
 desired_timestep_minutes=0
 max_timestep_minutes=180 # Value of 1e10 corresponds to empty input in menu widget
 maxspeed_minpsec=1e10 # Value of 1e10 corresponds to empty input in menu widget
@@ -141,7 +141,7 @@ vwp_manual_sfcobs = {}
 vwp_manual_axlim = [] 
 vvp_range_limits = [2, 25]
 vvp_height_limits = [0.1, 11.9]
-vvp_vmin_mps = 2.
+vvp_vmin_mps = 3.
 vwp_sigmamax_mps = None
 vwp_shear_layers = {1:[0,1], 2:[0,3], 3:[0,6], 4:[1,6]}
 vwp_vorticity_layers = {1:[0,0.5], 2:[0,1]}
@@ -4071,7 +4071,7 @@ def screen_DPI():
 def main():
     global device_pixel_ratio, screen_size, screen
     app = QApplication(sys.argv)
-    device_pixel_ratio = app.instance().devicePixelRatio()    
+    device_pixel_ratio = app.instance().devicePixelRatio   
     print('devicePixelRatio=',device_pixel_ratio)    
     screen_size = np.array([app.desktop().screenGeometry().width(),app.desktop().screenGeometry().height()])
     screen = app.screens()[0]

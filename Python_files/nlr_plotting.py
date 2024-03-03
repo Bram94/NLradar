@@ -461,11 +461,11 @@ class Plotting(QObject,app.Canvas):
         #shift of the panel center, that is required to ensure that the center of each panel shows the same geographical location as before. 
         #Using the first panel is necessary, because this is the only panel that always gets updated by this function.
         print(self.gui.screen_size, 'screen size')
-        print(self.gui.device_pixel_ratio, 'device pixel ratio')
+        print(self.gui.device_pixel_ratio(), 'device pixel ratio')
         print(panel_center_shift, 'panel center shift')
         for j in self.panellist:
             print(j, self.panel_bounds[j], self.panel_centers[j], 'panel bounds, centers j')
-            self.clippers[j].bounds = tuple(self.panel_bounds[j]*self.gui.device_pixel_ratio)
+            self.clippers[j].bounds = tuple(self.panel_bounds[j]*self.gui.device_pixel_ratio())
             #Shift the geographical location of the center of the panels
             self.panels_sttransforms[j].translate=self.panel_centers[j]+panel_center_shift
       
