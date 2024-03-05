@@ -13,7 +13,8 @@ from PyQt5 import QtCore,QtGui,QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+# When setting QtCore.Qt.AA_EnableHighDpiScaling to True, the variable screen.devicePixelRatio() would be needed in the plotting code
+QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, False)
 # QApplication.setAttribute(QtCore.Qt.HighDpiScaleFactorRoundingPolicy, Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
 from vispy import gloo
@@ -316,30 +317,37 @@ class ListWidgetItem(QListWidgetItem):
         descr, other_descr = qlabel.text(), qlabel_other.text()
         s = sorted([descr, other_descr])
         return s[0] == descr
+    
+previous_screen_DPI = None
+def screen_DPI(screen):
+    global previous_screen_DPI
+    try:
+        screen_DPI = screen.physicalDotsPerInch()
+    except RuntimeError:
+        # Can happen when the monitor is disconnected
+        screen_DPI = previous_screen_DPI if previous_screen_DPI else 96
+    previous_screen_DPI = screen_DPI
+    return screen_DPI
 
 class GUI(QWidget):
-    def __init__(self,parent=None):
-        global device_pixel_ratio, screen_size, screen
+    def __init__(self, parent=None):
         super(GUI, self).__init__(parent) 
         self.changing_fullscreen=False
         self.showMaximized()
         
-        self.setWindowTitle('NLradar')  
-        self.screen = screen
-        self.screen_DPI=screen_DPI #self.screen_DPI is a function! This is done to let it update automatically when the DPI changes after startup
-        #of the program.
-        self.device_pixel_ratio=device_pixel_ratio
-        self.screen_size=screen_size
-        print('screen_size=',self.screen_size)
+        self.setWindowTitle('NLradar')
+        
+        # self.screen_DPI is a function! This is done to let it update automatically when the DPI changes after startup of the program.
+        self.screen_DPI = lambda: screen_DPI(self.screen())
+        self.screen_size = lambda: np.array([self.screen().size().width(), self.screen().size().height()])
+        print('screen_size=',self.screen_size())
         print('screen_DPI=',self.screen_DPI())        
-        self.screen_physicalsize=self.screen_size/self.screen_DPI()*2.54
-        print('screen_physicalsize=',self.screen_physicalsize)
+        self.screen_physicalsize = lambda: self.screen_size()/self.screen_DPI()*2.54
+        print('screen_physicalsize=',self.screen_physicalsize())
         print('scale_fac=',self.logicalDpiX() / 96.0)
         self.ref_screen_size=np.array([1920.,1080])
         self.ref_screen_DPI=141.58475185806762
         self.ref_screen_physicalsize=self.ref_screen_size/self.ref_screen_DPI*2.54
-        self.ref_plotwidget_size = np.array([0, 0]) #Size of the plotwidget (defined below) shown in Maximized mode (not in full screen mode!).
-        #Is given its actual values in self.pb.on_resize, since they are here not yet available!
 
         
         #Variables with gui as their living class are assigned to gui here.
@@ -675,8 +683,8 @@ class GUI(QWidget):
         
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showrightclickMenu)
-                        
-        
+                         
+    
         
         
         
@@ -2278,7 +2286,7 @@ class GUI(QWidget):
         layout.addRow(QLabel('MP4 video quality (0-10)'), self.ani_qualityw)
         layout.addRow(QLabel('Create animation'), hbox2)
         layout.addRow(QLabel('As long as you keep this window open, you can recreate the animation'))
-        layout.addRow(QLabel('with different settings, or press SHIFT+CTRL+S again and start adding'))
+        layout.addRow(QLabel('with different settings, or press CTRL+SHIFT+S again and start adding'))
         layout.addRow(QLabel('more frames to the animation.'))
          
         self.ani_widget.setLayout(layout)
@@ -3002,8 +3010,8 @@ class GUI(QWidget):
         input_size=self.dimensions_mainw[dimension].text()
         number=ft.to_number(input_size)
         if not number is None:
-            self.dimensions_main[dimension]=number/self.pb.scale_physicalsize(1)
-            self.pb.wdims[0 if dimension=='width' else 1]=number
+            self.dimensions_main[dimension] = number/self.pb.scale_physicalsize(1)
+            self.pb.wdims[0 if dimension=='width' else 1] = number
             self.pb.on_resize()
             self.pb.update()
             
@@ -4057,24 +4065,10 @@ class GUI(QWidget):
              
 
 
-previous_screen_DPI = None
-def screen_DPI():
-    global previous_screen_DPI
-    try:
-        screen_DPI = screen.physicalDotsPerInch()
-    except RuntimeError:
-        # Can happen when the monitor is disconnected
-        screen_DPI = previous_screen_DPI if previous_screen_DPI else 96
-    previous_screen_DPI = screen_DPI
-    return screen_DPI  
+
 
 def main():
-    global device_pixel_ratio, screen_size, screen
     app = QApplication(sys.argv)
-    device_pixel_ratio = app.instance().devicePixelRatio   
-    print('devicePixelRatio=',device_pixel_ratio)    
-    screen_size = np.array([app.desktop().screenGeometry().width(),app.desktop().screenGeometry().height()])
-    screen = app.screens()[0]
     gui = GUI()
     
     print(app.exec_())
@@ -4085,8 +4079,3 @@ def main():
         
 if __name__ == '__main__':
     main()
-    # import trace
-    # t = trace.Trace()
-    # t.run('main()')
-    # r = t.results()
-    # r.write_results(show_missing=True, coverdir="./trace")

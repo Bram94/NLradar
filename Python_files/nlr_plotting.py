@@ -47,7 +47,9 @@ class Plotting(QObject,app.Canvas):
             # Is used to initialise this class without getting issues below with references to other classes that at this point don't exist yet.
             return
         super(Plotting, self).__init__()
-        app.Canvas.__init__(self, dpi=gui_class.screen_DPI()) #It is important to set DPI manually, since at Linux vispy
+        self.start_dpi = gui_class.screen_DPI()
+        self.start_screen_size = gui_class.screen_size()
+        app.Canvas.__init__(self, dpi=self.start_dpi) #It is important to set DPI manually, since at Linux vispy
         #is not able to determine it correctly automatically!
         self.gui=gui_class
         
@@ -63,7 +65,7 @@ class Plotting(QObject,app.Canvas):
         self.mt = mt.MapTiles(self)
         
         #Startup settings
-        self.wdims=np.array([self.scale_physicalsize(self.gui.dimensions_main['width']),self.scale_physicalsize(self.gui.dimensions_main['height'])]) 
+        self.wdims = np.array([self.gui.dimensions_main['width'], self.gui.dimensions_main['height']])
         #First value gives x dimension of the 'left' and 'right' widgets. Second value gives y dimension of the 'top' and 'bottom' widgets.
         #In cm.
         
@@ -163,6 +165,10 @@ class Plotting(QObject,app.Canvas):
         self.visuals_widgets['right']=['cbar'+str(j) for j in range(5,10)]+self.visuals_widgets['left'][-3:]
         self.visuals_widgets['bottom']=self.visuals_widgets['top']=['titles']
         self.visuals_widgets['main']=['background_map']+self.visuals_panels+['panel_borders']
+        
+        self.font_sizes = {'text_hor1':'self.gui.gridheightrings_fontsize', 'text_vert1':'self.gui.gridheightrings_fontsize', 
+                           'titles':"self.gui.fontsizes_main['titles']", 'cbars_ticks':"self.gui.fontsizes_main['cbars_ticks']", 
+                           'cbars_labels':"self.gui.fontsizes_main['cbars_labels']"}
                 
         
         # set self.map_data and self.map_bounds
@@ -241,13 +247,13 @@ class Plotting(QObject,app.Canvas):
             self.visuals['map_lines'][j].transform = STTransform(scale=(1,-1))*self.map_transforms['aeqd']
             self.visuals['gh_lines'][j] = visuals.LineVisual(pos=None,connect=None,color=None,method='gl',antialias=self.gui.lines_antialias)
             
-            self.visuals['text_hor1'][j] = visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color=np.ones(4),font_size=self.scale_pointsize(self.gui.gridheightrings_fontsize),face='OpenSans-Bold',anchor_x='center',anchor_y='center')
+            self.visuals['text_hor1'][j] = visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color=np.ones(4),font_size=eval(self.font_sizes['text_hor1']),face='OpenSans-Bold',anchor_x='center',anchor_y='center')
             self.visuals['text_hor2'][j] = self.visuals['text_hor1'][j].view()
             self.visuals['text_hor1'][j].attach(self.text_hor_bottom_colorfilter, view=self.visuals['text_hor1'][j])
             self.visuals['text_hor1'][j].attach(self.text_hor_top_colorfilter, view=self.visuals['text_hor2'][j])
             if j in self.panels_vertical_ghtext:
                 #For now only created for panel 0 and 5, because others don't need vertically oriented text atm.
-                self.visuals['text_vert1'][j] = visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color=np.ones(4),font_size=self.scale_pointsize(self.gui.gridheightrings_fontsize),face='OpenSans-Bold',rotation=90,anchor_x='center',anchor_y='center')
+                self.visuals['text_vert1'][j] = visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color=np.ones(4),font_size=eval(self.font_sizes['text_vert1']),face='OpenSans-Bold',rotation=90,anchor_x='center',anchor_y='center')
                 self.visuals['text_vert2'][j] = self.visuals['text_vert1'][j].view()
                 self.visuals['text_vert1'][j].attach(self.text_hor_bottom_colorfilter, view=self.visuals['text_vert1'][j])
                 self.visuals['text_vert1'][j].attach(self.text_hor_top_colorfilter, view=self.visuals['text_vert2'][j])
@@ -262,7 +268,7 @@ class Plotting(QObject,app.Canvas):
             
         self.panel_borders_width = self.scale_pixelsize(1)
         self.visuals['panel_borders']=visuals.LineVisual(color=self.gui.panelbdscolor/255.,method='gl',width=self.panel_borders_width)
-        self.visuals['titles']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',bold=True,font_size=self.scale_pointsize(self.gui.fontsizes_main['titles']),face='OpenSans',anchor_x='center',anchor_y='top')
+        self.visuals['titles']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',bold=True,font_size=eval(self.font_sizes['titles']),face='OpenSans',anchor_x='center',anchor_y='top')
         
         for j in range(self.max_panels):
             self.visuals['cbar'+str(j)]=visuals.ColorBarVisual(pos=[0,0],size=[1,1],cmap=self.cm2[self.crd.products[j]],orientation='right',clim=[-1,1],label_color=(0,0,0,0),border_width=self.scale_pixelsize(1))
@@ -271,18 +277,18 @@ class Plotting(QObject,app.Canvas):
             #Set the visibility of the TextVisuals for the ticks and the label to False, to prevent that they are drawn. This is because I don't use them.
             self.visuals['cbar'+str(j)]._label.visible=False
                     
-        self.visuals['cbars_ticks']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',font_size=self.scale_pointsize(self.gui.fontsizes_main['cbars_ticks']),face='OpenSans',anchor_x='center',anchor_y='center')
+        self.visuals['cbars_ticks']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',font_size=eval(self.font_sizes['cbars_ticks']),face='OpenSans',anchor_x='center',anchor_y='center')
         self.visuals['cbars_reflines']=visuals.LineVisual(pos=None,color='black',method='gl',connect=None,width=self.scale_pixelsize(1))
-        self.visuals['cbars_labels']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',font_size=self.scale_pointsize(self.gui.fontsizes_main['cbars_labels']),bold=True,face='OpenSans',anchor_x='center',anchor_y='top')
+        self.visuals['cbars_labels']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',font_size=eval(self.font_sizes['cbars_labels']),bold=True,face='OpenSans',anchor_x='center',anchor_y='top')
                 
         self.panel_bounds={}
         self.panel_corners={}
         self.panel_centers={j:np.array([0,0]) for j in range(self.max_panels)} #In screen coordinates
         self.clippers={j:Clipper() for j in range(self.max_panels)}
         #STTransforms for handling positioning of widgets in panels, and panning and zooming.
-        # Use (approximately) the base panel y range on start-up. It is approximately, because 0.9*self.gui.screen_size is used instead of
+        # Use (approximately) the base panel y range on start-up. It is approximately, because 0.9*self.gui.screen_size() is used instead of
         # self.wcenter['main'], because the latter isn't up-to-date yet at this point in the initialisation process
-        self.panels_sttransforms={j:STTransform(scale=1/self.base_range*0.5*0.9*self.gui.screen_size[1]*np.array([1, 1])) for j in range(self.max_panels)}
+        self.panels_sttransforms={j:STTransform(scale=1/self.base_range*0.5*0.9*self.gui.screen_size()[1]*np.array([1, 1])) for j in range(self.max_panels)}
         
         self.set_panel_sttransforms_and_clippers()
         self.set_panel_borders()  
@@ -329,18 +335,16 @@ class Plotting(QObject,app.Canvas):
         
     def physical_size_cm(self):
         #Physical size of the vispy canvas
-        return np.array(self.size)/(self.gui.screen_DPI())*2.54
+        return np.array(self.physical_size)/(self.gui.screen_DPI())*2.54
     
     def scale_physicalsize(self,size):
-        # return size * np.min(self.gui.screen_physicalsize/self.gui.ref_screen_physicalsize)
-        return size * self.gui.screen_physicalsize[1]/self.gui.ref_screen_physicalsize[1]
+        return size * self.gui.screen_physicalsize()[1]/self.gui.ref_screen_physicalsize[1]
         
     def scale_pointsize(self,size):
         return self.scale_physicalsize(size)
         
     def scale_pixelsize(self,size):
-        # return size * np.min(self.gui.screen_size/self.gui.ref_screen_size)
-        return size*self.gui.screen_size[1]/self.gui.ref_screen_size[1]
+        return size*self.gui.screen_size()[1]/self.gui.ref_screen_size[1]
 
     def scale(self,r,array):
         array=np.asarray(array)
@@ -372,12 +376,13 @@ class Plotting(QObject,app.Canvas):
         Bounds are given in the format [[xmin,xmax],[ymin,ymax]]
         Corner positions start with the top left corner, and are listed in counterclockwise order.
         """
-        panels_width = self.physical_size_cm()[0] - 2*self.wdims[0]
+        wdims = self.scale_physicalsize(self.wdims)
+        panels_width = self.physical_size_cm()[0] - 2*wdims[0]
         if self.gui.show_vwp: 
-            panels_width = self.physical_size_cm()[0]*(1-self.vwp_relxdim) - 2*self.wdims[0]
+            panels_width = self.physical_size_cm()[0]*(1-self.vwp_relxdim) - 2*wdims[0]
         rel_main_bounds = []
-        rel_main_bounds += [[self.wdims[0], panels_width+self.wdims[0]]]
-        rel_main_bounds += [[self.wdims[1], self.physical_size_cm()[1]-self.wdims[1]]]
+        rel_main_bounds += [[wdims[0], panels_width+wdims[0]]]
+        rel_main_bounds += [[wdims[1], self.physical_size_cm()[1]-wdims[1]]]
         rel_main_bounds = np.array(rel_main_bounds) / np.reshape(self.physical_size_cm(),(2,1))
         b=rel_main_bounds
         
@@ -428,9 +433,7 @@ class Plotting(QObject,app.Canvas):
             topleft=self.wpos['main'][0]+size_panel*np.array([col,row]) #In screen coordinates
             bottomright=topleft+size_panel            
             
-            print('size', self.size)
             b=np.array([topleft[0],self.size[1]-bottomright[1],size_panel[0],size_panel[1]])
-            print(b)
             # (x, y, w, h), with y measured with upward pointing y axis, because that is necessary for the clipper! Screen coordinates are measured with 
             #the y axis pointing downwards.
             self.panel_bounds[j]=b            
@@ -460,30 +463,44 @@ class Plotting(QObject,app.Canvas):
         panel_center_shift=np.array(self.panels_sttransforms[0].translate[:2])-self.panel_centers_before[0] #Always use the first panel for calculating the
         #shift of the panel center, that is required to ensure that the center of each panel shows the same geographical location as before. 
         #Using the first panel is necessary, because this is the only panel that always gets updated by this function.
-        print(self.gui.screen_size, 'screen size')
-        print(self.gui.device_pixel_ratio(), 'device pixel ratio')
-        print(panel_center_shift, 'panel center shift')
         for j in self.panellist:
-            print(j, self.panel_bounds[j], self.panel_centers[j], 'panel bounds, centers j')
-            self.clippers[j].bounds = tuple(self.panel_bounds[j]*self.gui.device_pixel_ratio())
+            self.clippers[j].bounds = tuple(self.panel_bounds[j])
             #Shift the geographical location of the center of the panels
             self.panels_sttransforms[j].translate=self.panel_centers[j]+panel_center_shift
       
         
     def calculate_vwp_relxdim(self):
-        f = self.gui.plotwidget.height()/self.gui.plotwidget.width() / 0.5078206465067779 # Reference value
+        f = self.size[1]/self.size[0] / 0.5136825645035183 # Reference value
         self.vwp_relxdim = 0.255*f #The fractional width of the VWP plot relative to that of the whole canvas
             
-    def on_resize(self, event=None):           
+    def on_resize(self, event=None):      
+        self.dpi = self.gui.screen_DPI()
+        
+        # Set canvas viewport and reconfigure visual transforms to match.
+        vp = (0, 0, self.physical_size[0], self.physical_size[1])
+        self.context.set_viewport(*vp)
+        
+        for j in self.visuals_order:
+            if j in self.visuals_global:
+                self.visuals[j].transforms.configure(canvas=self, viewport=vp)
+                if hasattr(self.visuals[j], 'font_size'):
+                    self.visuals[j].font_size = self.scale_pointsize(eval(self.font_sizes[j]))
+            else:
+                for visual in self.visuals[j].values():
+                    visual.transforms.configure(canvas=self, viewport=vp)
+                    if hasattr(visual, 'font_size'):
+                        visual.font_size = self.scale_pointsize(eval(self.font_sizes[j]))
+        
         #First resize the 5 widgets in which the canvas is divided, and then resize the visuals that reside in them.
-        if not self.gui.fullscreen and self.gui.plotwidget.width() > self.gui.ref_plotwidget_size[0]:
-            self.gui.ref_plotwidget_size = np.array([self.gui.plotwidget.width(), self.gui.plotwidget.height()])
         self.calculate_vwp_relxdim()
         self.set_widget_sizes_and_bounds()
         self.set_panel_sttransforms_and_clippers()
         self.set_panel_borders()
-
+                
         self.set_cbars(resize=True, set_cmaps=False)
+        
+        self.set_maplineproperties(self.panellist)
+        self.set_radarmarkers_data()
     
         if self.firstplot_performed:
             if 'grid' in self.gui.lines_show: self.set_grid()
@@ -494,18 +511,6 @@ class Plotting(QObject,app.Canvas):
         
         self.visuals['background_map'].transform.scale=self.wsize['main']
         self.visuals['background_map'].transform.translate=self.wcenter['main']
-                    
-        # Set canvas viewport and reconfigure visual transforms to match.
-        vp = (0, 0, self.physical_size[0], self.physical_size[1])
-        self.context.set_viewport(*vp)
-        
-        for j in self.visuals_order:
-            if j in self.visuals_global:
-                self.visuals[j].transforms.configure(canvas=self, viewport=vp)
-            else:
-                for i in range(self.max_panels):
-                    if not i in self.visuals[j]: continue
-                    self.visuals[j][i].transforms.configure(canvas=self, viewport=vp)
                     
         if self.gui.show_vwp:
             self.vwp.on_resize()
@@ -1479,7 +1484,7 @@ class Plotting(QObject,app.Canvas):
         
         
     def set_titles(self):
-        relwidth = self.wsize['main'][0] / self.gui.ref_plotwidget_size[0]
+        relwidth = self.wsize['main'][0] / self.gui.screen_size()[0]
         title_top, title_bottom, paneltitles=bg.get_titles(relwidth,self.gui.fontsizes_main['titles'],self.crd.radar,self.panels,self.panellist,self.panelnumber_to_plotnumber,self.plotnumber_to_panelnumber,self.data_empty,self.data_isold,self.data_attr['product'],self.crd.date,self.data_attr['scantime'],self.data_attr['scanangle'],self.crd.using_unfilteredproduct,self.crd.using_verticalpolarization,self.crd.apply_dealiasing,self.productunits,self.gui.stormmotion,self.gui.PP_parameter_values,self.gui.PP_parameters_panels,self.gui.show_vwp)
         
         titles_text_top=[title_top]+[paneltitles[j] for j in paneltitles if j<5 or self.panels==2]
@@ -1849,8 +1854,8 @@ class Plotting(QObject,app.Canvas):
           
     def set_grid(self):
         self.get_corners()
-        physical_size_cm_main = self.physical_size_cm() - 2*self.scale_physicalsize(np.array([self.gui.dimensions_main['width'], self.gui.dimensions_main['height']]))
-        rel_xdim = self.gui.plotwidget.width()/self.gui.ref_plotwidget_size[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
+        physical_size_cm_main = self.physical_size_cm() - 2*self.scale_physicalsize(self.wdims)
+        rel_xdim = self.physical_size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
         self.gridlines_vertices, self.gridlines_connect, self.gridlines_text_hor_pos, self.gridlines_text_hor, self.gridlines_text_vert_pos, self.gridlines_text_vert =\
             bg.determine_gridpos(physical_size_cm_main,rel_xdim,self.corners,self.visuals['text_hor1'][0].font_size,self.panels,self.panellist,self.nrows,self.ncolumns,self.gui.show_vwp)
         self.update_combined_lineproperties(self.panellist,changing_grid=True)
@@ -1913,7 +1918,7 @@ class Plotting(QObject,app.Canvas):
         
         self.heights={}; self.radii={}
         if len(panellist_determine_heightrings):
-            rel_xdim = self.gui.plotwidget.width()/self.gui.ref_plotwidget_size[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
+            rel_xdim = self.physical_size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
             self.update_heightrings_scanangles()
             angle1 = self.dsg.scanangle('z', 1, 0)
             scanangles = np.array([self.heightrings_scanangles[j] if j in panellist_no_pp else angle1 for j in panellist_determine_heightrings])

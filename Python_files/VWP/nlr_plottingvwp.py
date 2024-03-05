@@ -61,7 +61,11 @@ class PlottingVWP(QObject):
         self.visuals_hodo = ['hodo_axes+circles','hodo_sigmacircles','hodo_line','hodo_line_legendtext','hodo_points','hodo_axtext','hodo_hmarkers','hodo_htext','hodo_sm']
         self.visuals_bottom = ['cbar_streamwise_vorticity_sign','cbar_filled_sectors','general_text_anchorx=left','general_text_anchorx=right', 'general_text_anchorx=center', 'legend_markers', 'legend_labels']
         
-        self.visuals['title'] = visuals.TextVisual(bold=True, font_size=self.pb.scale_pointsize(self.gui.fontsizes_main['titles']), anchor_y = 'top')
+        self.font_sizes = {'title':"self.gui.fontsizes_main['titles']", 'hodo_line_legendtext':'8.5', 'hodo_axtext':'8', 'hodo_htext':'6', 
+                           'general_text_anchorx=left':'8.5', 'general_text_anchorx=right':'8.5', 'general_text_anchorx=center':'8.5',
+                           'legend_labels':'9'}
+        
+        self.visuals['title'] = visuals.TextVisual(bold=True, font_size=eval(self.font_sizes['title']), anchor_y = 'top')
         self.visuals['hodo_axes+circles'] = visuals.LineVisual(pos = None, color = 'black', width = self.pb.scale_pixelsize(1))
         self.visuals['hodo_axes+circles'].antialias = True
         self.visuals['hodo_sigmacircles'] = visuals.MarkersVisual()
@@ -74,17 +78,17 @@ class PlottingVWP(QObject):
         for width in self.hodo_line_widths:        
             self.visuals['hodo_line'] += [visuals.LineVisual(pos=None, color=None, width=width, connect='segments', antialias=True)]
             
-        self.visuals['hodo_line_legendtext'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(8.5), color = 'black')
+        self.visuals['hodo_line_legendtext'] = visuals.TextVisual(font_size = eval(self.font_sizes['hodo_line_legendtext']), color = 'black')
         self.visuals['hodo_points'] = visuals.MarkersVisual()
-        self.visuals['hodo_axtext'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(8), color = np.array([0.5,0.5,0.5,1]))
+        self.visuals['hodo_axtext'] = visuals.TextVisual(font_size = eval(self.font_sizes['hodo_axtext']), color = np.array([0.5,0.5,0.5,1]))
         self.visuals['hodo_hmarkers'] = visuals.MarkersVisual()
-        self.visuals['hodo_htext'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(6), bold = True, color = 'white')
+        self.visuals['hodo_htext'] = visuals.TextVisual(font_size = eval(self.font_sizes['hodo_htext']), bold = True, color = 'white')
         self.visuals['hodo_sm'] = visuals.MarkersVisual()
-        self.visuals['general_text_anchorx=left'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(8.5), color = 'black', anchor_x = 'left', anchor_y = 'top')
-        self.visuals['general_text_anchorx=right'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(8.5), color = 'black', anchor_x = 'right', anchor_y = 'top')
-        self.visuals['general_text_anchorx=center'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(8.5), color = 'black', anchor_x = 'center', anchor_y = 'top')
+        self.visuals['general_text_anchorx=left'] = visuals.TextVisual(font_size = eval(self.font_sizes['general_text_anchorx=left']), color = 'black', anchor_x = 'left', anchor_y = 'top')
+        self.visuals['general_text_anchorx=right'] = visuals.TextVisual(font_size = eval(self.font_sizes['general_text_anchorx=right']), color = 'black', anchor_x = 'right', anchor_y = 'top')
+        self.visuals['general_text_anchorx=center'] = visuals.TextVisual(font_size = eval(self.font_sizes['general_text_anchorx=center']), color = 'black', anchor_x = 'center', anchor_y = 'top')
         self.visuals['legend_markers'] = visuals.MarkersVisual()
-        self.visuals['legend_labels'] = visuals.TextVisual(font_size = self.pb.scale_pointsize(9), color = 'black', anchor_x = 'left', anchor_y = 'center')
+        self.visuals['legend_labels'] = visuals.TextVisual(font_size = eval(self.font_sizes['legend_labels']), color = 'black', anchor_x = 'left', anchor_y = 'center')
         
         start_color = ft.interpolate_2colors(np.array([1,0,0]), np.array([0,0,1]), self.vvp_min_frac_sectors_filled)
         self.cm_filled_sectors = color.Colormap([start_color,[0,0,1]], controls=[0,1], interpolation='linear')
@@ -137,10 +141,8 @@ class PlottingVWP(QObject):
     def on_resize(self, event=None):
         self.hodo_size_px = self.pb.vwp_relxdim*self.pb.size[0]
         self.set_bottom_sttransform()
-        if self.firstplot_performed:
-            self.plot_title()
-            self.set_hodo_sttransform()
-            self.update_hodo_clipper()
+        
+        self.set_newdata()
         
         # Set canvas viewport and reconfigure visual transforms to match.
         vp = (0, 0, self.pb.physical_size[0], self.pb.physical_size[1])
@@ -148,8 +150,12 @@ class PlottingVWP(QObject):
             if isinstance(self.visuals[j], list):
                 for visual in self.visuals[j]:
                     visual.transforms.configure(canvas=self.pb, viewport=vp)
+                    if hasattr(visual, 'font_size'):
+                        visual.font_size = self.pb.scale_pointsize(eval(self.font_sizes[j]))
             else:
                 self.visuals[j].transforms.configure(canvas=self.pb, viewport=vp)
+                if hasattr(self.visuals[j], 'font_size'):
+                    self.visuals[j].font_size = self.pb.scale_pointsize(eval(self.font_sizes[j]))
                                 
     def on_draw(self):
         visuals_to_plot = self.visuals_order
@@ -164,9 +170,7 @@ class PlottingVWP(QObject):
                 self.visuals[j].draw()
                 
     def set_bottom_sttransform(self):
-        #The area for the bottom widgets is kept fixed in size when switching to full screen mode, which is realized by this scale factor.
-        scale_fac = (self.gui.ref_plotwidget_size[1]-self.hodo_size_px)/(self.gui.plotwidget.height()-self.hodo_size_px)
-        bottom_ypx = (self.pb.size[1]-self.hodo_size_px-self.pb.wbounds['main'][1,0]) * scale_fac
+        bottom_ypx = self.pb.size[1]-self.hodo_size_px-self.pb.wbounds['main'][1,0]
         title_px = self.pb.wbounds['main'][1,0]
         self.bottom_sttransform.scale = (self.pb.vwp_relxdim*self.pb.size[0], bottom_ypx)
         self.bottom_sttransform.translate = ((1-self.pb.vwp_relxdim)*self.pb.size[0], self.hodo_size_px+title_px)
@@ -210,9 +214,8 @@ class PlottingVWP(QObject):
         
     def update_hodo_clipper(self):
         sx, sy = self.pb.physical_size
-        hodo_size_px = self.hodo_size_px*self.gui.device_pixel_ratio()
-        title_px = self.pb.wbounds['main'][1,0]*self.gui.device_pixel_ratio()
-        self.hodo_clipper.bounds = (sx-hodo_size_px, sy-hodo_size_px-title_px, hodo_size_px, hodo_size_px)
+        title_px = self.pb.wbounds['main'][1,0]
+        self.hodo_clipper.bounds = (sx-self.hodo_size_px, sy-self.hodo_size_px-title_px, self.hodo_size_px, self.hodo_size_px)
                           
     def plot_title(self):
         self.visuals['title'].text = 'Radar VWP ('+self.pb.productunits['v']+')'+'      '+self.volume_starttime+'-'+self.volume_endtime+'Z'
