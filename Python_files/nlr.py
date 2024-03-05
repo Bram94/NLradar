@@ -3011,7 +3011,7 @@ class GUI(QWidget):
         number=ft.to_number(input_size)
         if not number is None:
             self.dimensions_main[dimension] = number/self.pb.scale_physicalsize(1)
-            self.pb.wdims[0 if dimension=='width' else 1] = number
+            self.pb.wdims[0 if dimension=='width' else 1] = self.dimensions_main[dimension]
             self.pb.on_resize()
             self.pb.update()
             

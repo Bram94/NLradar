@@ -139,9 +139,9 @@ class PlottingVWP(QObject):
         
                 
     def on_resize(self, event=None):
+        # Update all visuals in order to use the new canvas dimensions and/or resolution.
         self.hodo_size_px = self.pb.vwp_relxdim*self.pb.size[0]
         self.set_bottom_sttransform()
-        
         self.set_newdata()
         
         # Set canvas viewport and reconfigure visual transforms to match.

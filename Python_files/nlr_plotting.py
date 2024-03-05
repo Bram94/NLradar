@@ -266,8 +266,8 @@ class Plotting(QObject,app.Canvas):
                 self.visuals['radar_markers'][j] = self.visuals['radar_markers'][0].view()
             self.visuals['sm_pos_markers'][j].visible=False
             
-        self.panel_borders_width = self.scale_pixelsize(1)
-        self.visuals['panel_borders']=visuals.LineVisual(color=self.gui.panelbdscolor/255.,method='gl',width=self.panel_borders_width)
+        self.panel_borders_width = 1
+        self.visuals['panel_borders']=visuals.LineVisual(color=self.gui.panelbdscolor/255.,method='gl',width=self.scale_pixelsize(self.panel_borders_width))
         self.visuals['titles']=visuals.TextVisual(text=startup_string,pos=[-1e6,-1e6],color='black',bold=True,font_size=eval(self.font_sizes['titles']),face='OpenSans',anchor_x='center',anchor_y='top')
         
         for j in range(self.max_panels):
@@ -491,23 +491,17 @@ class Plotting(QObject,app.Canvas):
                     if hasattr(visual, 'font_size'):
                         visual.font_size = self.scale_pointsize(eval(self.font_sizes[j]))
         
-        #First resize the 5 widgets in which the canvas is divided, and then resize the visuals that reside in them.
+        # First resize the 5 widgets in which the canvas is divided, and then resize the visuals that reside in them.
         self.calculate_vwp_relxdim()
         self.set_widget_sizes_and_bounds()
         self.set_panel_sttransforms_and_clippers()
         self.set_panel_borders()
-                
-        self.set_cbars(resize=True, set_cmaps=False)
         
+        # Now update all visuals in order to use the new canvas dimensions and/or resolution.
+        self.set_cbars(resize=True, set_cmaps=False)
         self.set_maplineproperties(self.panellist)
         self.set_radarmarkers_data()
-    
-        if self.firstplot_performed:
-            if 'grid' in self.gui.lines_show: self.set_grid()
-            if 'heightrings' in self.gui.lines_show: self.set_heightrings(self.panellist)
-            if any([j in self.gui.lines_show for j in ('grid','heightrings')]):
-                self.set_ghlineproperties(self.panellist); self.set_ghtextproperties(self.panellist)
-            self.set_titles()
+        self.set_newdata(self.panellist)
         
         self.visuals['background_map'].transform.scale=self.wsize['main']
         self.visuals['background_map'].transform.translate=self.wcenter['main']
@@ -1491,7 +1485,7 @@ class Plotting(QObject,app.Canvas):
         titles_text_bottom=[title_bottom]+[paneltitles[j] for j in paneltitles if j>=5 and self.panels!=2]
         
         dy_bottom = dy_top = self.scale_pixelsize(2)
-        dy_bottom += 0.5*self.panel_borders_width # For the bottom panel borders
+        dy_bottom += 0.5*self.scale_pixelsize(self.panel_borders_width) # For the bottom panel borders
         titles_top_ypos = self.wpos['top'][0,1]+dy_top; titles_bottom_ypos = self.wpos['bottom'][0,1]+dy_bottom
         xleft=self.wpos['top'][0,0]; xright=self.wpos['top'][-1,0]
         xdim_1p=(xright-xleft)/self.ncolumns
@@ -1787,6 +1781,7 @@ class Plotting(QObject,app.Canvas):
         self.visuals['cbar'+str(j)].cmap=self.cm2[product]
         self.visuals['cbar'+str(j)].pos=cbar_pos
         self.visuals['cbar'+str(j)].size=cbar_size[::-1] #Size should have format (major_axis, minor_axis)
+        self.visuals['cbar'+str(j)].border_width = self.scale_pixelsize(1) # Setting border_width is important for when screen properties changes
                 
         dvt = [k if not k in self.tick_map[product] else self.tick_map[product][k] for k in dvt]
         self.cbars_ticks[j]=[str(ft.rifdot0(ft.rndec(k,3))) for k in (dvt if product!='r' else np.power(10,dvt))]
@@ -1815,7 +1810,7 @@ class Plotting(QObject,app.Canvas):
         cbars_labels_pos=np.concatenate(list(self.cbars_labels_pos.values()))
 
         self.visuals['cbars_ticks'].text=cbars_ticks; self.visuals['cbars_ticks'].pos=cbars_ticks_pos
-        self.visuals['cbars_reflines'].set_data(pos=cbars_reflines_pos,connect=cbars_reflines_connect)
+        self.visuals['cbars_reflines'].set_data(pos=cbars_reflines_pos,connect=cbars_reflines_connect,width=self.scale_pixelsize(1))
         self.visuals['cbars_labels'].text=cbars_labels; self.visuals['cbars_labels'].pos=cbars_labels_pos
 
     def set_cbars(self,resize=False,set_cmaps=True):   
