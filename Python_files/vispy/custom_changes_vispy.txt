@@ -1,0 +1,55 @@
+Modifications in order to make use of visual views possible:
+- _prepare_transforms in visuals\image.py: method = view.__dict__.get('_method_used', None), because
+during the init stage the view has no attribute _method_used
+- Changed all occurrences of self._program into self.shared_program in visuals\line\line.py.
+
+2020-05-25:
+- systime.clock() + START_TIME -> systime.time() in function winTime + removal of lines in
+if-statement around line 35 in util/ptime.py
+- qtmod -> int(qtmod) in function QtBaseCanvasBackend._modifiers in app/backends/_qt.py
+Resolves a warning.
+- ('a_size', np.float32, 1) -> ('a_size', np.float32) in visuals/markers.py at line 563. Resolves
+#a warning. Same in visuals\line\line.py:390 and visuals\line\arrow.py:52.
+
+2020-06-03:
+- I added support for escape characters in TextVisuals from https://github.com/mkkb/vispy/blob/master/vispy/visuals/text/text.py. 
+- In this updated text.py script I swapped the effects of anchor_y = 'bottom' and anchor_y = 'top', since these were reversed in mkkb's update and I don't agree with that.
+
+2022-11-22:
+Modifications to allow for other OpenSans variations than just bold and italic. Face can now also describe the full font variant instead of just the face (minus the .ttf extension):
+- line 33 in D:/NLradar/Python_files/vispy/util/fonts/_freetype.py -> if any([face.startswith(j) for j in _vispy_fonts]):
+- the following function in D:/NLradar/Python_files/vispy/util/fonts/_vispy_fonts.py:
+def _get_vispy_font_filename(face, bold, italic):
+    """Fetch a remote vispy font"""
+    name = face
+    if not '-' in face:
+        name += '-'
+        name += 'Regular' if not bold and not italic else ''
+        name += 'Bold' if bold else ''
+        name += 'Italic' if italic else ''
+    name += '.ttf'
+    return op.join(op.dirname(__file__), 'data', name)
+
+2023-10-23:
+Added lines in vispy/visuals/line/line.py, _prepare_draw function:
+self._parent._changed['pos'] = False
+self._parent._changed['color'] = False
+self._parent._changed['connect'] = False
+2023-10-28:
+Added lines in vispy/visuals/text/text.py, _prepare_draw function:
+need_update = self._vertices is None or self._pos_changed
+if need_update:
+    transforms = self.transforms...
+
+2024-03-05:
+Updated vispy/ext/cocoapy.py to latest version from github: https://github.com/vispy/vispy/blob/main/vispy/ext/cocoapy.py.
+This should fix issues on MacOS.
+
+
+
+
+
+visuals\image.py; _prepare_transforms: 
+- method = view._method_used if hasattr(view, '_method_used') else None
+visuals\markers.py; _prepare_transforms: 
+- scaling = view._scaling if hasattr(view, '_scaling') and view._scaling != "fixed" else "scene"
