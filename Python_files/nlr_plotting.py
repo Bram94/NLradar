@@ -501,7 +501,8 @@ class Plotting(QObject,app.Canvas):
         self.set_cbars(resize=True, set_cmaps=False)
         self.set_maplineproperties(self.panellist)
         self.set_radarmarkers_data()
-        self.set_newdata(self.panellist)
+        if self.firstplot_performed:
+            self.set_newdata(self.panellist)
         
         self.visuals['background_map'].transform.scale=self.wsize['main']
         self.visuals['background_map'].transform.translate=self.wcenter['main']

@@ -1322,7 +1322,7 @@ def determine_gridpos(physical_size_cm_main,rel_xdim,corners,text_fontsize,panel
     max_N=7/ncolumns*rel_xdim
     if N==max_N: gridspacing=gs[0]
     elif N<max_N:
-        while N<max_N:
+        while N < max_N and gs.min() > 0:
             for j in range(len(gs)):
                 gs_try=gs[j]
                 N=xdim/gs_try
@@ -1409,17 +1409,18 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
     hranges_old = {p: hranges[p] for p in hranges}
     for j, p in enumerate(panellist):
         p = panellist[j]
-        no_heightrings = scanangles[j] == 90. or scanangles[j] < 0.
-        if no_heightrings:
-            heights[p] = hranges[p] = np.array([])
-            continue
         
         dmin = 0.035*x_full
         h_min_text = ft.c1dec(ft.var1_to_var2(min_r+dmin, scanangles[j], 'gr+theta->h'))
         h_max_text = ft.f1dec(ft.var1_to_var2(max_r-dmin, scanangles[j], 'gr+theta->h'))
         r_min_text = bool(min_r > 0.)*ft.var1_to_var2(h_min_text, scanangles[j], 'h+theta->gr')
         r_max_text = ft.var1_to_var2(h_max_text, scanangles[j], 'h+theta->gr')
-        
+
+        no_heightrings = scanangles[j] == 90. or scanangles[j] < 0. or h_max_text > 100
+        if no_heightrings:
+            heights[p] = hranges[p] = np.array([])
+            continue
+                
         N_min = 2 if h_max_text-h_min_text < 4 else 3
         N = min([6, max([N_min, int(round((r_max_text-r_min_text)/dr_desired))+int(min_r > 0.)])])
         r_text = np.linspace(r_max_text, r_min_text, N, endpoint=min_r > 0.)[::-1]
