@@ -1043,28 +1043,31 @@ class Plotting(QObject,app.Canvas):
                 continue
         self.update()
             
-    def set_radarmarkers_data(self): #Radar is the radar that is currently selected
-        self.radarmarkers_facecolors=[]
+    def set_radarmarkers_data(self):
+        # Selected radar should be drawn last, in order to always plot it on top.
+        face_colors = [self.gui.radar_colors['Automatic download + selected' if self.crd.selected_radar in self.gui.radars_automatic_download else 'Selected']]
+        radars = [self.crd.selected_radar]
+        for j in self.gui.radars_automatic_download:
+            if j != self.crd.selected_radar:
+                face_colors.append(self.gui.radar_colors['Automatic download'])
+                radars.append(j)
         for j in gv.radars_all:
-            if j in self.gui.radars_automatic_download:
-                if j==self.crd.selected_radar:
-                    self.radarmarkers_facecolors+=[self.gui.radar_colors['Automatic download + selected']]
-                else: self.radarmarkers_facecolors+=[self.gui.radar_colors['Automatic download']]
-            else:
-                if j==self.crd.selected_radar:
-                    self.radarmarkers_facecolors+=[self.gui.radar_colors['Selected']]
-                else: self.radarmarkers_facecolors+=[self.gui.radar_colors['Default']]
-                
+            if not j in self.gui.radars_automatic_download+[self.crd.selected_radar]:
+                face_colors.append(self.gui.radar_colors['Default'])
+                radars.append(j)
+        coords_xy = []
+        for i,j in enumerate(radars):
             if j in self.gui.radars_download_older_data:
                 #Blend the color with black, to get a darker color that indicates that download of older data is being performed.
-                self.radarmarkers_facecolors[-1]=ft.blend_rgba_colors_1D(np.append(self.radarmarkers_facecolors[-1],0),np.array([64,64,64,0]),0.5)[:3]
-                
-        self.radarmarkers_facecolors=np.array(self.radarmarkers_facecolors)
+                face_colors[i] = ft.blend_rgba_colors_1D(np.append(face_colors[i],0), np.array([64,64,64,0]), 0.5)[:3]
+            coords_xy.append(self.radarcoords_xy[gv.radars_all.index(j)])
+        # Reverse array entries in order to put selected radar last            
+        coords_xy, face_colors = np.array(coords_xy)[::-1], np.array(face_colors)[::-1]
         
         # Use slightly different marker sizes for different radar wavelength bands, the biggest for S-band
         scale_fac = {'S':1.1, 'C':1, 'X':1/1.1}
         sizes = np.array([scale_fac[j]*self.scale_pixelsize(self.gui.radar_markersize) for j in gv.radar_bands.values()])
-        self.visuals['radar_markers'][0].set_data(pos=self.radarcoords_xy*np.array([1,-1]),symbol='disc',size=sizes,edge_width=1,face_color=self.radarmarkers_facecolors/255.,edge_color='black')
+        self.visuals['radar_markers'][0].set_data(pos=coords_xy*np.array([1,-1]),symbol='disc',size=sizes,edge_width=1,face_color=face_colors/255.,edge_color='black')
 
             
     def set_newdata(self,panellist,change_datetime=False,source_function=None,set_data=True,plain_products_parameters_changed=False,apply_storm_centering=False):

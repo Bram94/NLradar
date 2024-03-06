@@ -1480,7 +1480,7 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
         d = 0.667
         too_close = (hranges[p][1:]-hranges[p][:-1])/dr < d
         n = 0
-        while too_close.any() and len(heights[p]) > 2 and n < 5:
+        while too_close.any() and len(heights[p]) > 2 and n < 5: # Without a maximum, it can happen that this loop continues indefinitely
             n += 1
             i = np.nonzero(too_close)[0][0]
             r12 = hranges[p][i:i+2]
