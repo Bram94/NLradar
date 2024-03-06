@@ -804,6 +804,7 @@ class Plotting(QObject,app.Canvas):
             self.update()
         else:
             if not ft.point_inside_rectangle(ev.pos,self.wpos['main'])[0]:
+                self.gui.plotwidget.setCursor(Qt.ArrowCursor)
                 return
             self.last_mouse_pos_px = ev.pos
             self.check_presence_near_radars(ev.pos)
@@ -956,10 +957,10 @@ class Plotting(QObject,app.Canvas):
             self.radar_mouse_selected = gv.radars_all[min_distance_index]
             self.gui.set_textbar()
             if self.radar_mouse_selected != self.crd.selected_radar:
-                QApplication.setOverrideCursor(Qt.PointingHandCursor)
+                self.gui.plotwidget.setCursor(Qt.PointingHandCursor)
         else: 
             self.radar_mouse_selected = None
-            QApplication.setOverrideCursor(Qt.ArrowCursor)
+            self.gui.plotwidget.setCursor(Qt.ArrowCursor)
             
     def check_presence_near_pos_markers(self, pos):
         if len(self.gui.pos_markers_positions):
