@@ -1479,7 +1479,9 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
         # get too close to the other heights, or delete 1 of the heights otherwise.
         d = 0.667
         too_close = (hranges[p][1:]-hranges[p][:-1])/dr < d
-        while too_close.any() and len(heights[p]) > 2:
+        n = 0
+        while too_close.any() and len(heights[p]) > 2 and n < 5:
+            n += 1
             i = np.nonzero(too_close)[0][0]
             r12 = hranges[p][i:i+2]
             h12 = heights[p][i:i+2]
@@ -1502,7 +1504,7 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
                     heights[p][l-np.sign(l)] = h12_test[k]
                 else:
                     heights[p] = np.delete(heights[p], l-np.sign(l))
-            hranges[p] = ft.var1_to_var2(heights[p], scanangles[j], 'h+theta->gr')    
+            hranges[p] = ft.var1_to_var2(heights[p], scanangles[j], 'h+theta->gr')
             too_close = (hranges[p][1:]-hranges[p][:-1])/dr < 0.5
             
         if use_old_hranges:
