@@ -543,7 +543,8 @@ class GUI(QWidget):
         for w in widgets:
             widget = getattr(self, w)
             widget.setMinimumWidth(1)
-            widget.setFixedHeight(QFontMetrics(f1).height())
+            # setFixedHeight is currently disabled because it can lead to issues when moving the app to a different screen with different size, resolution etc
+            # widget.setFixedHeight(QFontMetrics(f1).height())
             # widget.setStyleSheet( "margin: 0px;" )
             # widget.setMinimumHeight(int(round(self.pb.scale_pixelsize(24))))
             widget.setFont(f2 if w == 'textbar' else f1)
@@ -3405,7 +3406,7 @@ class GUI(QWidget):
         if not number is None: self.minimum_downloadspeed=number
         else: self.minimum_downloadspeedw.setText(str(ft.rifdot0(self.minimum_downloadspeed)))
     def change_api_keys(self, datasource, key):
-        self.api_keys[datasource][key] = self.api_keysw[datasource][key].text()
+        self.api_keys[datasource][key] = self.api_keysw[datasource][key].text().strip()
         
 
     def settings_tabdatastorage(self):

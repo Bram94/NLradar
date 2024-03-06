@@ -473,7 +473,7 @@ class Plotting(QObject,app.Canvas):
         f = self.size[1]/self.size[0] / 0.5136825645035183 # Reference value
         self.vwp_relxdim = 0.255*f #The fractional width of the VWP plot relative to that of the whole canvas
             
-    def on_resize(self, event=None):      
+    def on_resize(self, event=None): 
         self.dpi = self.gui.screen_DPI()
         
         # Set canvas viewport and reconfigure visual transforms to match.
@@ -497,13 +497,17 @@ class Plotting(QObject,app.Canvas):
         self.set_panel_sttransforms_and_clippers()
         self.set_panel_borders()
         
-        # Now update all visuals in order to use the new canvas dimensions and/or resolution.
+        # Now update all visuals with line widths, font sizes etc in order to use the new canvas dimensions and/or resolution.
         self.set_cbars(resize=True, set_cmaps=False)
         self.set_maplineproperties(self.panellist)
         self.set_radarmarkers_data()
         if self.firstplot_performed:
-            self.set_newdata(self.panellist)
-        
+            if 'grid' in self.gui.lines_show: self.set_grid()
+            if 'heightrings' in self.gui.lines_show: self.set_heightrings(self.panellist)
+            if any([j in self.gui.lines_show for j in ('grid','heightrings')]):
+                self.set_ghlineproperties(self.panellist); self.set_ghtextproperties(self.panellist)
+            self.set_titles()
+            
         self.visuals['background_map'].transform.scale=self.wsize['main']
         self.visuals['background_map'].transform.translate=self.wcenter['main']
                     
