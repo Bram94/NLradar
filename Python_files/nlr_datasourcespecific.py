@@ -446,8 +446,7 @@ class Source_DWD():
         
     def get_file_availability_info(self):
         self.files_per_filenumber = {}; self.products_per_filenumber = {}
-        self.files_per_product = {}; self.filenumbers_per_product = {}
-        self.files_per_product_per_filenumber = {}
+        self.filenumbers_per_product = {}; self.files_per_product_per_filenumber = {}
         
         if self.get_extension() == 'hd5':
             n = len(self.dsg.files_datetime)
@@ -479,7 +478,7 @@ class Source_DWD():
                 break  # only executed if the inner loop DID break
                         
             if not product in self.filenumbers_per_product:
-                self.files_per_product[product] = []; self.filenumbers_per_product[product] = []
+                self.filenumbers_per_product[product] = []
                 self.files_per_product_per_filenumber[product] = {}
             if not filenumber in self.files_per_filenumber: 
                 self.files_per_filenumber[filenumber] = []; self.products_per_filenumber[filenumber] = []
@@ -487,7 +486,7 @@ class Source_DWD():
                 self.files_per_product_per_filenumber[product][filenumber] = []
                 
             self.files_per_filenumber[filenumber].append(j); self.products_per_filenumber[filenumber].append(product)
-            self.files_per_product[product].append(j); self.filenumbers_per_product[product].append(filenumber)
+            self.filenumbers_per_product[product].append(filenumber)
             self.files_per_product_per_filenumber[product][filenumber].append(j)
         
     def get_scans_information(self):

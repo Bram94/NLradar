@@ -1423,7 +1423,7 @@ class DWD_odimh5():
            
 
     def get_scans_information(self, filepaths, products, filenumbers_per_product): #These should be the paths to the files that contain the velocity,
-    #because otherwise it is not possible to determine the Nyquist velocity.
+        #because otherwise it is not possible to determine the Nyquist velocity.
         scanangles_all = {}; radial_bins_all = {}; radial_res_all = {}
         nyquist_velocities_all_mps = {}; low_nyquist_velocities_all_mps = {}; high_nyquist_velocities_all_mps = {}       
         for j in filepaths:
@@ -2166,8 +2166,7 @@ class NEXRAD_L2():
         
         unambig_ranges = [self.file.get_unambigous_range()[indices].mean() for indices in scans_record_indices]
         i_scans_z = []
-        # os.path.basename(filepath) should be replaced by self.crd.radar once radars are properly implemented!
-        i_scans_exclude = [0] if os.path.basename(filepath)[0] == 'T' else []
+        i_scans_exclude = [0] if gv.radar_bands[self.crd.radar] == 'C' else []
         for i in (j for j in range(n_scans-1) if abs(scanangles[j+1]-scanangles[j]) <= 0.4):
             ratio = unambig_ranges[i]/unambig_ranges[i+1]
             if ratio > 1.25:
