@@ -74,12 +74,7 @@ class Animate(QThread):
                                  'ani':self.animate, 'ani_case':self.animate, 'ani_cases':self.animate}
                 
         
-        
-    def show_current_animation(self):
-        self.crd.signal_set_datetimewidgets.emit('c','c')
-        # QApplication.processEvents()
-        self.change_continue_type('ani',0)
-        
+                
     def change_continue_type(self,continue_type,direction): #direction=-1 for left,+1 for right
         if continue_type=='ani': 
             if not (self.continue_type == 'None' and pytime.time()-0.2<self.last_ani_time):
@@ -124,7 +119,9 @@ class Animate(QThread):
             
             if self.continue_type == 'ani':
                 #Remove spaces, as the presence of a space should not lead to regarding the input as incorrect.
-                input_enddate=self.gui.datew.text().replace(' ',''); input_endtime=self.gui.timew.text().replace(' ','')
+                show_current_animation = self.crd.check_viewing_most_recent_data()
+                input_enddate = 'c' if show_current_animation else self.gui.datew.text().replace(' ','')
+                input_endtime = 'c' if show_current_animation else self.gui.timew.text().replace(' ','')
             else:
                 self.case_dict = self.gui.current_case if use_current_case else self.gui.get_next_case()
                 case_datetime = self.case_dict['datetime']

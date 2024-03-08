@@ -240,8 +240,7 @@ class Change_RadarData(QObject):
         if set_data:
             self.update_download_widgets(limit_update_download)
             
-        timediff = pytime.time() - ft.get_absolutetimes_from_datetimes(self.date+self.time)
-        if set_data and self.pb.firstplot_performed and timediff < 900 and self.date+self.time == self.filedatetimes[0][-1]:
+        if set_data and self.check_viewing_most_recent_data():
             self.plot_mostrecent_data()
         else:
             self.process_datetimeinput(set_data=set_data)
@@ -250,6 +249,24 @@ class Change_RadarData(QObject):
         self.change_radar_running = False
         if not call_ID is None:
             self.change_radar_call_ID=call_ID
+            
+    def check_viewing_most_recent_data(self):
+        timediff = pytime.time() - ft.get_absolutetimes_from_datetimes(self.date+self.time)
+        if self.pb.firstplot_performed and timediff < 900:
+            # First entry is newest datetime, second is second-newest
+            # The second-newest datetime is also used, since it can happen that for the latest datetime only
+            # a very incomplete volume is available.
+            newest_datetimes = self.dsg.get_newest_datetimes_currentdata(self.radar,self.selected_dataset)
+            current_datetime = self.selected_date+self.selected_time
+            duplicate = self.dsg.scannumbers_forduplicates[self.scans[0]]
+            max_duplicate = len(self.dsg.scannumbers_all['z'][self.scans[0]])-1
+            # Also consider which duplicates are currently shown. For the newest datetime this should be either the
+            # last or second-to-last duplicate (the last duplicate scan might not be fully available yet), while for 
+            # the second-newest datetime the last duplicate should be shown.
+            if current_datetime == newest_datetimes[0] and duplicate in (max_duplicate, max_duplicate-1) or\
+            current_datetime == newest_datetimes[1] and duplicate == max_duplicate:
+                return True
+        return False
             
     def update_download_widgets(self, limit_update_download=True):
         # When switching to another radar, the current item of self.downloadw must be set to the value corresponding to the new radar.

@@ -611,7 +611,6 @@ class GUI(QWidget):
         QShortcut(QKeySequence('SPACE'),self,lambda: self.ani.change_continue_type('ani',0))
         QShortcut(QKeySequence('ALT+C'),self,lambda: self.crd.plot_mostrecent_data(True))
         QShortcut(QKeySequence('ALT+SHIFT+C'),self,lambda: self.crd.plot_mostrecent_data(False))
-        QShortcut(QKeySequence('ALT+SHIFT+SPACE'),self,self.ani.show_current_animation)
         QShortcut(QKeySequence('CTRL+Return'),self,lambda: self.move_to_next_case(None,0))
         QShortcut(QKeySequence('CTRL+LEFT'),self,lambda: self.move_to_next_case(None,-1))
         QShortcut(QKeySequence('CTRL+RIGHT'),self,lambda: self.move_to_next_case(None,1))
@@ -3841,7 +3840,6 @@ class GUI(QWidget):
         keyboard_text=[['ENTER','Plot for current input'],
                   ['SPACE',"Start/stop animation, or stop continuing backward/forward in time. Animation ends at input date and time. If both 'c', then end time gets updated when new data available."],
                   ['ALT+C/ALT+SHIFT+C',"Set the date and time equal to 'c', with/without plotting the data."],
-                  ['ALT+SHIFT+SPACE',"Start continuously updated animation of most recent data (by setting date and time equal to 'c')"],
                   ['ALT+LEFT/RIGHT','Go continuously backward/forward in time.'],
                   ['LEFT/RIGHT, SHIFT+LEFT/RIGHT','Go to previous/next radar volume, go one hour backward/forward in time.'],
                   ['(SHIFT+)BACKSPACE','Go back to the previous combination of radar and dataset (and also date and time).'],

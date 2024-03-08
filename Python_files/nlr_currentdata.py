@@ -356,6 +356,7 @@ class CurrentData(QObject):
             self.file_at_disk[index]=False; self.download_succeeded[index]=False
             save_directory_before=None
             n_downloads = 0
+            # Newest datetime first, second-newest second
             newest_datetimes = list(self.dsg.get_newest_datetimes_currentdata(self.radar,self.crd.selected_dataset))
             mod_base = min([10, (len(self.savenames[index])+1)//2])
             for j in range(len(self.savenames[index])):
@@ -372,7 +373,7 @@ class CurrentData(QObject):
                     self.start_download(index,j)  
                     n_downloads += 1
                     if not self.datetimes[index][j] in newest_datetimes:
-                        newest_datetimes += [self.datetimes[index][j]]
+                        newest_datetimes = sorted([self.datetimes[index][j], newest_datetimes[0]], reverse=True)
                     
                 if index == 1 and ((download_file and n_downloads % mod_base == 0) or j == len(self.savenames[index])-1):
                     # When currently showing the most recent scans or when not having plot any data yet,

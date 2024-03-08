@@ -721,7 +721,6 @@ class DataSource_General():
         
         if not set_data:
             retrieved_attrs = {j:self.__dict__[j] for j in gv.volume_attributes_all}
-            print('restore_previous_attrs not set_data')
             self.restore_previous_attributes()
             return retrieved_attrs, self.total_files_size
         
