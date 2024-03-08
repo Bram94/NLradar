@@ -203,7 +203,7 @@ class DataSource_General():
                                        self.attrs_before['scannumbers_all'] else False
                       
         attributes_available = self.restore_volume_attributes()            
-            
+
         if not attributes_available:
             try:
                 self.nyquist_velocities_all_mps = {}; self.low_nyquist_velocities_all_mps = {}; self.high_nyquist_velocities_all_mps = {}
