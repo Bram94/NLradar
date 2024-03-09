@@ -1055,18 +1055,18 @@ class Plotting(QObject,app.Canvas):
             if not j in self.gui.radars_automatic_download+[self.crd.selected_radar]:
                 face_colors.append(self.gui.radar_colors['Default'])
                 radars.append(j)
-        coords_xy = []
+        # Use slightly different marker sizes for different radar wavelength bands, the biggest for S-band
+        scale_fac = {'S':1.1, 'C':1, 'X':1/1.1}
+        coords_xy, sizes = [], []
         for i,j in enumerate(radars):
             if j in self.gui.radars_download_older_data:
                 #Blend the color with black, to get a darker color that indicates that download of older data is being performed.
                 face_colors[i] = ft.blend_rgba_colors_1D(np.append(face_colors[i],0), np.array([64,64,64,0]), 0.5)[:3]
             coords_xy.append(self.radarcoords_xy[gv.radars_all.index(j)])
+            sizes.append(scale_fac[gv.radar_bands[j]]*self.scale_pixelsize(self.gui.radar_markersize))
         # Reverse array entries in order to put selected radar last            
-        coords_xy, face_colors = np.array(coords_xy)[::-1], np.array(face_colors)[::-1]
+        coords_xy, face_colors, sizes = np.array(coords_xy)[::-1], np.array(face_colors)[::-1], np.array(sizes)[::-1]
         
-        # Use slightly different marker sizes for different radar wavelength bands, the biggest for S-band
-        scale_fac = {'S':1.1, 'C':1, 'X':1/1.1}
-        sizes = np.array([scale_fac[j]*self.scale_pixelsize(self.gui.radar_markersize) for j in gv.radar_bands.values()])
         self.visuals['radar_markers'][0].set_data(pos=coords_xy*np.array([1,-1]),symbol='disc',size=sizes,edge_width=1,face_color=face_colors/255.,edge_color='black')
 
             

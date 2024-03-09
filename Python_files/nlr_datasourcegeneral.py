@@ -1476,18 +1476,30 @@ class DataSource_General():
                 radar_dataset = self.get_radar_dataset(i, j)
                 _,dir_string_list = self.get_dir_string(i,j,return_dir_string_list = True)
                 for k in dir_string_list:
-                    dirs_abspaths,dates_filtered = bg.get_abspaths_directories_in_datetime_range(k,i,startdatetime,enddatetime)
-                    if i in gv.radars_with_onefileperdate:
-                        for path in dirs_abspaths:
-                            files = np.sort(self.get_filenames_directory(i, path))
-                            _, dates = self.get_datetimes_from_files(i, files, mode='dates')
-                            if date in dates:
+                    if '${date' in k:
+                        for l in range(24):
+                            # Check for each hour of the day whether a directory is available. This is a crude way to consider both directory formats
+                            # with 1 folder per date and formats with folders for different times (e.g. hours).
+                            directory = bg.convert_dir_string_to_real_dir(k, i, date, format(l, '04d'))
+                            if os.path.exists(directory):
                                 radars_with_data.append(radar_dataset)
                                 break
-                    elif len(dirs_abspaths)>0 and dates_filtered:
-                        #If not dates_filtered, then it was not possible to determine which directories contain data for the input date, because no 
-                        #${date} variable is located in dir_string.
-                        radars_with_data.append(radar_dataset)
+                            elif not ('${datetime' in k or '${time' in k):
+                                break
+                    else:
+                        dirs_abspaths,dates_filtered = bg.get_abspaths_directories_in_datetime_range(k,i,startdatetime,enddatetime)
+                        if i in gv.radars_with_onefileperdate:
+                            for path in dirs_abspaths:
+                                files = np.sort(self.get_filenames_directory(i, path))
+                                _, dates = self.get_datetimes_from_files(i, files, mode='dates')
+                                if date in dates:
+                                    radars_with_data.append(radar_dataset)
+                                    break
+                        elif len(dirs_abspaths)>0 and dates_filtered:
+                            #If not dates_filtered, then it was not possible to determine which directories contain data for the input date, because no 
+                            #${date} variable is located in dir_string.
+                            radars_with_data.append(radar_dataset)
+                    if radar_dataset in radars_with_data:
                         break
     
         return radars_with_data
