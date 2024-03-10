@@ -200,6 +200,8 @@ class DerivedPlain():
                 dataset = subgroup[dataset_name] = subgroup[dataset_remove]
                 del subgroup[dataset_remove]
             else:
+                if dataset_name in subgroup:
+                    del subgroup[dataset_name]
                 dataset = subgroup.create_dataset(dataset_name, self.product_arrays[p_param].shape, maxshape=(None, None) if proj == 'car' else None,
                                                   dtype='uint'+str(gv.products_data_nbits[product]), compression='gzip', track_times=False)
                 
