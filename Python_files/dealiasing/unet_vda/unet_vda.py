@@ -1,13 +1,14 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import os
 import sys
 sys.path.append('src/')
 
 import numpy as np
 import time as pytime
 import tensorflow as tf
+tf.debugging.disable_traceback_filtering()
+
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 gpus = tf.config.experimental.list_physical_devices('GPU')
 print('detected GPUs:', gpus)
@@ -46,7 +47,7 @@ class Unet_VDA():
         self.vda = VelocityDealiaser(down, up)
         
         # Load weights
-        self.vda.load_weights(gv.programdir+'/Python_files/dealiasing/unet_vda/models/dealias_sn16_csi9764.SavedModel')
+        self.vda.load_weights(gv.programdir+'/Python_files/dealiasing/unet_vda/models/dealias_sn16_csi9764.SavedModel/variables/variables')
 
 
     def __call__(self, data, vn, azis=None, da=None, extra_dealias=True):

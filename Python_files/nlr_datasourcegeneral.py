@@ -767,9 +767,9 @@ class DataSource_General():
                 ft.create_subdicts_if_absent(self.scanangles, [self.crd.radar, self.crd.date])
                 try:
                     # Mono PRF dealiasing normally is performed below, except when a special treatment is required, e.g. when more than one 
-                    # Nyquist velocity is used for the scan. In that case it is performed in nlr_importdata.py, where self.mono_PRF_dealiasing_performed
-                    # must be set to True.
-                    self.mono_PRF_dealiasing_performed = False
+                    # Nyquist velocity is used for the scan. In that case the function self.perform_mono_prf_dealiasing is called in nlr_importdata.py,
+                    # after which self.mono_prf_dealiasing_performed is set to True in this function.
+                    self.mono_prf_dealiasing_performed = False
                     
                     if j in self.scantimes:
                         before = self.data[j], self.scantimes[j], self.data_azimuth_offset[j], self.data_radius_offset[j]
@@ -787,12 +787,13 @@ class DataSource_General():
                             self.data[j], self.scantimes[j], self.data_azimuth_offset[j], self.data_radius_offset[j] = before
                             continue
                     
+                    v_nyquist = self.nyquist_velocities_all_mps[self.crd.scans[j]]
                     if gv.i_p[self.crd.products[j]] == 'v' and self.crd.apply_dealiasing[j] and 'Unet VDA' in self.gui.dealiasing_setting and\
-                    self.data[j].dtype == 'float32' and self.nyquist_velocities_all_mps[self.crd.scans[j]] not in (None, 999.) and\
-                    not self.mono_PRF_dealiasing_performed:
+                    self.data[j].dtype == 'float32' and v_nyquist not in (None, 999.) and v_nyquist <= self.gui.dealiasing_max_nyquist_vel and\
+                    not self.mono_prf_dealiasing_performed:
                         # A Nyquist velocity of 999. indicates that it could not be determined, while it is at least high enough to include
                         # the scan in operations that require a sufficiently high Nyquist velocity.
-                        self.perform_mono_PRF_dealiasing(j)
+                        self.data[j] = self.perform_mono_prf_dealiasing(j, self.data[j])
                 except Exception as e:
                     print(e, 'get_data, panel '+str(j))
                     traceback.print_exception(type(e), e, e.__traceback__)
@@ -843,14 +844,17 @@ class DataSource_General():
         # stats.print_stats(20)  
         return self.data_changed, self.total_files_size
     
-    def perform_mono_PRF_dealiasing(self, j): # j is the panel
+    def perform_mono_prf_dealiasing(self, j, data, vn=None, azis=None, da=None): # j is the panel
         if not hasattr(self, 'vda'):
             from dealiasing.unet_vda.unet_vda import Unet_VDA
             self.vda = Unet_VDA()
-        self.data[j][self.data[j] == self.pb.masked_values['v']] = np.nan
+        data[data == self.pb.masked_values['v']] = np.nan
         t = pytime.time()
-        self.data[j] = self.vda(self.data[j], self.nyquist_velocities_all_mps[self.crd.scans[j]], extra_dealias='extra' in self.gui.dealiasing_setting)
+        vn = self.nyquist_velocities_all_mps[self.crd.scans[j]] if vn is None else vn
+        data = self.vda(data, vn, azis, da, extra_dealias='extra' in self.gui.dealiasing_setting)
+        self.mono_prf_dealiasing_performed = True
         print(pytime.time()-t, 't unet vda')
+        return data
     
     def calculate_derived_with_tilts(self, j): # j is the panel
         """Currently only calculates SRV.

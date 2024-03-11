@@ -114,6 +114,7 @@ productunfiltered={j:False for j in range(10)}
 polarization={j:'H' for j in range(10)}
 apply_dealiasing = {j:True for j in range(10)}
 dealiasing_setting = gv.velocity_dealiasing_settings[-1]
+dealiasing_max_nyquist_vel = 50
 dualprfdealiasing_n_it = 50
 cartesian_product_res = 1.
 scans=[1,2,3,4,5,1,2,3,4,5]
@@ -200,8 +201,8 @@ reset_volume_attributes = True #Gets set to False in nlr_datasourcegeneral.py
 
 
 
-variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','self.max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dualprfdealiasing_n_it','cartesian_product_res','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
-variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dualprfdealiasing_n_it','self.cartesian_product_res','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
+variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','self.max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dualprfdealiasing_n_it','cartesian_product_res','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
+variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dualprfdealiasing_n_it','self.cartesian_product_res','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
 
 #Variables that are reset to their default for the next update. Needs to be updated before every new update, 
 #and 'variables_resettodefault_version' should always be included!!!!! reset_volume_attributes maybe too.
@@ -376,6 +377,7 @@ class GUI(QWidget):
         self.ani_group_datasets = ani_group_datasets
         self.ani_quality = ani_quality
         self.dealiasing_setting = dealiasing_setting
+        self.dealiasing_max_nyquist_vel = dealiasing_max_nyquist_vel
         self.dualprfdealiasing_n_it = dualprfdealiasing_n_it
         self.cartesian_product_res = cartesian_product_res
         self.networktimeout=networktimeout
@@ -839,6 +841,9 @@ class GUI(QWidget):
         self.select_dealiasing_setting = QWidget()
         self.select_dealiasing_setting.setWindowTitle('Select dealiasing setting')
         
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel('Setting used for velocity dealiasing'))
+        
         self.dealiasing_settingsw = {}
         group = QButtonGroup()
         hbox = QHBoxLayout()
@@ -848,10 +853,13 @@ class GUI(QWidget):
             self.dealiasing_settingsw[j].toggled.connect(lambda state, j=j: self.change_dealiasing_setting(j))
             group.addButton(self.dealiasing_settingsw[j])
             hbox.addWidget(self.dealiasing_settingsw[j])
-            
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel('Setting used for velocity dealiasing'))
         layout.addLayout(hbox)
+        self.dealiasing_max_nyquist_velw = QLineEdit(str(ft.rifdot0(ft.r1dec(self.dealiasing_max_nyquist_vel*self.pb.scale_factors['v']))))
+        self.dealiasing_max_nyquist_velw.editingFinished.connect(self.change_dealiasing_max_nyquist_vel)
+        layout.addWidget(QLabel("Select maximum Nyquist velocity for which to apply the Unet VDA model. For higher Nyquist velocities"))
+        layout.addWidget(QLabel(f"the model will not be applied, since aliasing becomes unlikely. Unit: {self.pb.productunits['v']}."))
+        layout.addWidget(self.dealiasing_max_nyquist_velw)
+            
         self.select_dealiasing_setting.setLayout(layout)
         self.select_dealiasing_setting.resize(self.select_dealiasing_setting.sizeHint())
         self.select_dealiasing_setting.show()
@@ -862,6 +870,14 @@ class GUI(QWidget):
         if self.pb.firstplot_performed:
             panels_update = [j for j in self.pb.panellist if gv.i_p[self.crd.products[j]] == 'v']
             self.pb.set_newdata(panels_update)
+            
+    def change_dealiasing_max_nyquist_vel(self):
+        input_val = self.dealiasing_max_nyquist_velw.text()
+        number = ft.to_number(input_val)
+        if not number is None and number > 0:
+            self.dealiasing_max_nyquist_vel = number/self.pb.scale_factors['v']
+        else:
+            self.dealiasing_max_nyquist_velw.setText(str(ft.rifdot0(ft.r1dec(self.dealiasing_max_nyquist_vel*self.pb.scale_factors['v']))))
         
           
     def change_plainproducts_parameters(self):
@@ -1663,7 +1679,7 @@ class GUI(QWidget):
         self.set_stormmotion=QWidget()
         self.set_stormmotion.setWindowTitle('Storm motion')
         layout=QFormLayout()
-        self.sm_direction=QLineEdit(format(self.stormmotion[0], '.1f')); self.sm_speed=QLineEdit(format(self.stormmotion[1]*gv.scale_factors_velocities[self.pb.productunits['s']], '.1f'))
+        self.sm_direction=QLineEdit(format(self.stormmotion[0], '.1f')); self.sm_speed=QLineEdit(format(self.stormmotion[1]*self.pb.scale_factors['s'], '.1f'))
 
         layout.addRow(QLabel('A storm speed of 0 kts removes the storm motion from the title,'))
         layout.addRow(QLabel('except when displaying the storm-relative velocity.'))
@@ -1720,7 +1736,7 @@ class GUI(QWidget):
             if not number1 is None and not number2 is None:
                 sm_speed_mps = number2
                 if convert_units:
-                    sm_speed_mps /= gv.scale_factors_velocities[self.pb.productunits['s']]
+                    sm_speed_mps /= self.pb.scale_factors['s']
                 self.stormmotion = np.array([number1 % 360, sm_speed_mps])
                 if self.stormmotion[1] == 0.: 
                     self.stormmotion[0] = 0
@@ -1730,7 +1746,7 @@ class GUI(QWidget):
                     self.stormmotion_save = {'sm':self.stormmotion, 'radar':self.crd.radar}
             else:
                 self.sm_direction.setText(format(self.stormmotion[0], '.1f'))
-                self.sm_speed.setText(format(self.stormmotion[1]*gv.scale_factors_velocities[self.pb.productunits['s']], '.1f'))
+                self.sm_speed.setText(format(self.stormmotion[1]*self.pb.scale_factors['s'], '.1f'))
 
         if self.pb.firstplot_performed:
             redraw_panellist = [j for j in self.pb.panellist if self.crd.products[j]=='s' or self.crd.products[j] in gv.plain_products_correct_for_SM]
@@ -2185,9 +2201,9 @@ class GUI(QWidget):
             for j in self.dsg.scanangles_all['z']:
                 properties_text += 'Scan '+str(j)+': '+"%.2f" % self.dsg.scanangles_all_m['z'][j]+" \xb0, "+"%.1f" % self.dsg.radial_range_all['z'][j]+' km, '+"%.4f" % self.dsg.radial_res_all['z'][j]+' km, '
                 if not self.dsg.nyquist_velocities_all_mps[j] is None:
-                    properties_text+="%.1f" % (self.dsg.nyquist_velocities_all_mps[j]*gv.scale_factors_velocities[self.pb.productunits['v']])+' '+self.pb.productunits['v'] +\
-                    ', '+(("%.1f" % (self.dsg.low_nyquist_velocities_all_mps[j]*gv.scale_factors_velocities[self.pb.productunits['v']])+' '+self.pb.productunits['v'] +\
-                    ', '+"%.1f" % (self.dsg.high_nyquist_velocities_all_mps[j]*gv.scale_factors_velocities[self.pb.productunits['v']])+' '+self.pb.productunits['v']) \
+                    properties_text+="%.1f" % (self.dsg.nyquist_velocities_all_mps[j]*self.pb.scale_factors['v'])+' '+self.pb.productunits['v'] +\
+                    ', '+(("%.1f" % (self.dsg.low_nyquist_velocities_all_mps[j]*self.pb.scale_factors['v'])+' '+self.pb.productunits['v'] +\
+                    ', '+"%.1f" % (self.dsg.high_nyquist_velocities_all_mps[j]*self.pb.scale_factors['v'])+' '+self.pb.productunits['v']) \
                     if not self.dsg.low_nyquist_velocities_all_mps[j] is None else '--, --')
                 else: 
                     #If it was impossible to obtain the Nyquist velocities, then they are set to '--'

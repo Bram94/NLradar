@@ -1985,9 +1985,11 @@ class MeteoFrance_BUFR():
         # Sigma denotes the standard deviation of reflectivity
         self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':4}
         # Offsets for 'v' and 'sigma' include a correction for the fact that integer data values represent the start of an interval,
-        # with the average being 0.5 higherround()
+        # with the average being 0.5 higher
         self.product_offset = {'z':-10.5, 'v':60, 'c':30.5, 'd':-9.85, 'p':0.5, 'sigma':0.125}
         self.product_scale = {'z':1., 'v':-0.5, 'c':1., 'd':0.1, 'p':1., 'sigma':0.25}
+        self.product_nbits = {'z':8, 'v':8, 'c':8, 'd':8, 'p':16}
+        self.product_maskvals = {'z':'minmax', 'v':'min', 'c':'max', 'd':'max', 'p':'max'}
             
 
     def get_file_content(self, filepath, product):
@@ -2054,7 +2056,13 @@ class MeteoFrance_BUFR():
         if slice:
             data = data[slice]
         
-        data_mask = (data == data.min()) | (data == data.max())
+        bounds = [offset, offset+scale*(2**self.product_nbits[product]-1)]
+        # For velocity offset represents the maximum product value
+        if self.product_maskvals[product] == 'minmax':
+            data_mask = (data == min(bounds)) | (data == max(bounds))
+        else:
+            data_mask = data == (min(bounds) if self.product_maskvals[product] == 'min' else max(bounds))
+            
         if i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
             c_data = None
             try:
@@ -2285,24 +2293,7 @@ class NEXRAD_L2():
         vn_azis = self.file.get_nyquist_vel(scans=[scan_index])[-n_azi:]
         # Exclude Nyquist velocities of 0 as is the case for TDWR radars
         if i_p == 'v' and vn_azis[0] != 0. and not panel is None and self.crd.apply_dealiasing[panel] and 'Unet VDA' in self.gui.dealiasing_setting:
-            if not hasattr(self.dsg, 'vda'):
-                from cProfile import Profile
-                profiler = Profile()
-                profiler.enable() 
-
-                from dealiasing.unet_vda.unet_vda import Unet_VDA
-                self.dsg.vda = Unet_VDA()
-
-            t = pytime.time()
-            data = self.dsg.vda(data, vn_azis, azis, da, 'extra' in self.gui.dealiasing_setting)
-            if 'profiler' in locals():
-                profiler.disable()
-                import pstats
-                stats = pstats.Stats(profiler).sort_stats('cumtime')
-                stats.print_stats(50)  
-
-            print(pytime.time()-t, 't unet vda')
-            self.dsg.mono_PRF_dealiasing_performed = True
+            data = self.dsg.perform_mono_prf_dealiasing(panel, data, vn_azis, azis, da)
         
         data, azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset)
         if not panel is None:
@@ -2609,18 +2600,11 @@ class CFRadial():
                 data *= 100.
             
             if i_p == 'v' and not j is None and self.crd.apply_dealiasing[j]:
-                if not hasattr(self.dsg, 'vda'):
-                    from dealiasing.unet_vda.unet_vda import Unet_VDA
-                    self.dsg.vda = Unet_VDA()
-                    
-                t = pytime.time()
                 vn = self.dsg.nyquist_velocities_all_mps[scan]
                 # vmax = np.abs(data).max()
                 # if vmax > vn:
                 #     vn = 26.2
-                data = self.dsg.vda(data, vn, azis, da)
-                print(pytime.time()-t, 't unet vda')
-                self.dsg.mono_PRF_dealiasing_performed = True
+                data = self.dsg.perform_mono_prf_dealiasing(j, data, vn, azis, da)
             
             self.dsg.data[j], azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='left')
             if not j is None:
@@ -2715,18 +2699,11 @@ class DORADE():
         data = data[-n_azi:]
                 
         if i_p == 'v' and not j is None and self.crd.apply_dealiasing[j]:
-            if not hasattr(self.dsg, 'vda'):
-                from dealiasing.unet_vda.unet_vda import Unet_VDA
-                self.dsg.vda = Unet_VDA()
-                
-            t = pytime.time()
             vn = self.dsg.nyquist_velocities_all_mps[scan]
             vmax = np.abs(data).max()
             if vmax > vn:
                 vn = vmax
-            data = self.dsg.vda(data, vn, azis, da)
-            print(pytime.time()-t, 't unet vda')
-            self.dsg.mono_PRF_dealiasing_performed = True
+            data = self.dsg.perform_mono_prf_dealiasing(j, data, vn, azis, da)
         
         self.dsg.data[j], azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='center')
         if not j is None:
