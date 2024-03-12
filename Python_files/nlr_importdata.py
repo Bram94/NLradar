@@ -260,7 +260,7 @@ class Gematronik_vol_rainbow3():
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
         window_size = [2, 2, 2]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_l, None, window_detection = window_size, window_correction = window_size, n_it = n_it) 
         #The first azimuth is scanned with a high PRF
@@ -479,7 +479,7 @@ class Gematronik_vol_rainbow5():
                 c_array = np.roll(c_array[:360][s],int(np.round(start_azimuth)),axis=0)
         
         window_size = [2, 2, 2] if self.crd.radar != 'Zaventem' else None
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_l, None, window_detection = window_size, window_correction = window_size, deviation_factor = deviation_factor, n_it = n_it,\
         c_array = c_array) #The first azimuth is scanned with a high PRF
@@ -819,7 +819,7 @@ class KNMI_hdf5():
             #By masking them they do not hinder the dealiasing of the surrounding bins.
         
         radial_res = self.dsg.radial_res_all['v'][scan]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, 'h', window_detection = window_size, window_correction = window_size, deviation_factor = deviation_factor, n_it = n_it,\
         c_array = c_array, mask_all_nearzero_velocities = mask_all_nearzero_velocities) #The first azimuth is scanned with a high PRF
@@ -1140,7 +1140,7 @@ class KMI_hdf5():
         # if self.crd.radar == 'Wideumont':
         #     window_detection = [1,2,1]
         #     window_correction = [1,2,1]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, None, window_detection = window_detection, window_correction = window_correction, deviation_factor = deviation_factor,\
         n_it = n_it, mask_all_nearzero_velocities = self.crd.radar == 'Wideumont') #The first azimuth is scanned with a high PRF
@@ -1357,7 +1357,7 @@ class skeyes_hdf5():
         radial_res = self.dsg.radial_res_all['v'][scan]
         #The window is chosen to be slightly larger than the default window in nlr_dealiasing.py, because the low and high Nyquist velocities are larger
         #than the 30/40 kts on which the window sizes in nlr_dealiasing.py are based.
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, None, n_it = n_it, window_detection = [3,5,7,5,3], window_correction = [5,7,5]) #The first azimuth is scanned with a high PRF
                     
@@ -1549,7 +1549,7 @@ class DWD_odimh5():
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         window_detection = [3,5,7,5,3] if combi else None
         window_correction = [3,5,3] if combi else None
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
@@ -1727,7 +1727,7 @@ class DWD_BUFR():
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, None, n_it = n_it) #The prf of the first azimuth is unknown, hence vn_first_azimuth = None
 
@@ -2104,7 +2104,7 @@ class MeteoFrance_BUFR():
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
-        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dualprfdealiasing_n_it
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan], vn_l, vn_h, None, 
                                             window_detection = [1,2,1], window_correction = [1,2,1], deviation_factor = 1.5, n_it = n_it,
                                             c_array=c_array)

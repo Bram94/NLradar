@@ -46,7 +46,7 @@ class Unet_VDA():
         # Full model
         self.vda = VelocityDealiaser(down, up)
         
-        # Load weights
+        # Load weights. Append variables/variables to model path, since without it some users report an error that prevents loading the model.
         self.vda.load_weights(gv.programdir+'/Python_files/dealiasing/unet_vda/models/dealias_sn16_csi9764.SavedModel/variables/variables')
 
 

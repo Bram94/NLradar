@@ -543,7 +543,7 @@ class DataSource_General():
                 dataspecs_string+= '_'+str(self.gui.stormmotion)+'_'+str(self.gui.cartesian_product_res)
         else: 
             if product == 'v':
-                dataspecs_string += '_'+str(apply_dealiasing) + '_' + self.gui.dealiasing_setting + '_' + str(self.gui.dualprfdealiasing_n_it)
+                dataspecs_string += '_'+str(apply_dealiasing) + '_' + self.gui.dealiasing_setting + '_' + str(self.gui.dealiasing_dualprf_n_it)
             dataspecs_string+= '_'+str(productunfiltered)+'_'+polarization
             dataspecs_string+= '_'+str(scannumbers_all[scan][duplicate])
         return dataspecs_string
