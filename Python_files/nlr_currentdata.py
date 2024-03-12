@@ -373,7 +373,9 @@ class CurrentData(QObject):
                     self.start_download(index,j)  
                     n_downloads += 1
                     if not self.datetimes[index][j] in newest_datetimes:
-                        newest_datetimes = sorted([self.datetimes[index][j], newest_datetimes[0]], reverse=True)
+                        newest_datetimes = [self.datetimes[index][j], newest_datetimes[0]]
+                        if not newest_datetimes[1] is None:
+                            newest_datetimes = sorted(newest_datetimes, reverse=True)
                     
                 if index == 1 and ((download_file and n_downloads % mod_base == 0) or j == len(self.savenames[index])-1):
                     # When currently showing the most recent scans or when not having plot any data yet,

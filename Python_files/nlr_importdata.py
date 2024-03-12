@@ -2056,12 +2056,12 @@ class MeteoFrance_BUFR():
         if slice:
             data = data[slice]
         
-        bounds = [offset, offset+scale*(2**self.product_nbits[product]-1)]
+        bounds = [offset, offset+scale*(2**self.product_nbits[i_p]-1)]
         # For velocity offset represents the maximum product value
-        if self.product_maskvals[product] == 'minmax':
+        if self.product_maskvals[i_p] == 'minmax':
             data_mask = (data == min(bounds)) | (data == max(bounds))
         else:
-            data_mask = data == (min(bounds) if self.product_maskvals[product] == 'min' else max(bounds))
+            data_mask = data == (min(bounds) if self.product_maskvals[i_p] == 'min' else max(bounds))
             
         if i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
             c_data = None
