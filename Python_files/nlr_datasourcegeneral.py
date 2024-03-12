@@ -787,7 +787,7 @@ class DataSource_General():
                             self.data[j], self.scantimes[j], self.data_azimuth_offset[j], self.data_radius_offset[j] = before
                             continue
                     
-                    v_nyquist = self.nyquist_velocities_all_mps[self.crd.scans[j]]
+                    v_nyquist = self.nyquist_velocities_all_mps.get(self.crd.scans[j], None)
                     if gv.i_p[self.crd.products[j]] == 'v' and self.crd.apply_dealiasing[j] and 'Unet VDA' in self.gui.dealiasing_setting and\
                     self.data[j].dtype == 'float32' and v_nyquist not in (None, 999.) and v_nyquist <= self.gui.dealiasing_max_nyquist_vel and\
                     not self.mono_prf_dealiasing_performed:
