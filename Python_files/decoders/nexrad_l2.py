@@ -224,7 +224,8 @@ class NEXRADLevel2File:
                         i += size
                         
                     n = len(self.indices)
-                    indices_select = list(range(0, n, 30))
+                    gzip_indices_step = 30
+                    indices_select = list(range(0, n, gzip_indices_step))
                     buf = [buf[:self.indices[0]]]+\
                           [buf[slice(self.indices[i], self.indices[i+1] if i+1 < n else None)] for i in indices_select]
                     
@@ -269,9 +270,12 @@ class NEXRADLevel2File:
             np.where(elev_nums == i)[0] for i in range(elev_nums.min(), elev_nums.max()+1)
         ]
                
-        # For 'min-meta' a few additional checks are needed to ensure that the desired metadata has been obtained correctly
+        azi_numbers = [j['msg_header']['azimuth_number'] for j in self.radial_records]
+        wrong_indices_step = read_mode == 'min-meta' and not self._bzip2_compression and\
+                             any(azi_i-azi_numbers[i-1] > 0 and azi_i-azi_numbers[i-1] != gzip_indices_step for i,azi_i in enumerate(azi_numbers))
+        # For 'min-meta' a few additional checks are needed to ensure that the desired metadata has been obtained correctly.
         # min(msg_types_counts.values()) > 0 checks whether both MSG1 and MSG31 formats are present
-        if read_mode == 'min-meta' and (min(msg_types_counts.values()) > 0 or
+        if read_mode == 'min-meta' and (min(msg_types_counts.values()) > 0 or wrong_indices_step or
         (self._bzip2_compression and (any(len(j) != 1 for j in self.scan_msgs) or
         any(any(i.get('ngates', -1) == 0 for i in self.radial_records[j[0]].values()) for j in self.scan_msgs)))):
             # In this mode it is expected that for each scan only 1 message gets included
@@ -1286,6 +1290,7 @@ if __name__ == "__main__":
     filename = "D:/radar_data_NLradar/NWS/20240212/KTLH/KTLH20240212_1432"
     filename = "D:/radar_data_NLradar/NWS/20190528/KILN/KILN20190528_035544_V06"
     filename = "D:/radar_data_NLradar/NWS/19990503/KTLX/KTLX19990503_223406.gz"
+    filename = "D:/radar_data_NLradar/NWS/19980624/KUEX/KUEX19980624_002337.gz"
     # t = pytime.time()
     # test = NEXRADLevel2File(filename)
     # angles = test.get_elevation_angles()
@@ -1326,6 +1331,7 @@ if __name__ == "__main__":
     #%%
     _test = NEXRADLevel2File(filename, read_mode=test.scan_startend_pos[1], moments='VEL')
     print(len(_test.get_azimuth_angles()))
+    print(len([j for j in _test.radial_records if not 'VEL' in j]))
     print(pytime.time()-t, 't')
     1/0
     # d1 = _test.get_data('REF', 1800)
