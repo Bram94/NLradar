@@ -50,8 +50,9 @@ def process_azis_array(azis, da, calc_azi_offset, azi_pos='center'):
     diffs = ft.angle_diff(-azis[::-1], between_0_360=True)
     # print(list(diffs))
     csum = np.cumsum(diffs)
-    # Ensure that azis spans less than 360°, to prevent issues with unsampled radials in self.map_onto_uniform_grid
-    n_azi = len(azis) if csum[-1] < 360 else 1+np.where(csum >= 360)[0][0]
+    # Ensure that azis spans less than 360°, otherwise some issues can occur in self.map_onto_uniform_grid.
+    # In fact, a threshold of 359.9° is used, since it has been observed that due to floating point errors 360 sometimes doesn't work. 
+    n_azi = len(azis) if csum[-1] < 359.9 else 1+np.where(csum >= 359.9)[0][0]
     azis = azis[-n_azi:]
     diffs = diffs[:n_azi-1][::-1]
     
@@ -127,7 +128,7 @@ def map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='cen
     
     if k > 1:
         j_repeats = np.bincount(ij_map[ij_map != -1])
-        j_repeats_notk = {j:n for j,n in enumerate(j_repeats) if n != k}
+        j_repeats_notk = {j:n for j,n in enumerate(j_repeats) if n not in (k, 0)} # Also not 0, otherwise calling np.where below doesn't give a hit
         keys, vals = list(j_repeats_notk), list(j_repeats_notk.values())
         """These are pairs of indices for radials that are not repeated the expected # of k times in the remapped array. The radials contained
         within the azimuthal range spanned by each pair of radials will be checked for whether their positional error won't increase by too much
@@ -147,7 +148,6 @@ def map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='cen
                 max_error_exceeded = np.min(angle_diff_left[r] - ref_da) < -max_error_width_correction
             else:
                 max_error_exceeded = np.max(angle_diff_right[r] + ref_da) > max_error_width_correction
-                
             if not max_error_exceeded:
                 i1 = np.where(ij_map == j1)[0][-1]
                 i2 = np.where(ij_map == j2)[0][0]

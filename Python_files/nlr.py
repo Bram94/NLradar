@@ -1080,12 +1080,24 @@ class GUI(QWidget):
             action = cases_menu.addAction(self.current_case_list_name+f' ({len(self.current_case_list)} cases)')
             action.setEnabled(False)
             
+            cases = self.get_cases_as_strings()
             current_case = str(self.current_case)
+            i_current_case = cases.index(current_case) if not self.current_case is None else None
+            action_before = None
             for i, case_dict in enumerate(self.current_case_list):
                 if i % max_length == 0:
-                    menu = cases_menu.addMenu(case_dict['datetime']+' -') if len(self.current_case_list) > max_length else cases_menu
+                    if i <= i_current_case < i+max_length or len(self.current_case_list) <= max_length:
+                        menu = cases_menu
+                    else:
+                        dt1 = case_dict['datetime']
+                        dt2 = self.current_case_list[min(i+max_length, len(self.current_case_list))-1]['datetime']
+                        menu = QMenu(dt1+' - '+dt2, cases_menu)
+                        # Use insertMenu instead of addAction, in order to always put these submenus above any listed actions in the main menu
+                        cases_menu.insertMenu(action_before, menu)
                 action = menu.addAction(self.get_descriptor_for_case(case_dict))
-                if str(case_dict) == current_case:
+                if menu == cases_menu and action_before is None:
+                    action_before = action
+                if cases[i] == current_case:
                     menu.setDefaultAction(action)
                 action.triggered.connect(
                             lambda state, list_name=self.current_case_list_name, case_dict=case_dict: self.switch_to_case(list_name, case_dict))
