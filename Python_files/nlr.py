@@ -1439,7 +1439,14 @@ class GUI(QWidget):
         self.switch_to_case(self.current_case_list_name, self.current_case_list[index])
         
         
-    def showrightclickMenu(self,pos):
+    def show_radar_menu(self, radars, pos):
+        menu = QMenu(self)
+        for radar in radars:
+            action = menu.addAction(radar)
+            action.triggered.connect(lambda state, radar=radar: self.crd.change_selected_radar(radar))
+        menu.popup(self.mapToGlobal(pos))
+        
+    def showrightclickMenu(self, pos):
         self.rightmouseclick_Qpos = pos
                 
         """The order in which events are handled differs among different PC's (different for Linux and Windows at least). For Windows, showing the right-click menu 
@@ -1450,87 +1457,83 @@ class GUI(QWidget):
         if ft.point_inside_rectangle(self.pb.last_mousepress_pos,self.pb.wpos['main'])[0] and not self.pb.mouse_moved_after_press:
             if self.pb.mouse_hold_right: self.need_rightclickmenu=True; return #The function gets called from self.pb.on_mouse_release
             else: self.need_rightclickmenu=False
-            menu=QMenu(self)
-                
-            menu.addSeparator()
             
+            if self.pb.radar_mouse_selected:
+                # Check whether multiple radars are located very close to the selected one. In that case it is hard or impossible to select
+                # each radar by mouse, so in this case the right-click menu lists all these close-proximity radars instead of the actions below.
+                selected_radar_xy = self.pb.radarcoords_xy[gv.radars_all.index(self.pb.radar_mouse_selected)]
+                distances_to_radars = np.linalg.norm(self.pb.radarcoords_xy-selected_radar_xy, axis=1)
+                max_distance = self.pb.get_max_dist_mouse_to_marker(f=0.5)
+                radars = [j for i,j in enumerate(gv.radars_all) if distances_to_radars[i] < max_distance]
+                if len(radars) > 1:
+                    self.show_radar_menu(radars, pos)
+                    return
+            
+            menu=QMenu(self)
+                            
             selected_radar = self.pb.radar_mouse_selected if self.pb.radar_mouse_selected else self.crd.selected_radar
             if self.ad[selected_radar].isRunning():
-                action = QAction('Stop automatic download for '+selected_radar, menu)
+                action = menu.addAction('Stop automatic download for '+selected_radar)
                 action.triggered.connect(lambda: self.stop_automatic_download(selected_radar))
             else:
-                action = QAction('Start automatic download for '+selected_radar, menu)
+                action = menu.addAction('Start automatic download for '+selected_radar)
                 action.triggered.connect(lambda: self.start_automatic_download(selected_radar))
-            menu.addAction(action)
             
             menu.addSeparator()     
             
-            action = QAction('Set position marker: Mouse position', menu)
+            action = QAction('Set position marker: Mouse position')
             action.triggered.connect(lambda: self.set_pos_markers_properties('Mouse'))
             menu.addAction(action)
                                                                                         
-            action = QAction('Set position marker: Coordinate input', menu)
+            action = menu.addAction('Set position marker: Coordinate input')
             action.triggered.connect(self.set_marker_coordinates)
-            menu.addAction(action)
             
             marker_selected = not self.pb.marker_mouse_selected_index is None
             if len(self.pos_markers_latlons) or len(self.pos_markers_latlons_save) == 0:
-                action = QAction('Remove this marker' if marker_selected else 'Remove all markers', menu)
+                action = menu.addAction('Remove this marker' if marker_selected else 'Remove all markers')
                 action.triggered.connect(lambda: self.remove_marker('pos' if marker_selected else 'all'))
                 if len(self.pos_markers_latlons) == 0:
                     action.setEnabled(False)
             else:
-                action = QAction('Restore position markers', menu)
+                action = menu.addAction('Restore position markers')
                 action.triggered.connect(self.restore_pos_markers)
-            menu.addAction(action)
             
             menu.addSeparator()
             
-            action = QAction('Set SM marker', menu)
-            if not self.pb.firstplot_performed: 
+            action = menu.addAction('Set SM marker')
+            if not self.pb.firstplot_performed:
                 action.setEnabled(False)
             action.triggered.connect(lambda: self.set_sm_marker_properties())
-            menu.addAction(action)
             
-            action = QAction('Remove SM marker', menu)
+            action = menu.addAction('Remove SM marker')
             if not self.sm_marker_present: 
                 action.setEnabled(False)
             action.triggered.connect(lambda: self.remove_marker('sm'))
-            menu.addAction(action)
             
-            action = QAction('Calculate SM vector from marker', menu)
+            action = menu.addAction('Calculate SM vector from marker')
             if not self.sm_marker_present or\
             self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
                 action.setEnabled(False)
             action.triggered.connect(self.set_stormmotion_from_marker)
-            menu.addAction(action)
             
-            action = QAction('Set SM vector manually',menu)
+            action = menu.addAction('Set SM vector manually')
             action.triggered.connect(self.set_stormmotion_manually)
-            menu.addAction(action)
             
             if self.stormmotion[1] != 0. or self.stormmotion_save['sm'][1] == 0.:
-                action = QAction('Reset SM vector', menu)
+                action = menu.addAction('Reset SM vector')
                 action.triggered.connect(lambda: self.change_stormmotion(np.array([0, 0])))
                 if self.stormmotion[1] == 0.:
                     action.setEnabled(False)
             else:
-                action = QAction('Restore SM vector', menu)
+                action = menu.addAction('Restore SM vector')
                 action.triggered.connect(lambda: self.change_stormmotion(self.stormmotion_save, False))
-            menu.addAction(action)
             
             menu.addSeparator()
             
-            action = QAction('Adjust start azimuth of scans (certain radars)',menu)
+            action = menu.addAction('Adjust start azimuth of scans (certain radars)')
             if not self.crd.radar in gv.radars_with_adjustable_startazimuth:
                 action.setEnabled(False)
             action.triggered.connect(self.set_data_selected_startazimuth)
-            menu.addAction(action)
-                
-            # menu.addSeparator()
-            
-            # action = menu.addAction('Request ERA5 sounding')
-            # action.triggered.connect(self.so.request_era5_sounding)
             
             menu.addSeparator()
 
@@ -4019,7 +4022,7 @@ class GUI(QWidget):
                         "can lead to plots not appearing immediately after they have been created, but only after the last plot in a plotting series has been created. This does not occur at all",
                         "PC's however, and you should experiment a little to find a value that works at your PC. It should be the smallest time that does not lead to the problem mentioned.",
                         'Furthermore, after the calculation of a derived product this sleep time is automatically increased with a factor of 2.'],
-                       ['','- Partly drawing of the screen should be enabled if it does not lead to problems, because it increases the plotting speed. With some self.driver_soundings it could lead to',
+                       ['','- Partly drawing of the screen should be enabled if it does not lead to problems, because it increases the plotting speed. With some drivers it could lead to',
                         'the problem of a flickering background (white and black) however, and in this case it should be disabled.']]
         for j in range(0,len(settings_text)):
             settings_layout.addRow(QLabel(settings_text[j][0],font=self.help_font),QLabel(settings_text[j][1],font=self.help_font))  

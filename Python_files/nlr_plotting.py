@@ -762,7 +762,8 @@ class Plotting(QObject,app.Canvas):
                     self.crd.change_radar(self.radar_mouse_selected)
         elif ev.button==2:
             self.mouse_hold_right=False
-            if self.gui.need_rightclickmenu: self.gui.showrightclickMenu(self.gui.rightmouseclick_Qpos)
+            if self.gui.need_rightclickmenu: 
+                self.gui.showrightclickMenu(self.gui.rightmouseclick_Qpos)
  
     def on_mouse_move(self, ev): 
         if hasattr(self, 'previous_mouse_position') and (ev.pos == self.previous_mouse_position).all():
@@ -944,9 +945,9 @@ class Plotting(QObject,app.Canvas):
         in_view = data[self.in_view_mask & (data != self.masked_values_int[self.crd.products[panel]])]
         return in_view.min(), in_view.max()
         
-    def get_max_dist_mouse_to_marker(self):
+    def get_max_dist_mouse_to_marker(self, f=1):
         self.get_corners()
-        return 15*(self.corners[0][1]-self.corners[1][1])*self.nrows/1e3
+        return f*15*(self.corners[0][1]-self.corners[1][1])*self.nrows/1e3
     
     def check_presence_near_radars(self, pos):
         xy_mouse = self.screencoord_to_xy(pos)
