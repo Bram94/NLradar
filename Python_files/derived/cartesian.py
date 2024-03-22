@@ -38,9 +38,11 @@ class Cartesian():
         
         s = self.scans[0]
         max_ground_range = ft.var1_to_var2(self.radius_offsets_all[s]+self.radial_range_all[s], self.scanangles_all[s], 'sr+theta->gr')
+        max_ground_range = min(self.gui.cartesian_product_maxrange, max_ground_range)
         self.product_xy_bins = 2*int(np.ceil(max_ground_range/self.product_res))
         s = self.scans_all[0]
         max_ground_range_all = ft.var1_to_var2(self.radius_offsets_all[s]+self.radial_range_all[s], self.scanangles_all[s], 'sr+theta->gr')
+        max_ground_range_all = min(self.gui.cartesian_product_maxrange, max_ground_range_all)
         self.product_xy_bins_all = 2*int(np.ceil(max_ground_range_all/self.product_res))
         """self.product_xy_bins_all is used when calculating quantities that can be used in multiple functions, as stated above.
         """

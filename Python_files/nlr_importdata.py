@@ -2175,18 +2175,19 @@ class NEXRAD_L2():
         unambig_ranges = [self.file.get_unambigous_range()[indices].mean() for indices in scans_record_indices]
         i_scans_z = []
         i_scans_exclude = [0] if gv.radar_bands[self.crd.radar] == 'C' else []
-        for i in (j for j in range(n_scans-1) if abs(scanangles[j+1]-scanangles[j]) <= 0.4):
-            ratio = unambig_ranges[i]/unambig_ranges[i+1]
-            if ratio > 1.25:
-                i_scans_z.append(i)
-            elif ratio > 0.5:
-                # Some radar volumes contain multiple repetitions of a velocity scan, each time with a slightly different PRF 
-                # (and thus unambiguous range). Only the 1st of these scans is retained, the others are excluded.
-                i_scans_exclude.append(i+1)
-        if n_scans-2 not in i_scans_z and (n_scans == 1 or scanangles[-1] < scanangles[-2]):
-            # It's possible that the last z-scan/v-scan pair is incomplete, meaning that only the z-scan is available.
-            # This can happen in an incomplete volume
-            i_scans_z.append(n_scans-1)
+        if gv.radar_bands[self.crd.radar] == 'S':
+            for i in (j for j in range(n_scans-1) if abs(scanangles[j+1]-scanangles[j]) <= 0.4):
+                ratio = unambig_ranges[i]/unambig_ranges[i+1]
+                if ratio > 1.25:
+                    i_scans_z.append(i)
+                elif ratio > 0.5:
+                    # Some radar volumes contain multiple repetitions of a velocity scan, each time with a slightly different PRF 
+                    # (and thus unambiguous range). Only the 1st of these scans is retained, the others are excluded.
+                    i_scans_exclude.append(i+1)
+            if n_scans-2 not in i_scans_z and (n_scans == 1 or scanangles[-1] < scanangles[-2]):
+                # It's possible that the last z-scan/v-scan pair is incomplete, meaning that only the z-scan is available.
+                # This can happen in an incomplete volume
+                i_scans_z.append(n_scans-1)
             
         i_scans_include = [i for i in range(n_scans) if not i in i_scans_exclude]
         i_scans_v = [i for i in i_scans_include[1:] if i-1 in i_scans_z]

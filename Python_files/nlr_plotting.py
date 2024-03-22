@@ -431,14 +431,14 @@ class Plotting(QObject,app.Canvas):
             size_panel=np.array(self.wsize['main'])/np.array([self.ncolumns,self.nrows])
             row, col=self.get_row_col_panel(j)
             topleft=self.wpos['main'][0]+size_panel*np.array([col,row]) #In screen coordinates
-            bottomright=topleft+size_panel            
+            bottomright=topleft+size_panel
             
-            b=np.array([topleft[0],self.size[1]-bottomright[1],size_panel[0],size_panel[1]])
+            # b=np.array([topleft[0],self.size[1]-bottomright[1],size_panel[0],size_panel[1]])
             # (x, y, w, h), with y measured with upward pointing y axis, because that is necessary for the clipper! Screen coordinates are measured with 
             #the y axis pointing downwards.
-            self.panel_bounds[j]=b            
-            self.panel_corners[j]=np.array([b[0],b[1]])+np.array([[0,b[3]],[0,0],[b[2],0],[b[2],b[3]]])
-            #First corner is the top left one, and the other 3 are listed in counterclockwise order.
+            self.panel_bounds[j]=np.array([topleft[0],self.size[1]-bottomright[1],size_panel[0],size_panel[1]])
+            #First corner is the top left one, and the other 3 are listed in counterclockwise order. These are given for y axis pointing downward!
+            self.panel_corners[j]=topleft+np.array([[0,0],[0,size_panel[1]],size_panel,[size_panel[0],0]])
             self.panel_centers[j]=0.5*(topleft+bottomright)
     
     def set_panel_borders(self):
@@ -503,7 +503,7 @@ class Plotting(QObject,app.Canvas):
         self.set_radarmarkers_data()
         if self.firstplot_performed:
             if 'grid' in self.gui.lines_show: self.set_grid()
-            if 'heightrings' in self.gui.lines_show: self.set_heightrings(self.panellist)
+            if 'heightrings' in self.gui.lines_show: self.set_heightrings()
             if any([j in self.gui.lines_show for j in ('grid','heightrings')]):
                 self.set_ghlineproperties(self.panellist); self.set_ghtextproperties(self.panellist)
             self.set_titles()
@@ -656,34 +656,31 @@ class Plotting(QObject,app.Canvas):
         SM = self.gui.stormmotion
         SM = -SM[1]*np.array([np.sin(np.deg2rad(SM[0])), np.cos(np.deg2rad(SM[0]))])
         return SM*delta_time/1e3
-    def move_view_with_storm(self):
+    def move_view_with_storm(self, panellist):
         # print('Move_view_with_storm')
-        if self.gui.switch_to_case_running:
-            if 'scantime' in self.gui.current_case and 0 in self.data_attr['scantime']:
-                delta_time = ft.datetimediff_s(self.gui.current_case['scandatetime'], self.data_attr['scandatetime'][0])
+        delta_times = {}
+        for j in panellist:
+            if self.gui.switch_to_case_running:
+                try:
+                    dt = ft.datetimediff_s(self.gui.current_case['scandatetime'], self.data_attr['scandatetime'][0])
+                except Exception:
+                    dt = ft.datetimediff_s(self.gui.current_case['datetime'], self.crd.date+self.crd.time)
             else:
-                delta_time = ft.datetimediff_s(self.gui.current_case['datetime'], self.crd.date+self.crd.time)
-        else:
-            n_duplicates = [len(self.dsg.scannumbers_all['z'][self.crd.scans[j]]) if not any([self.data_empty[j], self.data_empty_before[j],
-                            self.data_isold[j]]) else 0 for j in self.panellist]
-            i_max = np.argmax(n_duplicates)
-            panel = self.panellist[i_max]
-            if n_duplicates[i_max] > 0 and panel in self.data_attr['scantime']:
-                panel_before = self.__dict__.get('panel_before', panel)
-                delta_time = ft.datetimediff_s(self.data_attr_before['scandatetime'][panel_before], self.data_attr['scandatetime'][panel])
-                self.panel_before = panel
-            else:
-                return False
-                # delta_time = ft.datetimediff_s(self.crd.before_variables['datetime'], self.crd.date+self.crd.time)
-                
-        if delta_time == 0. or (self.ani.continue_type[:3] != 'ani' and abs(delta_time) > self.max_delta_time_move_view_with_storm) or (
-        self.ani.continue_type[:3] == 'ani' and abs(delta_time) > 60*(self.ani.duration+60)): # Add some margin, since actual duration might differ somewhat
+                try:
+                    dt = ft.datetimediff_s(self.data_attr_before['scandatetime'][j], self.data_attr['scandatetime'][j])
+                except Exception: 
+                    dt = 0.
+            delta_times[j] = dt
+
+        max_dt = max(map(abs, delta_times.values()))
+        if max_dt == 0. or (self.ani.continue_type[:3] != 'ani' and max_dt > self.max_delta_time_move_view_with_storm) or (
+        self.ani.continue_type[:3] == 'ani' and max_dt > 60*(self.ani.duration+60)): # Add some margin, since actual duration might differ somewhat
             # Prevent movement in case of very big timesteps, that e.g. occur when switching to the next day with available data
             return False
             
         scale = np.array(self.panels_sttransforms[0].scale[:2])
-        distance_move = -self.translation_dist_km(delta_time)*np.array([1, -1])*scale 
-        for j in self.panellist:
+        for j in panellist:
+            distance_move = -self.translation_dist_km(delta_times[j])*np.array([1, -1])*scale
             self.panels_sttransforms[j].move(distance_move) # Moving needs to occur in opposite direction
 
         # self.dsg.time_last_panzoom=pytime.time()
@@ -774,7 +771,10 @@ class Plotting(QObject,app.Canvas):
         
         if self.mouse_hold_left:
             for j in self.panellist:
-                self.panels_sttransforms[j].move(np.array(ev.pos)-ev.last_event.pos)
+                if j == 0:
+                    self.panels_sttransforms[0].move(np.array(ev.pos)-ev.last_event.pos)
+                else:
+                    self.panels_sttransforms[j].translate = self.panels_sttransforms[0].translate[:2]+(self.panel_centers[j]-self.panel_centers[0])
 
         elif self.mouse_hold_right:
             p1c = np.array(ev.last_event.pos)[:2]
@@ -893,15 +893,15 @@ class Plotting(QObject,app.Canvas):
         self.datareadout_text='('+lat_text+', '+lon_text+'), ('+x_text+', '+y_text+'), r='+r_text+' km, h='+h_text+' km, '+data_text+' '+product_unit
         self.gui.set_textbar()
             
-    def screencoord_to_xy(self, pos):
+    def screencoord_to_xy(self, pos, panel=None):
         if len(pos.shape)>1:
             xy_coord=[]
             for j in pos:
-                panel=self.get_panel_for_position(j)
+                panel = self.get_panel_for_position(j) if panel is None else panel
                 xy_coord.append(self.coordimaps[panel](j)[:2])
             return np.array(xy_coord)*np.array([1,-1]) # y-coordinate was reversed.
         else:
-            panel=self.get_panel_for_position(pos)
+            panel = self.get_panel_for_position(pos) if panel is None else panel
             return np.array(self.coordimaps[panel](pos)[:2])*np.array([1,-1]) # y-coordinate was reversed.
         
     def xycoord_to_screen(self, panel, pos):
@@ -914,10 +914,10 @@ class Plotting(QObject,app.Canvas):
             return np.array(self.coordimaps[panel](pos*np.array([1,-1]))[:2]) # reverse y-coordinate.
         
     def get_in_view_mask_specs(self, data, panel):
-        specs = str(self.corners)+str(data.shape)+str(self.data_attr['radial_res'][panel] if self.data_attr['proj'][panel] == 'pol' else
+        specs = str(self.corners[panel])+str(data.shape)+str(self.data_attr['radial_res'][panel] if self.data_attr['proj'][panel] == 'pol' else
                                                       self.data_attr['res'][panel])
         if self.data_attr['proj'][panel] == 'pol':
-            specs += str(self.dsg.data_radius_offset[panel])+str(self.dsg.data_azimuth_offset[panel])
+            specs += str(self.data_attr['scanangle'][panel])+str(self.dsg.data_radius_offset[panel])+str(self.dsg.data_azimuth_offset[panel])
         return specs
     def get_min_max_in_view(self, panel):
         data = self.dsg.data[panel]
@@ -927,8 +927,9 @@ class Plotting(QObject,app.Canvas):
         self.get_corners()
         if self.get_in_view_mask_specs(data, panel) != self.in_view_mask_specs:
             if self.data_attr['proj'][panel] == 'pol':
-                dr = self.data_attr['radial_res'][panel]
-                r = self.dsg.data_radius_offset[panel] + dr*(0.5+np.arange(data.shape[1], dtype='float32'))
+                dr, theta = self.data_attr['radial_res'][panel], self.data_attr['scanangle'][panel]
+                r = ft.var1_to_var2(self.dsg.data_radius_offset[panel] + dr*(0.5+np.arange(data.shape[1], dtype='float32')), 
+                                    theta, 'sr+theta->gr')
                 da = self.data_attr['azimuthal_res'][panel]
                 azi = np.deg2rad(self.dsg.data_azimuth_offset[panel] + da*(0.5+np.arange(data.shape[0], dtype='float32')))
                 x = r[np.newaxis,:]*np.sin(azi[:,np.newaxis])
@@ -939,7 +940,8 @@ class Plotting(QObject,app.Canvas):
                 coords = res*(0.5+np.arange(-0.5*xy_bins, 0.5*xy_bins, dtype='float32'))
                 x, y = np.meshgrid(coords, coords[::-1], copy=False)
             
-            self.in_view_mask = (x >= self.corners[0][0]) & (x  <= self.corners[-1][0]) & (y >= self.corners[1][1]) & (y <= self.corners[0][1])
+            corners = self.corners[panel]
+            self.in_view_mask = (x >= corners[0][0]) & (x  <= corners[-1][0]) & (y >= corners[1][1]) & (y <= corners[0][1])
             self.in_view_mask_specs = self.get_in_view_mask_specs(data, panel)
             
         in_view = data[self.in_view_mask & (data != self.masked_values_int[self.crd.products[panel]])]
@@ -947,7 +949,7 @@ class Plotting(QObject,app.Canvas):
         
     def get_max_dist_mouse_to_marker(self, f=1):
         self.get_corners()
-        return f*15*(self.corners[0][1]-self.corners[1][1])*self.nrows/1e3
+        return f*15*self.ydim*self.nrows/1e3
     
     def check_presence_near_radars(self, pos):
         xy_mouse = self.screencoord_to_xy(pos)
@@ -977,7 +979,7 @@ class Plotting(QObject,app.Canvas):
             
     def update_gridheightrings(self,event=None):
         if 'grid' in self.gui.lines_show: self.set_grid()
-        if 'heightrings' in self.gui.lines_show: self.set_heightrings(self.panellist)
+        if 'heightrings' in self.gui.lines_show: self.set_heightrings()
         self.set_ghlineproperties(self.panellist)
         self.set_ghtextproperties(self.panellist)
         self.set_draw_action('panning_zooming')
@@ -1238,27 +1240,28 @@ class Plotting(QObject,app.Canvas):
             move_view_with_storm = self.gui.use_storm_following_view and apply_storm_centering
             # print('move', move_view_with_storm, apply_storm_centering)
             if move_view_with_storm:
-                move_view_with_storm = self.move_view_with_storm()
+                panellist_move = [j for j in panellist if data_changed[j]]
+                if panellist_move:
+                    move_view_with_storm = self.move_view_with_storm(panellist_move)
                 
             if source_function!=self.change_panels:
                 # If source_function==self.change_panels, then it is always desired to update grid and height rings because of changed 
                 # panel dimensions. In that case that is done in a simple manner in the function itself.
                 
-                #if self.data_empty has changed, then the grid and heightrings should always be updated, because for at least 1 panel they change
-                #from visible to invisible or vice versa.
-                gh_changed=True if any([self.data_empty_before[j]!=self.data_empty[j] for j in panellist]) else False 
+                gh_panellist = panellist_move if move_view_with_storm else panellist
+                # if self.data_empty has changed, then the grid and heightrings should always be updated, because for at least 1 panel they change
+                # from visible to invisible or vice versa.
+                gh_changed = any([self.data_empty_before[j] != self.data_empty[j] for j in panellist]) 
                 #When self.timer_setback_gridheightrins_running=True, then heightrings are currently not visible, and  will be plotted after the
                 #timer is finished. In this case it is therefore not desired to update them here, as this will make them visible.
                 if not self.firstplot_performed or (not self.postpone_plotting_gridheightrings and 
                 source_function==self.crd.process_datetimeinput) or move_view_with_storm:
                     if 'grid' in self.gui.lines_show:
-                        self.set_grid(); gh_changed=True
+                        self.set_grid(gh_panellist); gh_changed=True
                 
                 products_plainproducts=[[j,self.data_attr['product'][j]] for j in panellist if j in self.data_attr['product'] and self.data_attr['product'][j] in gv.plain_products]
                 productsbefore_plainproducts=[[j,self.products_before[j]] for j in panellist if self.products_before[j] in gv.plain_products]
                 
-                # Update grid and height rings for all panels when move_view_with_storm=True, since then the view changes
-                gh_panellist = self.panellist if move_view_with_storm else panellist
                 #Update height rings only if the scanangle differs by more than 0.05 degrees from the angle on which the height rings are currently
                 #based, to prevent that there are too much changes (which leads to undesired flickering and slows down plotting a bit).
                 scanangles_updated = self.update_heightrings_scanangles()
@@ -1352,7 +1355,8 @@ class Plotting(QObject,app.Canvas):
             elif not self.changing_panels: self.set_draw_action('plotting')
             self.update()
             
-            if (radar_changed or dataset_changed or self.crd.changing_subdataset or change_datetime) and any(list(data_changed.values())):
+            if (not self.firstplot_performed or radar_changed or dataset_changed or self.crd.changing_subdataset or change_datetime) and\
+            any(data_changed.values()):
                 self.update_current_variables()
                                                                     
             if any(data_changed.values()):
@@ -1426,7 +1430,8 @@ class Plotting(QObject,app.Canvas):
     def get_latlon_bounds(self, xy_bounds=None):
         if xy_bounds is None:
             self.get_corners()
-            x_min, x_max, y_min, y_max = self.corners[0,0], self.corners[-1,0], self.corners[1,1], self.corners[0,1]
+            x_min, x_max = min(self.corners[j][0,0] for j in self.panellist), max(self.corners[j][-1,0] for j in self.panellist)
+            y_min, y_max = min(self.corners[j][1,1] for j in self.panellist), max(self.corners[j][0,1] for j in self.panellist)            
         else:
             x_min, x_max, y_min, y_max = xy_bounds
             
@@ -1489,7 +1494,13 @@ class Plotting(QObject,app.Canvas):
         
     def set_titles(self):
         relwidth = self.wsize['main'][0] / self.gui.screen_size()[0]
-        title_top, title_bottom, paneltitles=bg.get_titles(relwidth,self.gui.fontsizes_main['titles'],self.crd.radar,self.panels,self.panellist,self.panelnumber_to_plotnumber,self.plotnumber_to_panelnumber,self.data_empty,self.data_isold,self.data_attr['product'],self.crd.date,self.data_attr['scantime'],self.data_attr['scanangle'],self.crd.using_unfilteredproduct,self.crd.using_verticalpolarization,self.crd.apply_dealiasing,self.productunits,self.gui.stormmotion,self.gui.PP_parameter_values,self.gui.PP_parameters_panels,self.gui.show_vwp)
+        if any(j not in self.data_attr['scandatetime'] or j not in self.data_isold for j in self.panellist):
+            print(list(self.data_attr['scandatetime']), self.data_isold)
+        scandates = [self.data_attr['scandatetime'][j][:8] for j in self.panellist if not self.data_isold[j]]
+        # During the switch to another day, it could happen that some scans are for the previous day, and others for the next. In that case show the
+        # date that is most common in the panels.
+        date = max(set(scandates), key=scandates.count) if scandates else self.crd.date
+        title_top, title_bottom, paneltitles=bg.get_titles(relwidth,self.gui.fontsizes_main['titles'],self.crd.radar,self.panels,self.panellist,self.panelnumber_to_plotnumber,self.plotnumber_to_panelnumber,self.data_empty,self.data_isold,self.data_attr['product'],date,self.data_attr['scantime'],self.data_attr['scanangle'],self.crd.using_unfilteredproduct,self.crd.using_verticalpolarization,self.crd.apply_dealiasing,self.productunits,self.gui.stormmotion,self.gui.PP_parameter_values,self.gui.PP_parameters_panels,self.gui.show_vwp)
         
         titles_text_top=[title_top]+[paneltitles[j] for j in paneltitles if j<5 or self.panels==2]
         titles_text_bottom=[title_bottom]+[paneltitles[j] for j in paneltitles if j>=5 and self.panels!=2]
@@ -1576,7 +1587,7 @@ class Plotting(QObject,app.Canvas):
              
             if not self.postpone_plotting_gridheightrings:
                 if 'grid' in self.gui.lines_show: self.set_grid()
-                if 'heightrings' in self.gui.lines_show: self.set_heightrings(self.panellist) 
+                if 'heightrings' in self.gui.lines_show: self.set_heightrings() 
                 if any([j in self.gui.lines_show for j in ('grid','heightrings')]):
                     self.set_ghlineproperties(self.panellist)
             if len(self.gui.ghtext_show)>0 and not self.postpone_plotting_gridheightrings: self.set_ghtextproperties(self.panellist)
@@ -1851,23 +1862,30 @@ class Plotting(QObject,app.Canvas):
         return update_cbars_products                            
                 
     def get_corner_specs(self):
-        return str(self.panels_sttransforms[0].translate[:2])+str(self.panels_sttransforms[0].scale[:2])
+        return [str(self.panels_sttransforms[j].translate[:2])+str(self.panels_sttransforms[j].scale[:2]) for j in self.panellist]
     def get_corners(self):
         if not hasattr(self, 'corner_specs') or self.get_corner_specs() != self.corner_specs:
-            self.corners = self.screencoord_to_xy(self.wpos['main'])
+            # Without setting panel=j, the right edge of the panel is actually considered to be part of the next panel, causing the calculated
+            # right panel corners to be the same as the left corners 
+            self.corners = {j:self.screencoord_to_xy(self.panel_corners[j], panel=j) for j in self.panellist}
+            self.xdim, self.ydim = self.corners[0][-1]-self.corners[0][1]
             self.corner_specs = self.get_corner_specs()
           
-    def set_grid(self):
+    def set_grid(self, panellist=None):
+        panellist = self.panellist if panellist is None else panellist
+        
         self.get_corners()
         physical_size_cm_main = self.physical_size_cm() - 2*self.scale_physicalsize(self.wdims)
         rel_xdim = self.physical_size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
         self.gridlines_vertices, self.gridlines_connect, self.gridlines_text_hor_pos, self.gridlines_text_hor, self.gridlines_text_vert_pos, self.gridlines_text_vert =\
-            bg.determine_gridpos(physical_size_cm_main,rel_xdim,self.corners,self.visuals['text_hor1'][0].font_size,self.panels,self.panellist,self.nrows,self.ncolumns,self.gui.show_vwp)
-        self.update_combined_lineproperties(self.panellist,changing_grid=True)
-        self.update_combined_ghtextproperties(self.panellist,changing_grid=True)
+            bg.determine_gridpos(physical_size_cm_main,rel_xdim,self.corners,self.visuals['text_hor1'][0].font_size,self.panels,panellist,self.nrows,self.ncolumns,self.gui.show_vwp)
+        self.update_combined_lineproperties(panellist,changing_grid=True)
+        self.update_combined_ghtextproperties(panellist,changing_grid=True)
          
-    def set_heightrings(self,panellist):
+    def set_heightrings(self, panellist=None):
+        panellist = self.panellist if panellist is None else panellist
         panellist = [j for j in panellist if not self.data_empty[j]]
+        
         self.get_parameters_heightrings()
         
         for j in panellist:
@@ -1887,7 +1905,7 @@ class Plotting(QObject,app.Canvas):
                 if product not in gv.plain_products_show_max_elevations:
                     self.heights_text_pos[j]=[self.radii[j][i]*np.array([np.sin(self.textangles[j][i]),np.cos(self.textangles[j][i])]) for i in range(0,len(self.radii[j]))]
                 else:
-                    pos_offset=20*(self.corners[0][1]-self.corners[1][1])*self.nrows/1e3
+                    pos_offset=20*self.ydim*self.nrows/1e3
                     if product in gv.plain_products:
                         heights_text_pos1=[(self.radii[j][i]+pos_offset)*np.array([np.sin(self.textangles[j][i]),np.cos(self.textangles[j][i])]) for i in range(len(self.radii[j])-len(self.dp.meta_PP[product]['elevations_minside']),len(self.radii[j]))]
                     heights_text_pos2=[(self.radii[j][i]-pos_offset)*np.array([np.sin(self.textangles[j][i]),np.cos(self.textangles[j][i])]) for i in range(0,len(self.radii[j]))]
@@ -1960,6 +1978,8 @@ class Plotting(QObject,app.Canvas):
               
     def update_combined_ghtextproperties(self,panellist,changing_heightrings=False,changing_grid=False):
         for i in panellist:
+            # if i in getattr(self, 'dont_draw', []):
+            #     continue
             if changing_grid:
                 self.ghtext_hor_pos_combined[i]['grid']=self.gridlines_text_hor_pos[i]
                 self.ghtext_hor_strings_combined[i]['grid']=self.gridlines_text_hor[i]
@@ -2008,9 +2028,9 @@ class Plotting(QObject,app.Canvas):
                         self.lines_connect_combined[i][j]=self.shapefiles_connect_combined[j]
                         self.lines_colors_combined[i][j]=np.ones((len(self.lines_pos_combined[i][j]),4))*self.gui.lines_colors[j]/255.
             if changing_grid:
-                self.lines_pos_combined[i]['grid']=self.gridlines_vertices
-                self.lines_connect_combined[i]['grid']=self.gridlines_connect
-                self.lines_colors_combined[i]['grid']=np.ones((len(self.gridlines_vertices),4))*self.gui.lines_colors['grid']/255.
+                self.lines_pos_combined[i]['grid']=self.gridlines_vertices[i]
+                self.lines_connect_combined[i]['grid']=self.gridlines_connect[i]
+                self.lines_colors_combined[i]['grid']=np.ones((len(self.gridlines_vertices[i]),4))*self.gui.lines_colors['grid']/255.
             if changing_heightrings:
                 self.lines_pos_combined[i]['heightrings']=self.vertices_circles[i]
                 self.lines_connect_combined[i]['heightrings']=self.vertices_circles_connect[i]

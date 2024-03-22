@@ -80,7 +80,7 @@ class Change_RadarData(QObject):
         
         """These 'before' variables get updated in the function set_newdata in nlr_plottingbasic.py
         """
-        self.current_variables={'radar':self.radar,'dataset':self.dataset,'radardir_index':None,'product_version':None,'date':self.date,'time':self.time,'scannumbers_forduplicates':{}}
+        self.current_variables={'radar':self.radar,'dataset':self.dataset,'radardir_index':None,'product_version':None,'date':self.date,'time':self.time,'datetime':self.date+self.time,'scannumbers_forduplicates':{}}
         self.before_variables=copy.deepcopy(self.current_variables)
         self.rd_before_variables=copy.deepcopy(self.current_variables) #Is only updated when the radar, radardir_index or dataset changes.
         
@@ -591,8 +591,9 @@ class Change_RadarData(QObject):
                     if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
                         # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
                         desired_newdate = desired_newtime = None
-                        
+                print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
                 self.directory=self.dsg.get_next_directory(self.selected_radar,self.selected_dataset,current_date,current_time,int(np.sign(lr_step)),desired_newdate,desired_newtime)
+                print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
                 self.determine_list_filedatetimes()
 
                 #If not files_available, then the 'old' list with datetimes is still used.
@@ -1011,9 +1012,17 @@ class Change_RadarData(QObject):
                 panellist_change=[j for j in self.pb.panellist if self.products[j] not in gv.plain_products]
             elif abs(downup_step)==1.1 and self.products[self.pb.panel] not in gv.plain_products:
                 panellist_change=[self.pb.panel]
-            elif leftright_step!=0 and use_same_volumetime:
-                panellist_change=[j for j in self.pb.panellist if len(self.dsg.scannumbers_all['z'][self.scans[j]])>1 and not self.products[j] in gv.plain_products]
-                panellist_change+=[j for j in self.pb.panellist if self.products[j] in gv.plain_products_affected_by_double_volume]
+            elif leftright_step!=0 and use_same_volumetime and not self.change_radar_running: # radar could change when combining nearest
+                # radar selection with storm-following view. In that case update all panels.
+                d, d_before = self.dsg.scannumbers_forduplicates, self.current_variables['scannumbers_forduplicates']
+                for j in self.pb.panellist:
+                    try:
+                        if (self.products[j] in gv.products_with_tilts and d[self.scans[j]] != d_before[self.scans[j]]) or (
+                        self.products[j] in gv.plain_products_affected_by_double_volume and d[self.products[j]] != d_before[self.products[j]]):
+                            panellist_change.append(j)
+                    except Exception as e:
+                        print(e, d, d_before, [self.scans[j] for j in self.pb.panellist])
+                        1/0
             elif leftright_step!=0:
                 panellist_change=[j for j in self.pb.panellist]
             

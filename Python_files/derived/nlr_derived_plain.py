@@ -31,7 +31,7 @@ class DerivedPlain():
         if not self.gui.derivedproducts_filename_version == self.filename_version and os.path.exists(self.gui.derivedproducts_dir):
             shutil.rmtree(self.gui.derivedproducts_dir)
         
-        self.hdf5_structure_version = 37
+        self.hdf5_structure_version = 38
         self.product_version = {'e':16,'r':11,'a':5,'m':5,'h':8,'l':17} #Product version, must be updated when the method for calculating the product has changed.
         self.product_parameters = {'e':'min_dBZ_value_echotops','a':'PCAPPI_height','m':'Zmax_minheight','h':'cap_dBZ, VIL_threshold','l':'cap_dBZ, VIL_minheight'}
         self.product_attributes = {'e':['scans_ranges','elevations_minside','elevations_plusside'],'m':['scans_ranges','elevations_minside','elevations_plusside'],'h':['scans_ranges','elevations_minside','elevations_plusside'],'l':['scans_ranges','elevations_minside','elevations_plusside']}
@@ -114,9 +114,7 @@ class DerivedPlain():
                 else:
                     subgroup = group
                 
-                dataset_name = 'data' if not product in self.gui.PP_parameter_values else f'data_pval{param}'
-                if proj == 'car':
-                    dataset_name += f'_res{self.gui.cartesian_product_res}'
+                dataset_name = self.get_dataset_name(product, param, proj)
                     
                 datasets = list(subgroup)
                 if dataset_name in datasets:
@@ -137,6 +135,12 @@ class DerivedPlain():
             pass
         
         return product_at_disk
+    
+    def get_dataset_name(self, product, param, proj):
+        dataset_name = 'data' if not product in self.gui.PP_parameter_values else f'data_pval{param}'
+        if proj == 'car':
+            dataset_name += f'_res{self.gui.cartesian_product_res}_maxrange{self.gui.cartesian_product_maxrange}'
+        return dataset_name
 
     def write_file(self, p_param, proj):
         product, param = self.get_product_and_param(p_param)
@@ -148,7 +152,7 @@ class DerivedPlain():
             with h5py.File(filename, 'r') as f:
                 version, total_volume_files_size = f.attrs['version'], f.attrs['total_volume_files_size']
                 new_file = version != self.hdf5_structure_version or total_volume_files_size != self.dsg.total_files_size
-                action = 'a' if new_file else 'w'
+                action = 'w' if new_file else 'a'
         except Exception: 
             action = 'w'
         
@@ -184,9 +188,7 @@ class DerivedPlain():
             else:
                 subgroup = group
             
-            dataset_name = 'data' if not product in self.gui.PP_parameter_values else f'data_pval{param}'
-            if proj == 'car':
-                dataset_name += f'_res{self.gui.cartesian_product_res}'
+            dataset_name = self.get_dataset_name(product, param, proj)
                             
             datasets = list(subgroup)
             if len(datasets) == self.product_datasets_max[proj]:

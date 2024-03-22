@@ -1312,85 +1312,80 @@ def get_titles(relwidth,fontsizes_main_titles,radar,panels,panellist,panelnumber
     
     
     
-def determine_gridpos(physical_size_cm_main,rel_xdim,corners,text_fontsize,panels,panellist,nrows,ncolumns,show_vwp):
-    xmin=corners[0,0]; xmax=corners[-1,0]
-    ymin=corners[1,1]; ymax=corners[-1,1]
-    xdim=xmax-xmin; ydim=ymax-ymin
-    gs=np.array([100,90,80,70,60,50,40,30,25,20,15,12],dtype='float64')
-    N=xdim/gs[0]
-    min_N=2
-    max_N=7/ncolumns*rel_xdim
-    if N==max_N: gridspacing=gs[0]
-    elif N<max_N:
-        while N < max_N and gs.min() > 0:
-            for j in range(len(gs)):
-                gs_try=gs[j]
-                N=xdim/gs_try
+def determine_gridpos(physical_size_cm_main,rel_xdim,corners,text_fontsize,panels,panellist,nrows,ncolumns,show_vwp):    
+    xdim, ydim = corners[0][-1]-corners[0][1]
+    # grid spacing options (which can be multiplied by a power of 10)
+    gs_arr = np.array([100,90,80,70,60,50,40,30,25,20,15,12], dtype='float64')
+    N = xdim/gs_arr[0]
+    min_N, max_N = 2, 7/ncolumns*rel_xdim
+    gs = gs_try_before = gs_arr[0]
+    if N < max_N:
+        while N < max_N and gs_arr.min() > 0:
+            for gs_try in gs_arr:
+                N = xdim/gs_try
                 if N >= max_N: break
-                gs_try_before=gs_try
-            gs /= 10.
-        gridspacing=gs_try_before if xdim/gs_try_before >= min_N else gs_try
-    else:
-        gs_try_before=gs[0]
-        while N>max_N:
-            gs *= 10.
-            for j in range(len(gs)):
-                gs_try=gs[len(gs)-1-j]
-                N=xdim/gs_try
+                gs_try_before = gs_try
+            gs_arr /= 10.
+        gs = gs_try_before if xdim/gs_try_before >= min_N else gs_try
+    elif N > max_N:
+        while N > max_N:
+            gs_arr *= 10.
+            for gs_try in gs_arr[::-1]:
+                N = xdim/gs_try
                 if N <= max_N: break
-                gs_try_before=gs_try
-        gridspacing=gs_try if N >= min_N else gs_try_before
-        
-    xstart=np.ceil(xmin/gridspacing)*gridspacing; xend=np.floor(xmax/gridspacing)*gridspacing
-    ystart=np.ceil(ymin/gridspacing)*gridspacing; yend=np.floor(ymax/gridspacing)*gridspacing
-    Nx=int(np.around((xend-xstart)/gridspacing+1)); Ny=int(np.around((yend-ystart)/gridspacing+1))
-    xvalues=np.linspace(xstart,xend,num=Nx); yvalues=np.linspace(ystart,yend,num=Ny)
-    
-    ycoords_xgridlines=np.array([ymin,ymax])+ydim*np.array([-1,1])
-    xcoords_ygridlines=np.array([xmin,xmax])+xdim*np.array([-1,1])
-            
-    #20.53 is the reference physical y dimension
-    text_offset=text_fontsize/11.5*20.53/physical_size_cm_main[1]*6*ydim*nrows/1e3
-        
-    if len(yvalues)>0:
-        ygridlines_vertices=np.concatenate(np.array([[[xcoords_ygridlines[0],yvalues[j]],[xcoords_ygridlines[1],yvalues[j]]] for j in range(0,len(yvalues))]))
-        ygridlines_connect=np.concatenate(np.array([[1,0] for j in yvalues]))
-        ygridlines_textpos=np.concatenate(np.array([[np.array([xmin,yvalues[j]])+text_offset*np.array([1,0])] for j in range(0,len(yvalues))]))
-        ygridlines_text=[str(ft.round_float(j)) for j in yvalues]
-    else:
-        ygridlines_vertices = []; ygridlines_connect = []; ygridlines_textpos = []; ygridlines_text = []
-        
-    if len(xvalues)>0:
-        xgridlines_vertices=np.concatenate(np.array([[[xvalues[j],ycoords_xgridlines[0]],[xvalues[j],ycoords_xgridlines[1]]] for j in range(0,len(xvalues))]))
-        xgridlines_connect=np.concatenate(np.array([[1,0] for j in xvalues]))
-        xgridlines_textpos=np.concatenate(np.array([[np.array([xvalues[j],ymin])+text_offset*np.array([0,1])] for j in range(0,len(xvalues))]))
-        xgridlines_text=[str(ft.round_float(j)) for j in xvalues]
-        
-        if xvalues[0]-xmin<37*ydim*nrows/1e3 and yvalues[0]-ymin<37*ydim*nrows/1e3:
-            xgridlines_textpos=xgridlines_textpos[1:]; xgridlines_text=xgridlines_text[1:] #This is to prevent that the first horizontal and vertical tick are on top of each other.
-    else:
-        xgridlines_vertices = []; xgridlines_connect = []; xgridlines_textpos = []; xgridlines_text = []
-    
-    if len(xvalues)>0 and len(yvalues)>0:
-        gridlines_vertices=np.concatenate([xgridlines_vertices,ygridlines_vertices])
-        gridlines_connect=np.append(xgridlines_connect,ygridlines_connect).astype('bool')
-    elif len(xvalues)>0 or len(yvalues)>0:
-        gridlines_vertices = xgridlines_vertices if len(xvalues)>0 else ygridlines_vertices
-        gridlines_connect = xgridlines_connect if len(xvalues)>0 else ygridlines_connect
-    else:
-        gridlines_vertices = []; gridlines_connect = []
-    
-    gridlines_text_hor_pos_panels={}; gridlines_text_hor_panels={}
-    gridlines_text_vert_pos_panels={}; gridlines_text_vert_panels={}
+                gs_try_before = gs_try
+        gs = gs_try if N >= min_N else gs_try_before
+     
+    gridlines_vertices_panels, gridlines_connect_panels = {}, {}
+    gridlines_text_hor_pos_panels, gridlines_text_hor_panels = {j:[] for j in panellist}, {j:[] for j in panellist}
+    gridlines_text_vert_pos_panels, gridlines_text_vert_panels = {j:[] for j in panellist}, {j:[] for j in panellist}
     for j in panellist:
-        gridlines_text_hor_pos_panels[j]=[]; gridlines_text_hor_panels[j]=[]; gridlines_text_vert_pos_panels[j]=[]; gridlines_text_vert_panels[j]=[]
-        if ((j<5 and panels<4) or (j>4 and (panels==2 or panels>3))) and len(xgridlines_text)>0:
-            gridlines_text_hor_pos_panels[j]=xgridlines_textpos
-            gridlines_text_hor_panels[j]=xgridlines_text
-        if (j==0 or (j==5 and panels>3)) and len(ygridlines_text)>0:
-            gridlines_text_vert_pos_panels[j]=ygridlines_textpos
-            gridlines_text_vert_panels[j]=ygridlines_text
-    return gridlines_vertices, gridlines_connect, gridlines_text_hor_pos_panels, gridlines_text_hor_panels, gridlines_text_vert_pos_panels, gridlines_text_vert_panels
+        xmin, xmax = corners[j][(0, -1), 0]
+        ymin, ymax = corners[j][(1, -1), 1]
+    
+        xstart, xend = np.ceil(xmin/gs)*gs, np.floor(xmax/gs)*gs
+        ystart, yend = np.ceil(ymin/gs)*gs, np.floor(ymax/gs)*gs
+        xvalues, yvalues = np.arange(xstart, xend+0.1*gs, gs), np.arange(ystart, yend+0.1*gs, gs) 
+                
+        #20.53 is the reference physical y dimension
+        text_offset = text_fontsize/11.5*20.53/physical_size_cm_main[1]*6*ydim*nrows/1e3
+            
+        ygridlines_vertices, ygridlines_connect, ygridlines_textpos, ygridlines_text = [], [], [], []
+        if len(yvalues):
+            ygridlines_vertices = np.concatenate([[[xmin, y],[xmax, y]] for y in yvalues])
+            ygridlines_connect = np.array([True, False]*len(yvalues))
+            ygridlines_textpos = np.array([[xmin+text_offset, y] for y in yvalues])
+            ygridlines_text = [str(ft.round_float(y)) for y in yvalues]
+            
+        xgridlines_vertices, xgridlines_connect, xgridlines_textpos, xgridlines_text = [], [], [], []
+        if len(xvalues):
+            xgridlines_vertices = np.concatenate([[[x, ymin],[x, ymax]] for x in xvalues])
+            xgridlines_connect = np.array([True, False]*len(xvalues))
+            xgridlines_textpos = np.array([[x, ymin+text_offset] for x in xvalues])
+            xgridlines_text = [str(ft.round_float(x)) for x in xvalues]
+            
+            if xstart-xmin < 37*ydim*nrows/1e3 and ystart-ymin < 37*ydim*nrows/1e3:
+                #This is to prevent that the first horizontal and vertical tick are on top of each other.
+                xgridlines_textpos, xgridlines_text = xgridlines_textpos[1:], xgridlines_text[1:]
+        
+        gridlines_vertices, gridlines_connect = [], []
+        if len(xvalues) and len(yvalues):
+            gridlines_vertices = np.concatenate([xgridlines_vertices, ygridlines_vertices])
+            gridlines_connect = np.append(xgridlines_connect, ygridlines_connect)
+        elif len(xvalues) or len(yvalues):
+            gridlines_vertices = xgridlines_vertices if len(xvalues) else ygridlines_vertices
+            gridlines_connect = xgridlines_connect if len(xvalues) else ygridlines_connect
+    
+        gridlines_vertices_panels[j] = gridlines_vertices
+        gridlines_connect_panels[j] = gridlines_connect
+        if ((j < 5 and panels < 4) or (j > 4 and (panels == 2 or panels > 3))) and len(xgridlines_text):
+            gridlines_text_hor_pos_panels[j] = xgridlines_textpos
+            gridlines_text_hor_panels[j] = xgridlines_text
+        if (j == 0 or (j == 5 and panels > 3)) and len(ygridlines_text):
+            gridlines_text_vert_pos_panels[j] = ygridlines_textpos
+            gridlines_text_vert_panels[j] = ygridlines_text
+    return (gridlines_vertices_panels, gridlines_connect_panels, gridlines_text_hor_pos_panels, gridlines_text_hor_panels,
+            gridlines_text_vert_pos_panels, gridlines_text_vert_panels)
             
             
             
@@ -1400,17 +1395,19 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
     # In the case of a moving panel center (like with storm-moving view), additional height rings will be added when needed, and out-of-view rings 
     # will be removed.
     global heights, hranges, previous_center_dist, previous_scanangles
-    min_r,max_r,_,_=ft.mindist_maxdist_maxangle(corners)
-    center_dist = np.linalg.norm(np.mean(corners, axis=0))
-
-    x_full = (corners[-1,0]-corners[0,0])*ncolumns
-    dr_desired = x_full/(5*rel_xdim)
+    
+    xdim_full = ncolumns*(corners[0][-1,0]-corners[0][0,0])
+    dr_desired = xdim_full/(5*rel_xdim)
+    
     heights_old = {p: heights[p] for p in heights}
     hranges_old = {p: hranges[p] for p in hranges}
+    center_dist = {}
     for j, p in enumerate(panellist):
         p = panellist[j]
+        min_r, max_r = ft.mindist_maxdist_maxangle(corners[p])[:2]
+        center_dist[p] = np.linalg.norm(np.mean(corners[p], axis=0))
         
-        dmin = 0.035*x_full
+        dmin = 0.035*xdim_full
         h_min_text = ft.c1dec(ft.var1_to_var2(min_r+dmin, scanangles[j], 'gr+theta->h'))
         h_max_text = ft.f1dec(ft.var1_to_var2(max_r-dmin, scanangles[j], 'gr+theta->h'))
         r_min_text = bool(min_r > 0.)*ft.var1_to_var2(h_min_text, scanangles[j], 'h+theta->gr')
@@ -1437,10 +1434,10 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
             
             # retain is None implies retaining all previous values. This is always done when there's no change in view, in order to prevent 
             # that the lowest/highest height is removed due to small changes in r_min_text/r_max_text caused by changes in scanangle
-            retain = None if center_dist == previous_center_dist else ((r_old >= r_min_text) & (r_old <= r_max_text))
+            retain = None if center_dist[p] == previous_center_dist[p] else ((r_old >= r_min_text) & (r_old <= r_max_text))
             h_old, r_old = h_old[retain], r_old[retain]
             if len(h_old):
-                s = np.sign(center_dist-previous_center_dist)
+                s = np.sign(center_dist[p]-previous_center_dist[p])
                 r = r_old[-1 if s > 0 else 0]
                 r_text = []
                 # s might be 0
@@ -1456,7 +1453,7 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
                             r = ft.var1_to_var2(h, scanangles[j], 'h+theta->gr')
                         else:
                             break
-                    if r/x_full < 0.025:
+                    if r/xdim_full < 0.025:
                         # Don't position height rings too close to the origin
                         break
                 r_text = np.sort(np.array(r_text[1:])) # First element is from old height rings 
@@ -1519,47 +1516,48 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
 xfactor={1:1,2:0.5,3:1./3.,4:0.5,6:1./3.,8:0.25,10:0.2}
 yfactor={1:1,2:1,3:1./3.,4:0.5,6:0.5,8:0.5,10:0.5}
 def determine_textangles(corners,panels,panellist,products,hranges):
-    min_r, max_r, angle_min_r, angle_max_r=ft.mindist_maxdist_maxangle(corners)
-    current_xlim=np.array([np.min(corners[:,0]),np.max(corners[:,0])]); current_ylim=np.array([np.min(corners[:,1]),np.max(corners[:,1])])
+    ydim = corners[0][-1,1]-corners[0][1,1]
     
-    textangles={}
+    textangles = {}
     for j in panellist:
-        textangles[j]=np.zeros(len(hranges[j]))
+        min_r, max_r, angle_min_r, angle_max_r = ft.mindist_maxdist_maxangle(corners[j])
+        current_xlim, current_ylim = corners[j][(0, -1), 0], corners[j][(1, -1), 1]
         
-        angle_perturbation_step=1
-        hranges[j] = hranges[j][::-1]
+        textangles[j] = np.zeros(len(hranges[j]))
+        
+        angle_perturbation_step = 1
         n_perturbations = 0
-        for i, r in enumerate(hranges[j]):
+        for i, r in enumerate(hranges[j][::-1]):
             if min_r==0.:
-                textangles[j][i]=angle_max_r
+                textangles[j][i] = angle_max_r
             else:
                 try:
-                    textangles[j][i]=ft.av_angle_circle_in_rectangle(current_xlim,current_ylim,r)
+                    textangles[j][i] = ft.av_angle_circle_in_rectangle(current_xlim,current_ylim,r)
                 except Exception:
                     # Happens when the circle is not within the current view
                     textangles[j][i] = 0.
                 
-            circle_point=r*np.array([np.sin(textangles[j][i]),np.cos(textangles[j][i])])
-            if ft.distance_to_rectangle_point_inside(corners,circle_point)*yfactor[panels]*4e2/(current_ylim[1]-current_ylim[0])<15:
+            circle_point = r*np.array([np.sin(textangles[j][i]), np.cos(textangles[j][i])])
+            if ft.distance_to_rectangle_point_inside(corners[j], circle_point)*yfactor[panels]*4e2/ydim < 15:
                 # This can happen only for the first and last circle
                 if i == 0:
-                    cornerx,cornery=max_r*np.array([np.sin(angle_max_r),np.cos(angle_max_r)])
-                    cornervector=[np.sign(np.sin(angle_max_r)),np.sign(np.cos(angle_max_r))]
-                    textangles[j][i]=ft.angle_intersection_circle_with_corner_bisector(cornerx,cornery,cornervector,r)
+                    cornerx,cornery = max_r*np.array([np.sin(angle_max_r), np.cos(angle_max_r)])
+                    cornervector = [np.sign(np.sin(angle_max_r)), np.sign(np.cos(angle_max_r))]
+                    textangles[j][i] = ft.angle_intersection_circle_with_corner_bisector(cornerx,cornery,cornervector,r)
                 elif not angle_min_r is None:
-                    cornerx,cornery=min_r*np.array([np.sin(angle_min_r),np.cos(angle_min_r)])
-                    cornervector=[np.sign(np.sin(angle_min_r)),np.sign(np.cos(angle_min_r))]
-                    textangles[j][i]=ft.angle_intersection_circle_with_corner_bisector(cornerx,cornery,cornervector,r)
+                    cornerx,cornery = min_r*np.array([np.sin(angle_min_r), np.cos(angle_min_r)])
+                    cornervector = [np.sign(np.sin(angle_min_r)), np.sign(np.cos(angle_min_r))]
+                    textangles[j][i] = ft.angle_intersection_circle_with_corner_bisector(cornerx,cornery,cornervector,r)
                     
             if products[j] in gv.plain_products:
-                if np.mod(n_perturbations, 3) == 0 or r/max_r > 0.9:
-                    angle_perturbation=0.
+                if n_perturbations % 3 == 0 or r/max_r > 0.9:
+                    angle_perturbation = 0.
                 else:
-                    angle_perturbation=angle_perturbation_step*10*np.pi/180*(corners[0][1]-corners[1][1])/6e2
+                    angle_perturbation = angle_perturbation_step*10*np.pi/180*ydim/6e2
                     angle_perturbation_step *= -1
                 n_perturbations += 1
-                if np.abs(angle_perturbation*150/r)<np.pi/4: angle_perturbation*=150/r
-                else: angle_perturbation=np.pi/4;
+                if abs(angle_perturbation*150/r) < np.pi/4: angle_perturbation *= 150/r
+                else: angle_perturbation = np.pi/4
                 textangles[j][i] += angle_perturbation
-        hranges[j] = hranges[j][::-1]; textangles[j] = textangles[j][::-1]
+        textangles[j] = textangles[j][::-1]
     return textangles

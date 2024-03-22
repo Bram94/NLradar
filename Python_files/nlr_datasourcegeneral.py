@@ -94,7 +94,7 @@ class DataSource_General():
         self.range_nyquistvelocity_scanpairs_indices = {j:0 for j in range(10)}
         self.scans_radars = {} #Gets updated in self.pb.set_newdata!
         self.selected_scanangles_before = {}
-        self.center_heights = {}
+        self.panel_center_heights = {}
         self.time_last_panzoom = 0
         self.time_last_purposefulscanchanges = 0
         self.time_last_choosenearestheight = 0
@@ -270,6 +270,8 @@ class DataSource_General():
                 self.crd.update_selected_scanangles(update_allpanels=True)
              
             self.scanpair_present = self.check_presence_large_range_large_nyquistvelocity_scanpair()
+            if self.scanpair_present or self.scanpair_present_before:
+                print('scanpair_present', self.scanpair_present, self.scanpair_present_before)
             if self.crd.scan_selection_mode != 'scan' or self.gui.setting_saved_choice:
                 self.check_need_scans_change()
             else:
@@ -532,7 +534,8 @@ class DataSource_General():
         
         # It is assumed that any change in volume/scan content is reflected in a change in scannumbers_all
         scannumbers_all = self.scannumbers_all[gv.i_p[product]]
-        scan, duplicate = self.crd.scans[panel], self.scannumbers_forduplicates[self.crd.scans[panel]]
+        scan = self.crd.scans[panel]
+        duplicate = self.scannumbers_forduplicates[product if product in gv.plain_products else scan]
         if product in gv.plain_products:
             if product in gv.plain_products_with_parameters:
                 dataspecs_string+= '_'+str(self.gui.PP_parameter_values[product][self.gui.PP_parameters_panels[panel]])
@@ -540,7 +543,7 @@ class DataSource_General():
             dataspecs_string+= '_'+str(scannumbers_all)+str(duplicate)
             dataspecs_string+= '_'+proj
             if proj == 'car':
-                dataspecs_string+= '_'+str(self.gui.stormmotion)+'_'+str(self.gui.cartesian_product_res)
+                dataspecs_string+= '_'+str(self.gui.stormmotion)+'_'+str(self.gui.cartesian_product_res)+'_'+str(self.gui.cartesian_product_maxrange)
         else: 
             if product == 'v':
                 dataspecs_string += '_'+str(apply_dealiasing) + '_' + self.gui.dealiasing_setting + '_' + str(self.gui.dealiasing_dualprf_n_it)
@@ -912,6 +915,7 @@ class DataSource_General():
                     previous_val_radar = self.scannumbers_forduplicates_radars.get(self.crd.radar, {self.crd.radar:{}}).get(i, 100)
                     self.scannumbers_forduplicates[i] = min(len(j)-1, previous_val_radar)  
                         
+                    
     def get_scanangles_allproducts(self, scanangles_all):
         """This function combines the dictionaries with per product the scanangles for all scans, given in scanangles_all, into one dictionary, that contains
         all the different scanangles that are available for the scans. If all scanangles are available for all products, then the returned dictionary is equal
@@ -932,16 +936,20 @@ class DataSource_General():
                 scanangles_allproducts[j] = scanangles_all[p][j]
         return scanangles_allproducts
     
-    def get_panel_center_heights(self, dist_to_radar, scanangles, scanangles_all, scanpair_present):
+    def get_panel_center_heights(self, dist_to_radar_panels, scanangles, scanangles_all, scanpair_present, panellist=None):
+        panellist = self.pb.panellist if panellist is None else panellist
         heights = {}
-        for j in self.pb.panellist:
+        for j in panellist:
             lowest_scan = (1, 2)[self.range_nyquistvelocity_scanpairs_indices[j]] if scanpair_present else 1
             if scanangles[j] == scanangles_all[lowest_scan]:
                 # Set height equal to 0 when the lowest scan is shown, such that this scan will keep being shown
                 heights[j] = 0.
             else:
-                heights[j] = ft.var1_to_var2(dist_to_radar, scanangles[j], 'gr+theta->h')
+                heights[j] = ft.var1_to_var2(dist_to_radar_panels[j], scanangles[j], 'gr+theta->h')
         return heights
+    def manually_set_panel_center_heights(self, heights):
+        # This function is called in self.gui.set_choice, in order to use selected heights from a saved choice.
+        self.panel_center_heights = {'time':pytime.time(), 'heights':heights}
                                 
     def check_need_scans_change(self):
         """This function checks whether it is desired to switch from scans. This could be the case when the radar volume changes, e.g. because 
@@ -976,7 +984,8 @@ class DataSource_General():
                     dt_before = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.crd.before_variables['datetime']
                     delta_time = ft.datetimediff_s(dt_before, self.crd.date+self.crd.time)
                     if abs(delta_time) <= self.pb.max_delta_time_move_view_with_storm:
-                        self.pb.corners += self.pb.translation_dist_km(delta_time)
+                        for j in self.pb.panellist:
+                            self.pb.corners[j] += self.pb.translation_dist_km(delta_time)
         
             #scanangles_all contains all scanangles for which data is present in the volume. It is determined in this way, because it is possible that the number
             #of scans differs per product, and therefore also the number of scanangles. If this is the case, then self.scanangles_all_m[product] refers for these 
@@ -1031,33 +1040,33 @@ class DataSource_General():
                         scanangles_before[j] = scanangles_all[self.crd.scans[j]]
 
                 if choose_nearest_height:
-                    old_corners = self.scans_radars.get(self.radar_dataset_before, {}).get('corners', self.pb.corners)
-                    old_distance_to_radar = np.linalg.norm(old_corners.mean(axis=0))
-                    new_distance_to_radar = np.linalg.norm(self.pb.corners.mean(axis=0))
-                    if not 'time' in self.center_heights or any([j > self.center_heights['time'] for j in (self.time_last_panzoom, 
-                    self.time_last_purposefulscanchanges, self.time_last_choosenearestscanangle, self.crd.time_last_change_scan_selection_mode)]):
+                    save_time = self.panel_center_heights.get('time', None)
+                    need_update = not save_time or any(j > save_time for j in (self.time_last_panzoom, self.time_last_purposefulscanchanges, 
+                                  self.time_last_choosenearestscanangle, self.crd.time_last_change_scan_selection_mode))
+                    new_panels = None if need_update else [j for j in self.pb.panellist if not j in self.panel_center_heights['heights']]
+                    if need_update or new_panels:
                         """These are only updated when zooming or panning has taken place in the mean time, or when the scans have been changed 
                         purposefully, or when the nearest scanangle is chosen in the mean time. This implies e.g. that when going to multiple radars, 
                         always the first radar in a sequence is used for determining the center heights, such that the center heights 
                         do not change in the next part of the sequence.
                         """
-                        # try:
-                        #     print([j > self.center_heights['time'] for j in (self.time_last_panzoom, 
-                        #                                                       self.time_last_purposefulscanchanges, self.time_last_choosenearestscanangle, self.crd.time_last_change_scan_selection_mode)])
-                        # except Exception:
-                        #     pass
+                        old_corners = self.scans_radars.get(self.radar_dataset_before, {}).get('corners', self.pb.corners)
+                        old_distance_to_radar = {j:np.linalg.norm(old_corners[j].mean(axis=0)) for j in self.pb.panellist}
                         heights = self.get_panel_center_heights(old_distance_to_radar, scanangles_before, scanangles_all_before,
-                                                                self.scanpair_present_before)
-                        self.center_heights = {'time':pytime.time(), 'heights':heights}
+                                                                self.scanpair_present_before, panellist=new_panels)
+                        if need_update:
+                            self.panel_center_heights = {'time':pytime.time(), 'heights':heights}
+                        else:
+                            self.panel_center_heights['heights'].update(heights)
                 
                 for j in self.pb.panellist:
                     
                     if choose_nearest_height:
-                        if self.center_heights['heights'][j] is None:
-                            continue
                         #Find the scanangle for which the beam elevation at the center of the screen is closest to the value it was before,
                         #for the previous radar.
-                        new_scanangle = ft.find_scanangle_closest_to_beamelevation(scanangles_all_values,new_distance_to_radar,self.center_heights['heights'][j])
+                        new_distance_to_radar = np.linalg.norm(self.pb.corners[j].mean(axis=0))
+                        # print(j, scanangles_all_values, new_distance_to_radar, self.panel_center_heights['heights'][j])
+                        new_scanangle = ft.find_scanangle_closest_to_beamelevation(scanangles_all_values,new_distance_to_radar,self.panel_center_heights['heights'][j])
                     else:
                         """Find the scanangle that is closest to the selected scanangle. If there are 2 scanangles that are equally close,
                         then the one is chosen that is closest to the scanangle for which currently data is displayed in panel j.

@@ -117,6 +117,7 @@ dealiasing_setting = gv.velocity_dealiasing_settings[-1]
 dealiasing_max_nyquist_vel = 100/gv.scale_factors_velocities['kts']
 dealiasing_dualprf_n_it = 50
 cartesian_product_res = 1.
+cartesian_product_maxrange = 200.
 scans=[1,2,3,4,5,1,2,3,4,5]
 plot_mode='Single'
 
@@ -201,8 +202,8 @@ reset_volume_attributes = True #Gets set to False in nlr_datasourcegeneral.py
 
 
 
-variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','self.max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
-variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dealiasing_dualprf_n_it','self.cartesian_product_res','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
+variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','self.max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','cartesian_product_maxrange','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
+variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dealiasing_dualprf_n_it','self.cartesian_product_res','self.cartesian_product_maxrange','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
 
 #Variables that are reset to their default for the next update. Needs to be updated before every new update, 
 #and 'variables_resettodefault_version' should always be included!!!!! reset_volume_attributes maybe too.
@@ -380,6 +381,7 @@ class GUI(QWidget):
         self.dealiasing_max_nyquist_vel = dealiasing_max_nyquist_vel
         self.dealiasing_dualprf_n_it = dealiasing_dualprf_n_it
         self.cartesian_product_res = cartesian_product_res
+        self.cartesian_product_maxrange = cartesian_product_maxrange
         self.networktimeout=networktimeout
         self.minimum_downloadspeed=minimum_downloadspeed
         self.api_keys = api_keys
@@ -1481,9 +1483,8 @@ class GUI(QWidget):
             
             menu.addSeparator()     
             
-            action = QAction('Set position marker: Mouse position')
+            action = menu.addAction('Set position marker: Mouse position')
             action.triggered.connect(lambda: self.set_pos_markers_properties('Mouse'))
-            menu.addAction(action)
                                                                                         
             action = menu.addAction('Set position marker: Coordinate input')
             action.triggered.connect(self.set_marker_coordinates)
@@ -2008,33 +2009,38 @@ class GUI(QWidget):
     def save_choice(self,choice_ID):
         if self.pb.firstplot_performed:
             choices = self.import_choices()
-            dist_to_radar = np.linalg.norm(self.pb.corners.mean(axis=0))
+            dist_to_radar = {j:np.linalg.norm(self.pb.corners[j].mean(axis=0)) for j in self.pb.panellist}
             selected_heights = self.dsg.get_panel_center_heights(dist_to_radar, self.crd.selected_scanangles, 
                                                                  self.dsg.get_scanangles_allproducts(self.dsg.scanangles_all_m), self.dsg.scanpair_present)
-            choices[choice_ID] = {'panels':self.pb.panels, 'products':self.crd.products, 'selected_scanangles':self.crd.selected_scanangles, 
+            selected_heights = {i:j for i,j in selected_heights.items() if self.crd.products[i] in gv.products_with_tilts}
+            selected_scanangles = {i:j for i,j in self.crd.selected_scanangles.items() if self.crd.products[i] in gv.products_with_tilts}
+            choices[choice_ID] = {'panels':self.pb.panels, 'products':self.crd.products, 'selected_scanangles':selected_scanangles, 
                                   'selected_heights':selected_heights, 'range_nyquistvelocity_scanpairs_indices':self.dsg.range_nyquistvelocity_scanpairs_indices}
             with open(gv.programdir+'/Generated_files/saved_choices.pkl', 'wb') as f:
                 pickle.dump(choices, f, protocol=2)
 
     def set_choice(self,choice_ID): 
         choices = self.import_choices()
-        if not choice_ID in choices: return
-        choice = choices[choice_ID]
-        if True: 
-            panels_new = choice['panels']
-            new_panellist = [self.pb.plotnumber_to_panelnumber[panels_new][j] for j in range(panels_new)]
-            for j in new_panellist:
-                self.crd.products[j] = choice['products'][j]
-                if self.crd.scan_selection_mode in ('scan', 'scanangle') and not choice['selected_scanangles'][j] is None:
-                    self.crd.selected_scanangles[j] = choice['selected_scanangles'][j]
-                if j in choice['range_nyquistvelocity_scanpairs_indices']:
-                    #Using self.dsg.range_nyquistvelocity_scanpairs_indices makes it possible to determine which scan is desired when there is 
-                    #a scan pair in which one has a large range but low Nyquist velocity, and the other a smaller range but larger Nyquist velocity.
-                    self.dsg.range_nyquistvelocity_scanpairs_indices[j] = choice['range_nyquistvelocity_scanpairs_indices'][j]
-            if self.crd.scan_selection_mode == 'height':
-                self.dsg.center_heights = {'time':pytime.time(), 'heights':choice['selected_heights']}
-        else:
+        if not choice_ID in choices: 
             return
+        
+        choice = choices[choice_ID]
+        # For backward compatibility:
+        for attr in ('selected_scanangles', 'selected_heights'):
+            choice[attr] = {i:j for i,j in choice[attr].items() if not j is None}
+        
+        panels_new = choice['panels']
+        new_panellist = [self.pb.plotnumber_to_panelnumber[panels_new][j] for j in range(panels_new)]
+        for j in new_panellist:
+            self.crd.products[j] = choice['products'][j]
+            if self.crd.scan_selection_mode in ('scan', 'scanangle') and j in choice['selected_scanangles']:
+                self.crd.selected_scanangles[j] = choice['selected_scanangles'][j]
+            if j in choice['range_nyquistvelocity_scanpairs_indices']:
+                #Using self.dsg.range_nyquistvelocity_scanpairs_indices makes it possible to determine which scan is desired when there is 
+                #a scan pair in which one has a large range but low Nyquist velocity, and the other a smaller range but larger Nyquist velocity.
+                self.dsg.range_nyquistvelocity_scanpairs_indices[j] = choice['range_nyquistvelocity_scanpairs_indices'][j]
+        if self.crd.scan_selection_mode == 'height':
+            self.dsg.manually_set_panel_center_heights(choice['selected_heights'])
         
         for j in new_panellist:
             if self.crd.products[j] in gv.plain_products_with_parameters:
@@ -2065,7 +2071,7 @@ class GUI(QWidget):
                 panellist = [self.pb.plotnumber_to_panelnumber[panels][j] for j in range(panels)]
                 for k in choices_text:
                     for j in panellist:
-                        product, scanangle = choices[i]['products'][j], choices[i]['selected_scanangles'][j]
+                        product, scanangle = choices[i]['products'][j], choices[i]['selected_scanangles'].get(j, None)
                         height = choices[i].get('selected_heights', {}).get(j, scanangle)
                         specs = product
                         if not product in gv.plain_products:
@@ -2176,8 +2182,9 @@ class GUI(QWidget):
                 p = panellist[idx]
                 if k[0] in gv.products_all and (k in gv.plain_products or k[1:].replace('.', '').isdigit()):
                     products[p] = k[0]
-                    values[p] = float(k[1:]) if k[1:] else None
-            error = len(values) < panels
+                    if k[1:]:
+                        values[p] = float(k[1:])
+            error = len(products) < panels
         for k in (0, 1):
             self.choice_edits[j][i][k].setStyleSheet('QLineEdit {color:'+('red' if error else 'black')+'}')
         if error:
@@ -3325,7 +3332,7 @@ class GUI(QWidget):
                 self.pb.update_combined_lineproperties(range(10),changing_colors=True)
         
         if self.pb.firstplot_performed and linetype=='grid' and source==True: self.pb.set_grid()
-        if self.pb.firstplot_performed and linetype=='heightrings' and source==True: self.pb.set_heightrings(self.pb.panellist)
+        if self.pb.firstplot_performed and linetype=='heightrings' and source==True: self.pb.set_heightrings()
         if linetype in ('grid', 'heightrings'):
             self.pb.set_ghlineproperties(self.pb.panellist)
         else:
@@ -3746,23 +3753,29 @@ class GUI(QWidget):
         else:
             self.cmaps_maxvaluesw[product].setText(str(self.cmaps_maxvalues[product]))
         
+        
     def settings_tabalgorithms(self):
         layout = QFormLayout()
         
         self.cartesian_product_resw= QLineEdit(str(self.cartesian_product_res))
         hbox= QHBoxLayout(); hbox.addWidget(self.cartesian_product_resw); hbox.addStretch(30)
         layout.addRow(QLabel('Product resolution of Cartesian derived products (km)'), hbox)
+        self.cartesian_product_maxrangew= QLineEdit(str(self.cartesian_product_maxrange))
+        hbox= QHBoxLayout(); hbox.addWidget(self.cartesian_product_maxrangew); hbox.addStretch(30)
+        layout.addRow(QLabel('Maximum range of Cartesian derived products (km)'), hbox)
         
         self.settingsalgorithms.setLayout(layout)
-        self.cartesian_product_resw.editingFinished.connect(self.change_cartesian_product_res)
+        self.cartesian_product_resw.editingFinished.connect(lambda: self.change_cartesian_product_attr('res'))
+        self.cartesian_product_maxrangew.editingFinished.connect(lambda: self.change_cartesian_product_attr('maxrange'))
                     
-    def change_cartesian_product_res(self):
-        number = ft.to_number(self.cartesian_product_resw.text())
+    def change_cartesian_product_attr(self, attr):
+        number = ft.to_number(getattr(self, f'cartesian_product_{attr}w').text())
         if not number is None and number > 0:
-            self.cartesian_product_res = float(number)
-        self.cartesian_product_resw.setText(str(self.cartesian_product_res))
+            setattr(self, f'cartesian_product_{attr}', float(number))
+        getattr(self, f'cartesian_product_{attr}w').setText(str(getattr(self, f'cartesian_product_{attr}')))
         if any([self.crd.products[j] in gv.plain_products_correct_for_SM for j in self.pb.panellist]) and self.stormmotion[1] != 0.:
             self.pb.set_newdata(self.pb.panellist)
+
 
     def settings_tabmiscellaneous(self):
         miscellaneous_layout=QFormLayout()

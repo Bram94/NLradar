@@ -569,57 +569,37 @@ def mindist_maxdist_maxangle(corners):
     return min_dist, max_dist, angle_mindist, angle_maxdist
     
 def distance_to_rectangle_point_inside(corners,point):
-    distances_to_corners = np.linalg.norm(corners-point, axis=1)
-    corner_mindist = corners[np.argmin(distances_to_corners)]
-    distance_to_rectangle = np.abs(corner_mindist-point).min()
+    distances = corners-point
+    distances_to_corners = np.linalg.norm(distances, axis=1)
+    distance_to_rectangle = np.abs(distances[distances_to_corners.argmin()]).min()
     return distance_to_rectangle
     
-def av_angle_circle_in_rectangle(xlim,ylim,radius):
+def av_angle_circle_in_rectangle(xlim, ylim, radius):
     with np.errstate(invalid='ignore'):
-        x1_plus=np.sqrt(radius**2-ylim[0]**2);x2_plus=np.sqrt(radius**2-ylim[1]**2);
-        y1_plus=np.sqrt(radius**2-xlim[0]**2);y2_plus=np.sqrt(radius**2-xlim[1]**2);
-        x1_min=0;x2_min=0;y1_min=0;y2_min=0;
-        if np.isnan(x1_plus)==False:x1_min=-x1_plus;
-        if np.isnan(x2_plus)==False:x2_min=-x2_plus;
-        if np.isnan(y1_plus)==False:y1_min=-y1_plus;
-        if np.isnan(y2_plus)==False:y2_min=-y2_plus;
-        
-    if x1_plus<xlim[0] or x1_plus>xlim[1] or np.isnan(x1_plus)==True: x1_plus=0;
-    if x2_plus<xlim[0] or x2_plus>xlim[1] or np.isnan(x2_plus)==True: x2_plus=0;
-    if y1_plus<ylim[0] or y1_plus>ylim[1] or np.isnan(y1_plus)==True: y1_plus=0;
-    if y2_plus<ylim[0] or y2_plus>ylim[1] or np.isnan(y2_plus)==True: y2_plus=0;
-    if x1_min<xlim[0] or x1_min>xlim[1] or np.isnan(x1_min)==True: x1_min=0;
-    if x2_min<xlim[0] or x2_min>xlim[1] or np.isnan(x2_min)==True: x2_min=0;
-    if y1_min<ylim[0] or y1_min>ylim[1] or np.isnan(y1_min)==True: y1_min=0;
-    if y2_min<ylim[0] or y2_min>ylim[1] or np.isnan(y2_min)==True: y2_min=0;
-    x_coordinates=[xlim[0],xlim[1],xlim[0],xlim[1],x1_plus,x2_plus,x1_min,x2_min];
-    y_coordinates=[y1_plus,y2_plus,y1_min,y2_min,ylim[0],ylim[1],ylim[0],ylim[1]];
-    points_of_intersection=[[x_coordinates[i],j] for i,j in enumerate(y_coordinates) if j!=0 and x_coordinates[i]!=0];
+        x_plus = np.sqrt(radius**2-ylim**2)
+        y_plus = np.sqrt(radius**2-xlim**2)
+        x_min, y_min = -x_plus, -y_plus
+    x_coords = [xlim[0], xlim[1], xlim[0], xlim[1], x_plus[0], x_plus[1], x_min[0], x_min[1]]
+    y_coords = [y_plus[0], y_plus[1], y_min[0], y_min[1], ylim[0], ylim[1], ylim[0], ylim[1]]
+    points_of_intersection = np.array([[x_coords[i], y_coords[i]] for i in range(8) if xlim[0] <= x_coords[i] <= xlim[1] and ylim[0] <= y_coords[i] <= ylim[1]])
     
-    angles=np.array([]);
-    for j in range(0,len(points_of_intersection)):
-        angles=np.append(angles,np.arctan(points_of_intersection[j][0]/points_of_intersection[j][1]));
-        if points_of_intersection[j][1]<0:
-            angles[j]=angles[j]+np.pi;
-    if abs(max(angles)-min(angles))>np.pi:
-        angles[angles<0]=angles[angles<0]+2*np.pi;
-    angles=np.sort(angles);
+    angles = np.arctan2(points_of_intersection[:,0], points_of_intersection[:,1])
+    if angles.max()-angles.min() > np.pi:
+        angles %= 2*np.pi
+    angles = np.sort(angles)
     
-    if len(angles)==4:
-        anglesdiff=[[angles[1]-angles[0],0,1],[angles[3]-angles[2],2,3]];
-        maxanglediff=np.max([x[0] for x in anglesdiff]);
-        posmaxanglediff=[x[0] for x in anglesdiff].index(maxanglediff);
-        angle1=angles[anglesdiff[posmaxanglediff][1]];
-        angle2=angles[anglesdiff[posmaxanglediff][2]];
+    if len(angles) == 4:
+        anglesdiff = np.array([angles[1]-angles[0], angles[3]-angles[2]])
+        angle1, angle2 = angles[slice(0, 2) if anglesdiff.argmax() == 0 else slice(2, None)]
     else:
-        angle1=angles[0];angle2=angles[1];
+        angle1, angle2 = angles
     
-    if np.abs(angle1-angle2)>np.pi and angle1<angle2:
-        angle1=angle1+2*np.pi;
-    elif np.abs(angle1-angle2)>np.pi and angle2<angle1:
-        angle2=angle2+2*np.pi;
+    if abs(angle1-angle2) > np.pi and angle1 < angle2:
+        angle1 += 2*np.pi
+    elif abs(angle1-angle2) > np.pi and angle2 < angle1:
+        angle2 += 2*np.pi
         
-    av_angle=0.5*(angle1+angle2);
+    av_angle = 0.5*(angle1+angle2)
     return av_angle
     
 def azimuthal_angle(coords, deg=False):
@@ -750,6 +730,8 @@ def aeqd(latlon_0, latlon_or_xy_1, degrees=True, inverse=False):
     if len(latlon_or_xy_1.shape) == 2:
         output = np.transpose(output)
     return output
+
+print(aeqd([52,6], [300, 0], inverse=True))
 
 def calculate_great_circle_distance_from_latlon(latlon_0, latlon_1): #latlon_0 should be a list/array with a single latitude 
     #and longitude, and latlon_1 can either also be a List/array that contains a single latitude and longitude, 

@@ -68,6 +68,7 @@ class PolarTransform(BaseTransform):
     
     
     
+# Suggestion: use elliposidal form https://neacsu.net/docs/geodesy/snyder/5-azimuthal/sect_25/
 class LatLon_to_Azimuthal_Equidistant_Transform(BaseTransform):
     glsl_map = """        
     vec4 slantrange_to_groundrange_imap(vec4 pos) {
