@@ -213,9 +213,9 @@ class PlottingVWP(QObject):
         self.hodo_sttransform.translate = (translate_x, translate_y)
         
     def update_hodo_clipper(self):
-        sx, sy = self.pb.physical_size
-        title_px = self.pb.wbounds['main'][1,0]
-        self.hodo_clipper.bounds = (sx-self.hodo_size_px, sy-self.hodo_size_px-title_px, self.hodo_size_px, self.hodo_size_px)
+        sx, sy = self.pb.size
+        hodo_px, title_px = self.hodo_size_px, self.pb.wbounds['main'][1,0]
+        self.hodo_clipper.bounds = tuple(np.array([sx-hodo_px, sy-hodo_px-title_px, hodo_px, hodo_px])*self.gui.screen_pixel_ratio())
                           
     def plot_title(self):
         self.visuals['title'].text = 'Radar VWP ('+self.pb.productunits['v']+')'+'      '+self.volume_starttime+'-'+self.volume_endtime+'Z'

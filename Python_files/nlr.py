@@ -14,7 +14,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 # When setting QtCore.Qt.AA_EnableHighDpiScaling to True, the variable screen.devicePixelRatio() would be needed in the plotting code
-QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, False)
+# QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 # QApplication.setAttribute(QtCore.Qt.HighDpiScaleFactorRoundingPolicy, Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
 from vispy import gloo
@@ -341,6 +341,7 @@ class GUI(QWidget):
         
         # self.screen_DPI is a function! This is done to let it update automatically when the DPI changes after startup of the program.
         self.screen_DPI = lambda: screen_DPI(self.screen())
+        self.screen_pixel_ratio = lambda: self.screen().devicePixelRatio()
         self.screen_size = lambda: np.array([self.screen().size().width(), self.screen().size().height()])
         print('screen_size=',self.screen_size())
         print('screen_DPI=',self.screen_DPI())        

@@ -335,7 +335,7 @@ class Plotting(QObject,app.Canvas):
         
     def physical_size_cm(self):
         #Physical size of the vispy canvas
-        return np.array(self.physical_size)/(self.gui.screen_DPI())*2.54
+        return np.array(self.size)/(self.gui.screen_DPI())*2.54
     
     def scale_physicalsize(self,size):
         return size * self.gui.screen_physicalsize()[1]/self.gui.ref_screen_physicalsize[1]
@@ -464,7 +464,7 @@ class Plotting(QObject,app.Canvas):
         #shift of the panel center, that is required to ensure that the center of each panel shows the same geographical location as before. 
         #Using the first panel is necessary, because this is the only panel that always gets updated by this function.
         for j in self.panellist:
-            self.clippers[j].bounds = tuple(self.panel_bounds[j])
+            self.clippers[j].bounds = tuple(self.panel_bounds[j]*self.gui.screen_pixel_ratio())
             #Shift the geographical location of the center of the panels
             self.panels_sttransforms[j].translate=self.panel_centers[j]+panel_center_shift
       
@@ -1876,7 +1876,7 @@ class Plotting(QObject,app.Canvas):
         
         self.get_corners()
         physical_size_cm_main = self.physical_size_cm() - 2*self.scale_physicalsize(self.wdims)
-        rel_xdim = self.physical_size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
+        rel_xdim = self.size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
         self.gridlines_vertices, self.gridlines_connect, self.gridlines_text_hor_pos, self.gridlines_text_hor, self.gridlines_text_vert_pos, self.gridlines_text_vert =\
             bg.determine_gridpos(physical_size_cm_main,rel_xdim,self.corners,self.visuals['text_hor1'][0].font_size,self.panels,panellist,self.nrows,self.ncolumns,self.gui.show_vwp)
         self.update_combined_lineproperties(panellist,changing_grid=True)
@@ -1941,7 +1941,7 @@ class Plotting(QObject,app.Canvas):
         
         self.heights={}; self.radii={}
         if len(panellist_determine_heightrings):
-            rel_xdim = self.physical_size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
+            rel_xdim = self.size[0]/self.gui.screen_size()[0] * (1-self.vwp_relxdim*self.gui.show_vwp)
             self.update_heightrings_scanangles()
             angle1 = self.dsg.scanangle('z', 1, 0)
             scanangles = np.array([self.heightrings_scanangles[j] if j in panellist_no_pp else angle1 for j in panellist_determine_heightrings])
