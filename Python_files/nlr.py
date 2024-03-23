@@ -1905,7 +1905,7 @@ class GUI(QWidget):
                 index = cases.index(str(case_dict))
                 self.current_case_list[index] = info
                 
-                if update_label:
+                if update_label and hasattr(self, 'modify_case_listw'):
                     descr, url_full, url_short = self.get_case_text(case_dict)
                     old_key = descr+']---['+url_full+']---['+url_short
                     descr, url_full, url_short = self.get_case_text(info)

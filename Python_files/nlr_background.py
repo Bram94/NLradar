@@ -27,7 +27,10 @@ def import_shapefiles():
     shapefile_types = {'combined3':'countries','provinces_BE-NL(1)_Utrecht-correct':'provinces',\
                        'DEU_adm1(3)':'provinces','gadm34_FRA_2':'provinces','gadm36_POL_1':'provinces',\
                        'gadm36_CZE_1':'provinces','full_rivers_merge_nearNL':'rivers',
-                       'cb_2018_us_state_500k':'countries'}
+                       'cb_2018_us_state_500k':'countries','gadm41_CUB_0':'countries','gadm41_MEX_0':'countries',
+                       'gadm41_CAN_0':'countries','gadm41_BHS_0':'countries','gadm41_DOM_0':'countries',
+                       'gadm41_HTI_0':'countries','gadm41_FIN_0':'countries','gadm41_NOR_0':'countries',
+                       'gadm41_SWE_0':'countries'}
     shapefiles = {}
     shapefile_readers = {}
     for j in shapefile_types:
@@ -43,15 +46,17 @@ def import_shapefiles():
         s_type = shapefile_types[i]
         
         shapes=shapefile_readers[i].shapes()
-        for j in range(0,len(shapes)):
+        for j in range(len(shapes)):
             shape=shapes[j]
             parts=np.array(shape.parts)
-            connect_add=np.ones(len(np.array(shape.points)))
+            connect_add=np.ones(len(np.array(shape.points)), dtype='bool')
             connect_add[parts-1]=0 #The first number in the array parts is always zero, so using parts-1 causes the last number of connect_add to be set equal to zero.
-            if j==0: shapefiles_latlon=np.array(shape.points); connect=connect_add
+            if j==0: 
+                shapefiles_latlon=np.array(shape.points)
+                connect=connect_add
             else: 
                 shapefiles_latlon=np.concatenate((shapefiles_latlon,np.array(shape.points)),axis=0)
-                connect=np.append(connect,connect_add).astype('bool')
+                connect=np.append(connect, connect_add)
         
         if not s_type in shapefiles_latlon_combined:
             shapefiles_latlon_combined[s_type]=np.transpose(np.transpose(shapefiles_latlon)[::-1])
