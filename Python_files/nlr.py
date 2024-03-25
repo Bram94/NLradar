@@ -149,7 +149,7 @@ vwp_sigmamax_mps = None
 vwp_shear_layers = {1:[0,1], 2:[0,3], 3:[0,6], 4:[1,6]}
 vwp_vorticity_layers = {1:[0,0.5], 2:[0,1]}
 vwp_srh_layers = {1:[0,1], 2:[0,2], 3:[0,3]}
-vwp_sm_display = {j: True for j in ('MW', 'LM', 'RM')}
+vwp_sm_display = {j:True for j in gv.vwp_sm_names if not j == 'SM'}
 
 base_url_obs = 'https://kachelmannwetter.com/de/messwerte/18584bea4ec779beb796d3770ed37f8e/'
 
@@ -207,8 +207,8 @@ variables_names_withclassreference=['variables_resettodefault_version','self.res
 
 #Variables that are reset to their default for the next update. Needs to be updated before every new update, 
 #and 'variables_resettodefault_version' should always be included!!!!! reset_volume_attributes maybe too.
-variables_resettodefault_forupdate=['variables_resettodefault_version','reset_volume_attributes','dimensions_main','fontsizes_main','lines_colors','gridheightrings_fontsize','PP_parameter_values','show_heightrings_derivedproducts','products','scans','productunfiltered','polarization','apply_dealiasing']
-variables_resettodefault_version = 8 #Version for variables_resettodefault_forupdate. Number needs to be increased by 1 before every new update!!!!!
+variables_resettodefault_forupdate=['variables_resettodefault_version', 'vwp_sm_display']
+variables_resettodefault_version = 9 #Version for variables_resettodefault_forupdate. Number needs to be increased by 1 before every new update!!!!!
 
 try:
     #pickle.load appears to be incompatible with changes in pyqt version, i.e. when the file is saved while using pyqt5, then it also needs pyqt5 for loading the file.
@@ -541,18 +541,19 @@ class GUI(QWidget):
         self.settingsw=QPushButton('Settings', autoDefault=True)
         self.helpw=QPushButton('Help', autoDefault=True)
              
-        widgets = ('datew', 'timew', 'casesw', 'download_timerangew', 'download_startstopw', 'animation_settingsw', 'desired_timestep_minutesw', 'max_timestep_minutesw', 'maxspeed_minpsecw', 'textbar', 'hodow', 'savefig_include_menubarw', 'extraw', 'settingsw', 'helpw')
-        f1 = QFont('Times')
+        self.widgets = ('datew', 'timew', 'casesw', 'download_timerangew', 'download_startstopw', 'animation_settingsw', 'desired_timestep_minutesw', 'max_timestep_minutesw', 'maxspeed_minpsecw', 'textbar', 'hodow', 'savefig_include_menubarw', 'extraw', 'settingsw', 'helpw')
+        self.f1 = QFont('Times')
         f2 = QFont('Consolas') # Use a monospace font for the textbar
-        # f.setPixelSize(int(round(self.pb.scale_pixelsize(14))))
-        for w in widgets:
+        # self.f1.setPixelSize(int(round(self.pb.scale_pixelsize(14))))
+        # QApplication.instance().setFont(self.f1)
+        for w in self.widgets:
             widget = getattr(self, w)
             widget.setMinimumWidth(1)
             # setFixedHeight is currently disabled because it can lead to issues when moving the app to a different screen with different size, resolution etc
             # widget.setFixedHeight(QFontMetrics(f1).height())
             # widget.setStyleSheet( "margin: 0px;" )
             # widget.setMinimumHeight(int(round(self.pb.scale_pixelsize(24))))
-            widget.setFont(f2 if w == 'textbar' else f1)
+            widget.setFont(f2 if w == 'textbar' else self.f1)
         hbox=QHBoxLayout()
         hbox.addWidget(self.datew,8)
         hbox.addWidget(self.timew,5)
@@ -1089,7 +1090,7 @@ class GUI(QWidget):
             action_before = None
             for i, case_dict in enumerate(self.current_case_list):
                 if i % max_length == 0:
-                    if i <= i_current_case < i+max_length or len(self.current_case_list) <= max_length:
+                    if (i_current_case != None and i <= i_current_case < i+max_length) or len(self.current_case_list) <= max_length:
                         menu = cases_menu
                     else:
                         dt1 = case_dict['datetime']

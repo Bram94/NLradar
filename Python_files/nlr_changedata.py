@@ -172,39 +172,38 @@ class Change_RadarData(QObject):
             selected_radar = self.radar
             while j < n and i < len(i_sorted_distances):
                 desired_radar = radar_keys[i_sorted_distances[i]]
-                directory = self.dsg.get_directory(date,time,desired_radar,self.selected_dataset)
-                if os.path.exists(directory):
-                    dir_string = self.dsg.get_dir_string(desired_radar,self.selected_dataset)
-                    datetimes = self.dsg.get_datetimes_directory(desired_radar, directory)
+                directory = self.dsg.get_directory(date, time, desired_radar, self.selected_dataset)
+                datetimes = self.dsg.get_datetimes_directory(desired_radar, directory) if os.path.exists(directory) else []
                     
-                    if '${date' in dir_string:
-                        dir_dtbounds = bg.get_datetime_bounds_dir_string(dir_string, date, time)
-                        
-                        threshold = 60*30
-                        if self.lrstep_beingperformed:
-                            direction = np.sign(self.lrstep_beingperformed)
-                            ref_datetime = dir_dtbounds[0 if direction == -1 else 1]
-                            include_next_dir = direction*ft.datetimediff_s(date+time, ref_datetime) < threshold
-                        else:
-                            diffs = np.abs([ft.datetimediff_s(date+time, k) for k in dir_dtbounds])
-                            include_next_dir = diffs.min() < threshold
-                            direction = -1 if diffs[0] < diffs[1] else 1
-                            
-                        if include_next_dir:
-                            next_dir = bg.get_next_possible_dir_for_dir_string(dir_string, desired_radar, date, time, direction)
-                            if os.path.exists(next_dir):
-                                datetimes = np.append(datetimes, self.dsg.get_datetimes_directory(desired_radar, next_dir))
-
-                    if not self.lrstep_beingperformed:
-                        date_present = any(abs(ft.datetimediff_s(date+time, k)) < 60*20 for k in datetimes)
+                dir_string = self.dsg.get_dir_string(desired_radar, self.selected_dataset)
+                if '${date' in dir_string:
+                    dir_dtbounds = bg.get_datetime_bounds_dir_string(dir_string, date, time)
+                    
+                    threshold = 60*30
+                    if self.lrstep_beingperformed:
+                        direction = np.sign(self.lrstep_beingperformed)
+                        ref_datetime = dir_dtbounds[0 if direction == -1 else 1]
+                        include_next_dir = direction*ft.datetimediff_s(date+time, ref_datetime) < threshold
                     else:
-                        vt = self.determine_volume_timestep_m(datetimes, desired_radar)                                
-                        date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
-                                       if desired_radar == self.radar else\
-                                       (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
-                    if date_present:
-                        selected_radar = desired_radar
-                        j += 1
+                        diffs = np.abs([ft.datetimediff_s(date+time, k) for k in dir_dtbounds])
+                        include_next_dir = diffs.min() < threshold
+                        direction = -1 if diffs[0] < diffs[1] else 1
+                        
+                    if include_next_dir:
+                        next_dir = bg.get_next_possible_dir_for_dir_string(dir_string, desired_radar, date, time, direction)
+                        if os.path.exists(next_dir):
+                            datetimes = np.append(datetimes, self.dsg.get_datetimes_directory(desired_radar, next_dir))
+
+                if not self.lrstep_beingperformed:
+                    date_present = any(abs(ft.datetimediff_s(date+time, k)) < 60*20 for k in datetimes)
+                else:
+                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)                                
+                    date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
+                                   if desired_radar == self.radar else\
+                                   (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
+                if date_present:
+                    selected_radar = desired_radar
+                    j += 1
                 i += 1
         else:
             selected_radar = radar_keys[i_sorted_distances[n-1]]
@@ -486,7 +485,9 @@ class Change_RadarData(QObject):
         files_datetimes=np.array([],dtype='int64')
         try:
             if not (date is None or time is None):
+                t = pytime.time()
                 self.directory = self.dsg.get_nearest_directory(self.selected_radar,dataset,date,time)
+                print(pytime.time()-t, 'nearest')
                 
             files_datetimes=self.dsg.get_files(self.selected_radar,self.directory,return_datetimes=True)
             if self.directory in self.filedatetimes_errors:

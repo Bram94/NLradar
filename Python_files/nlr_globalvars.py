@@ -195,5 +195,5 @@ colortables_dirs_filenames_NWS={i:opa(j) for i,j in colortables_dirs_filenames_N
 
 animation_frames_directory = opa(programdir+'/Generated_files/ani_frames')
 
-vwp_sm_names = {'MW': '0-6 km MW', 'LM': 'Bunkers LM', 'RM': 'Bunkers RM', 'SM':'Observed SM'}
-vwp_sm_colors = {'MW': 'orange', 'LM': [0,1,0,1], 'RM': 'cyan', 'SM':'magenta'}
+vwp_sm_names = {'MW': '0-6 km MW', 'LM': 'Bunkers LM', 'RM': 'Bunkers RM', 'SM':'Observed SM', 'DTM':'Deviant TM'}
+vwp_sm_colors = {'MW': 'orange', 'LM': [0,1,0,1], 'RM': 'cyan', 'SM':'magenta', 'DTM':'brown'}

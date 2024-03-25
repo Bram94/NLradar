@@ -80,7 +80,8 @@ kpah|kpah|37.06848| -88.77232| 153|1|KY|Paducah
 tsdf|klmk|38.04590| -85.61061| 222|3|KY|TDWR Louisville
 kpoe|klch|31.15574| -92.97607| 143|1|LA|Fort Polk
 klch|klch|30.12532| -93.21586|  41|1|LA|Lake Charles
-klix|klix|30.33677| -89.82545|  54|1|LA|New Orleans
+klix|klix|30.33677| -89.82545|  54|0|LA|New Orleans
+khdc|klix|30.51900| -90.40700|  13|1|LA|New Orleans
 kshv|kshv|32.45079| -93.84132| 117|1|LA|Shreveport
 tmsy|klix|30.02163| -90.40331|  30|3|LA|TDWR New Orleans
 kbox|kbox|41.95585| -71.13699|  70|1|MA|Boston
@@ -202,11 +203,16 @@ tmke|kmkx|42.81952| -88.04645| 284|3|WI|TDWR Milwaukee
 krlx|krlx|38.31101| -81.72287| 369|1|WV|Charleston
 kcys|kcys|41.15193|-104.80605|1887|1|WY|Cheyenne
 kriw|kriw|43.06606|-108.47720|1716|1|WY|Riverton
-KOUN, KOUN, 35.236000, -97.462219, 360, 1, OK, Norman Testbed
-DAN1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed DAN1
-DOP1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed DOP1
-FOP1,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed FOP1
-NOP3,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed NOP3
-NOP4,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed NOP4
-ROP3,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed ROP3
-ROP4,KCRI,   35.238,  -97.460,  390,  1, OK, Norman Testbed ROP4
+fwlx|fwlx|   35.254|  -87.325|  220|  1| TN| WLX X-Band
+wilu|wilu|   40.465|  -90.685|  212|  1| IL| Western Illinois University (WIU)
+KULM|KULM|   32.529|  -92.012|   55|  1| LA| Monroe/ULM
+mzzu|mzzu|   38.906|  -92.269|  271|  1| MO| Columbia/Mizzou
+DAN1|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed DAN1
+DOP1|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed DOP1
+FOP1|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed FOP1
+NOP3|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed NOP3
+NOP4|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed NOP4
+ROP3|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed ROP3
+ROP4|KCRI|   35.238|  -97.460|  390|  1| OK| Norman Testbed ROP4
+op5r|op5r|   63.922| -145.833|  522|  1| AK| Fort Greely
+KOUN| KOUN| 35.238| -97.460| 370| 1| OK| Norman Testbed

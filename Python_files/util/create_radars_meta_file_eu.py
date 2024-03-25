@@ -77,7 +77,7 @@ radar_elevations = {**radar_elevations_fromfile, **radar_elevations_manual}
 
 with open('radar_elevs_eu.txt', 'r', encoding='utf-8') as f:
     data = ft.list_data(f.read(), '\t')
-    elevs = {i[0]:int(round(float(i[2]))) for i in data}
+    elevs = {i[0]:int(round(float(i[1]))) for i in data}
 elevs.update({i:j['alt'] for i,j in french_meta.items()})
 
 radar_bands = {j:'C' if j != 'Cabauw' else 'X' for j in radars}

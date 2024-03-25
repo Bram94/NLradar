@@ -314,7 +314,7 @@ class GUI_VWP():
             
         self.vwp_sm_displayw = {}
         hbox_sm = QHBoxLayout()
-        for j in ('MW', 'LM', 'RM'):
+        for j in self.gui.vwp_sm_display:
             self.vwp_sm_displayw[j] = QCheckBox(gv.vwp_sm_names[j])
             self.vwp_sm_displayw[j].setTristate(False)
             self.vwp_sm_displayw[j].setCheckState(2 if self.gui.vwp_sm_display[j] else 0)

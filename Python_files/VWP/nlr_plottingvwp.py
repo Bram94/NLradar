@@ -183,11 +183,9 @@ class PlottingVWP(QObject):
             do = self.dr_circles/2. #Axes will be extended in such a way that they extend at least a distance of
             #do beyond the origin in both the negative and positive direction
             try:
-                stormmotions = [eval('self.'+j, {'self': self}) for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j] and not self.MW is None]
+                stormmotions = [getattr(self, j) for j in self.sms_display if not getattr(self, j) is None]
             except Exception: #happens for example when self.V has a length of 1, in which case the storm motions are not defined.
                 stormmotions = []
-            if self.is_SM_defined():
-                stormmotions += [self.SM]
             stormmotions = np.array(stormmotions)
             if len(stormmotions) == 0:
                 stormmotions = self.V[:1] #Is done to prevent that errors occur below
@@ -395,22 +393,21 @@ class PlottingVWP(QObject):
         else:
             self.visuals['hodo_hmarkers'].visible = False; self.visuals['hodo_htext'].visible = False
             
+            
     def plot_sm_markers(self):
-        if len(self.V) > 1 and (not self.MW is None or self.is_SM_defined()):            
-            if not self.MW is None:
-                pos = [eval('self.'+j, {'self': self}) for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]]
-                edge_color = [gv.vwp_sm_colors[j] for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]]
-            else:
-                pos = []; edge_color = []
-            if self.is_SM_defined():
-                pos += [self.SM]
-                edge_color += ['magenta']
+        if len(self.V) > 1 and (not self.MW is None or self.is_SM_defined()):
+            pos, edge_color = [], []
+            for sm in self.sms_display:
+                SM = getattr(self, sm)
+                if not SM is None:
+                    pos.append(SM)
+                    edge_color.append(gv.vwp_sm_colors[sm])
             pos = np.array(pos)
-            if len(pos) > 0:
+            if len(pos):
                 self.visuals['hodo_sm'].visible = True
-                self.visuals['hodo_sm'].set_data(pos = pos,symbol='x',face_color=None,edge_color=edge_color,edge_width=self.pb.scale_pixelsize(2.75),size=self.pb.scale_pixelsize(21))
-                return
-        self.visuals['hodo_sm'].visible = False
+                self.visuals['hodo_sm'].set_data(pos=pos,symbol='x',face_color=None,edge_color=edge_color,edge_width=self.pb.scale_pixelsize(2.75),size=self.pb.scale_pixelsize(21))
+        else:
+            self.visuals['hodo_sm'].visible = False
         
     def plot_cbar_legends(self):
         self.visuals['cbar_streamwise_vorticity_sign'].visible = self.visuals['cbar_filled_sectors'].visible = True
@@ -502,6 +499,10 @@ class PlottingVWP(QObject):
         self.base_sm_name = 'SM' if self.is_SM_defined() else 'RM'
         self.base_sm = self.__dict__[self.base_sm_name]
         
+        self.DTM = None
+        if not self.base_sm is None:
+            self.DTM = f.get_deviant_tornado_motion(self.V, self.h_layers, self.base_sm)
+        
         shear_kmranges = [j for j in list(self.gui.vwp_shear_layers.values()) if len(j)]
         self.shear = {}
         for kmrange in shear_kmranges:
@@ -510,7 +511,7 @@ class PlottingVWP(QObject):
         
         srh_kmranges = [j for j in list(self.gui.vwp_srh_layers.values()) if len(j)]
         self.srh = {}
-        for sm in [i for i,j in self.gui.vwp_sm_display.items() if j] + (['SM'] if not self.SM is None else []):
+        for sm in (j for j in self.sms_display if j != 'DTM'):
             self.srh[sm] = {}
             for kmrange in srh_kmranges:
                 if not self.__dict__[sm] is None:
@@ -540,21 +541,15 @@ class PlottingVWP(QObject):
             else:
                 layer = self.format_h(kmrange)
                 self.avg_sw_vorticity[layer] = self.avg_cw_vorticity[layer] = self.avg_sr_windspeed[layer] = None
-        
+                
     def plot_legend(self):
         if len(self.V) > 1:
-            legend_labels = [gv.vwp_sm_names[j] for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]]
+            legend_labels = [gv.vwp_sm_names[j] for j in self.sms_display]
             x = 0.68
             y_top = self.ytop+0.025
             dy = 0.056
-            legend_pos = [[x, y_top], [x, y_top+dy], [x, y_top+2*dy]]
-            legend_pos = [legend_pos[j] for j in range(len(legend_labels))]
-            edge_color = [gv.vwp_sm_colors[j] for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]]
-            if self.is_SM_defined():
-                legend_labels += [gv.vwp_sm_names['SM']]
-                legend_pos += [[x, legend_pos[-1][1]+dy if len(legend_pos)>0 else y_top]]
-                edge_color += [gv.vwp_sm_colors['SM']]
-            legend_pos = np.array(legend_pos)
+            legend_pos = np.array([[x, y_top+i*dy] for i in range(len(legend_labels))])
+            edge_color = [gv.vwp_sm_colors[j] for j in self.sms_display]
             if len(legend_pos) > 0:
                 self.visuals['legend_markers'].visible = True; self.visuals['legend_labels'].visible = True
                 self.visuals['legend_markers'].set_data(pos = legend_pos, symbol='x',face_color=None,edge_color=edge_color,edge_width=self.pb.scale_pixelsize(2.75),size=self.pb.scale_pixelsize(21))
@@ -566,23 +561,19 @@ class PlottingVWP(QObject):
     def plot_sm_text(self):
         if len(self.V) > 1:
             units = self.pb.productunits['v']
-            names = [j for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]]
-            if len(names) and not self.MW is None:
-                uv = np.array([eval('self.'+j, {'self':self}) for j in self.gui.vwp_sm_display if self.gui.vwp_sm_display[j]])
-                SMs = np.zeros(uv.shape)
-                SMs[:, 0] = np.mod(180. + np.rad2deg(np.arctan2(uv[:, 0], uv[:, 1])), 360)
-                SMs[:, 1] = np.linalg.norm(uv, axis = 1)
-                SMs = [[format(int(round(j[0])), '03d'), format(int(round(j[1])), '02d')] for j in SMs]
-            else:
-                SMs = ['--' for j in names]
-            if self.is_SM_defined():
-                names += ['SM']
-                SM = self.gui.stormmotion.copy()
-                SM[1] *= gv.scale_factors_velocities[units]
-                SMs += [[format(int(round(SM[0])), '03d'), format(int(round(SM[1])), '02d')]]
+            if len(self.sms_display) == 0:
+                return    
+            
+            SMs = []
+            for sm in self.sms_display:
+                if not getattr(self, sm) is None:
+                    uv = getattr(self, sm)
+                    direction = (np.rad2deg(np.arctan2(uv[0], uv[1])) + 180) % 360
+                    speed = np.linalg.norm(uv)
+                    SMs.append([format(int(round(direction)), '03d'), format(int(round(speed)), '02d')])
+                else:
+                    SMs.append('--')
             n_SMs = len(SMs)
-            if n_SMs == 0:
-                return
             
             #Try to get about equal amounts of white space above and below the text with storm motions.
             b = (self.n_params+4)*0.04125 #Relative y-pos of the top of the VWP legend text
@@ -591,10 +582,10 @@ class PlottingVWP(QObject):
             n = int(round((b-t-ydim_sm_text)/2/0.04125)) #Number of white lines between the VWP legend and the sm text
             n_white = self.n_params - n_SMs - n
             text1 = ' \n'*n_white+'Storm motions\n'; text2 = ' \n'*n_white+' \n'
-            for i in range(len(names)):
-                text1 += names[i]+':'
+            for i in range(n_SMs):
+                text1 += self.sms_display[i]+':'
                 text2 += (SMs[i][0]+u'\u00b0'+SMs[i][1]+' '+units) if isinstance(SMs[i], list) else SMs[i]
-                if not i == len(names)-1:
+                if i != n_SMs-1:
                     text1 += '\n'; text2 += '\n'
             
             self.general_text_left_text += [text1, text2]
@@ -729,6 +720,8 @@ class PlottingVWP(QObject):
             if i in ('V', 'sigma', 'w'):
                 self.__dict__[i] *= self.pb.scale_factors['v']
                 
+                
+        self.sms_display = [j for j in gv.vwp_sm_names if (j == 'SM' and self.is_SM_defined() or j != 'SM' and self.gui.vwp_sm_display[j])]
         
         if len(self.V) > 1:
             self.calculate_params()

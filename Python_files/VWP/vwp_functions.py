@@ -12,17 +12,17 @@ def interpolate(x, y, x_int):
     Returns the interpolated y value and x_int_true, which is the x coordinate at which the interpolated value is valid. 
     This differs from x_int when x_int lies outside the range of values given in x.
     """
-    xi_closest = np.argmin(np.abs(x-x_int))
+    xi_closest = np.abs(x-x_int).argmin()
     
-    if x[xi_closest]<x_int:
-        if xi_closest==len(x)-1:
+    if x[xi_closest] < x_int:
+        if xi_closest == len(x)-1:
             y_int = y[xi_closest]
             x_int_true = x[xi_closest]
         else:
             y_int = ((x[xi_closest+1]-x_int)*y[xi_closest]+(x_int-x[xi_closest])*y[xi_closest+1])/(x[xi_closest+1]-x[xi_closest])
             x_int_true = x_int
     else:
-        if xi_closest==0: 
+        if xi_closest == 0: 
             y_int = y[xi_closest]
             x_int_true = x[xi_closest]
         else:
@@ -31,23 +31,32 @@ def interpolate(x, y, x_int):
     return x_int_true, y_int
 
 def get_bunkers_stormmotions(V, h, units):
-    if h.min() > 1. or h.max() - h.min() < 3.:
+    if h[0] > 1. or h[-1] - h[0] < 3.:
         sm = None
         return sm, sm, sm
     
     dh = 0.1
-    heights_interp = np.arange(0,6+1e-3,dh)
+    heights_interp = np.arange(0, 6+1e-3, dh)
     V_interp = np.array([interpolate(h, V, j)[-1] for j in heights_interp])
     Vmean_0_6 = np.mean(V_interp, axis=0)
-    Vmean_0_0p5 = np.mean(V_interp[:int(round(0.5/dh))],axis=0)
-    Vmean_5p5_6 = np.mean(V_interp[-int(round(0.5/dh)):],axis=0)
+    Vmean_0_0p5 = np.mean(V_interp[:int(round(0.5/dh))], axis=0)
+    Vmean_5p5_6 = np.mean(V_interp[-int(round(0.5/dh)):], axis=0)
     V_shear = Vmean_5p5_6-Vmean_0_0p5
     #0-0.5 - 5.5-6km wind shear vector
     dv = 7.5*gv.scale_factors_velocities[units]
-    BK_left = Vmean_0_6 + dv*np.cross(np.array([0,0,1]),V_shear/np.linalg.norm(V_shear))[:2]
-    BK_right = Vmean_0_6 - dv*np.cross(np.array([0,0,1]),V_shear/np.linalg.norm(V_shear))[:2]
+    BK_left = Vmean_0_6 + dv*np.cross(np.array([0,0,1]), V_shear/np.linalg.norm(V_shear))[:2]
+    BK_right = Vmean_0_6 - dv*np.cross(np.array([0,0,1]), V_shear/np.linalg.norm(V_shear))[:2]
     
     return Vmean_0_6, BK_left, BK_right
+
+def get_deviant_tornado_motion(V, h, sm):
+    if h[0] > 0.3:
+        return None
+    dh = 0.1
+    heights_interp = np.arange(0, 0.5+1e-3, dh)
+    V_interp = np.array([interpolate(h, V, j)[-1] for j in heights_interp])
+    Vmean_0_0p5 = np.mean(V_interp, axis=0)
+    return 0.5*(sm+Vmean_0_0p5)
 
     
 def calculate_bulk_shear(V, h, h_min, h_max):

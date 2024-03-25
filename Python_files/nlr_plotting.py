@@ -473,7 +473,16 @@ class Plotting(QObject,app.Canvas):
         f = self.size[1]/self.size[0] / 0.5136825645035183 # Reference value
         self.vwp_relxdim = 0.255*f #The fractional width of the VWP plot relative to that of the whole canvas
             
-    def on_resize(self, event=None): 
+    def on_resize(self, event=None):
+        # font_size = int(round(self.scale_pixelsize(14)))
+        # if True or font_size != self.gui.f1.pixelSize():
+        #     self.gui.f1.setPixelSize(font_size)
+        #     # QApplication.instance().setFont(self.gui.f1)
+        #     for widget in QApplication.allWidgets():
+        #         f = widget.font()
+        #         f.setPixelSize(font_size)
+        #         widget.setFont(f)
+        
         self.dpi = self.gui.screen_DPI()
         
         # Set canvas viewport and reconfigure visual transforms to match.

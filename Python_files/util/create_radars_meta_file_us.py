@@ -18,7 +18,7 @@ import nlr_functions as ft
 if __name__ == '__main__':
     with open('radar_elevs_us.txt', 'r', encoding='utf-8') as f:
         data = ft.list_data(f.read(), '\t')
-        elevs = {i[0]:int(round(float(i[2]))) for i in data}
+        elevs = {i[0]:int(round(float(i[1]))) for i in data}
         radars = sorted(list(elevs))
     with open('radars_grlevelx.txt', 'r') as f:
         data = [ft.string_to_list(j[0]) if ',' in j[0] else j for j in ft.list_data(f.read(), '|')]
@@ -31,6 +31,9 @@ if __name__ == '__main__':
         data_sources = {i:'NWS' for i in radar_elevations}
         # 1 S-band, 2 C-band, 3 X-band
         radar_bands = {i[0].upper():'C' if i[0][0] == 't' and i[-2] != 'PR' else 'S' for i in data}
+        
+    radars_exclude = ['fwlx', 'mzzu', 'KULM']
+    radars = [j for j in radars if not j in radars_exclude]
     
     attrs = [radars, rplaces_to_ridentifiers, lats, lons, radar_elevations, elevs, radar_bands]
     attrs = [i if isinstance(i, list) else [i[j] for j in radars] for i in attrs]

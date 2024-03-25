@@ -509,7 +509,7 @@ class SfcObsMETAR():
                 
             _data = ft.list_data(text, ' ')[::-1]
             # Some stations like KPAH include some weird lines that start with PAH instead of KPAH
-            _data = [j for j in _data if j[0] == station and any(len(i) > 6 and i[-2:] == 'KT' for i in j)]
+            _data = [j for j in _data if j[0] == station]
             data += _data
             date_start, date_end = ft.next_date(previous_date, -1), ft.next_date(next_date, 1)
             date_map = {j[-2:]:j for j in ft.get_dates_in_range(date_start, date_end, 1)}
@@ -522,6 +522,11 @@ class SfcObsMETAR():
                     self.time_last_request_current[station] = pytime.time()
                 with open(sfcobs_filename, 'w') as f:
                     f.write(text)
+        # This is done after writing the text to a file, since when metars are available for the station, but without winds, it's
+        # still desired to save these metars to a file. As this prevents unnecessary follow-up requests for this station.
+        indices_keep = [i for i,j in enumerate(data) if any(len(k) > 6 and k[-2:] == 'KT' for k in j)]
+        data = [data[i] for i in indices_keep]
+        datetimes = [datetimes[i] for i in indices_keep]
                 
         index = None
         if datetimes:
