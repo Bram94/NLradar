@@ -239,6 +239,9 @@ except Exception:
     pass
 
 
+if radar not in gv.radars_all:
+    # Can happen when a radar has been removed from the radar meta files
+    radar = gv.radars_all[0]
 
 #Some variables are treated separately, because these are dictionaries for which the number of items (products) might vary between
 #different versions of the application.   
@@ -2012,10 +2015,10 @@ class GUI(QWidget):
         if self.pb.firstplot_performed:
             choices = self.import_choices()
             dist_to_radar = {j:np.linalg.norm(self.pb.corners[j].mean(axis=0)) for j in self.pb.panellist}
-            selected_heights = self.dsg.get_panel_center_heights(dist_to_radar, self.crd.selected_scanangles, 
+            selected_heights = self.dsg.get_panel_center_heights(dist_to_radar, self.dsg.selected_scanangles, 
                                                                  self.dsg.get_scanangles_allproducts(self.dsg.scanangles_all_m), self.dsg.scanpair_present)
             selected_heights = {i:j for i,j in selected_heights.items() if self.crd.products[i] in gv.products_with_tilts}
-            selected_scanangles = {i:j for i,j in self.crd.selected_scanangles.items() if self.crd.products[i] in gv.products_with_tilts}
+            selected_scanangles = {i:j for i,j in self.dsg.selected_scanangles.items() if self.crd.products[i] in gv.products_with_tilts}
             choices[choice_ID] = {'panels':self.pb.panels, 'products':self.crd.products, 'selected_scanangles':selected_scanangles, 
                                   'selected_heights':selected_heights, 'range_nyquistvelocity_scanpairs_indices':self.dsg.range_nyquistvelocity_scanpairs_indices}
             with open(gv.programdir+'/Generated_files/saved_choices.pkl', 'wb') as f:
@@ -2036,7 +2039,7 @@ class GUI(QWidget):
         for j in new_panellist:
             self.crd.products[j] = choice['products'][j]
             if self.crd.scan_selection_mode in ('scan', 'scanangle') and j in choice['selected_scanangles']:
-                self.crd.selected_scanangles[j] = choice['selected_scanangles'][j]
+                self.dsg.selected_scanangles[j] = choice['selected_scanangles'][j]
             if j in choice['range_nyquistvelocity_scanpairs_indices']:
                 #Using self.dsg.range_nyquistvelocity_scanpairs_indices makes it possible to determine which scan is desired when there is 
                 #a scan pair in which one has a large range but low Nyquist velocity, and the other a smaller range but larger Nyquist velocity.

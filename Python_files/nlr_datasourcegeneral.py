@@ -93,6 +93,10 @@ class DataSource_General():
         
         self.range_nyquistvelocity_scanpairs_indices = {j:0 for j in range(10)}
         self.scans_radars = {} #Gets updated in self.pb.set_newdata!
+        self.selected_scanangles={} #selected_scanangles is used when the radar volume structure changes during the course of a day, as can be the case
+        #for the radar in Zaventem. When selecting a particular scanangle, that is not available with the next volume structure, then it is chosen 
+        #automatically again when the structure changes back to something that contains the selected scanangle.
+        #Should not be updated when going to the left/right.
         self.selected_scanangles_before = {}
         self.panel_center_heights = {}
         self.time_last_panzoom = 0
@@ -110,7 +114,11 @@ class DataSource_General():
         self.products_version_dependent = None # Products that are version-dependent. This information is used to determine whether
         # derived products should be calculated separately for each product version.
         
+        # Should be updated when volume attributes for all data sources should be reset.
         self.attributes_version = 16
+        # Should be updated when the structure of volume attributes has changed only for particular data sources.
+        # Updating it resets only attributes for that particular data source.
+        self.attributes_version_sources = {'Météo-France':1}
                     
         self.scanangles = {}
         
@@ -136,13 +144,17 @@ class DataSource_General():
         if not 'version' in self.attributes_descriptions or self.attributes_descriptions['version'] != self.attributes_version:
             self.attributes_descriptions = {'version':self.attributes_version}
             self.attributes_IDs, self.attributes_variable = {}, {}
+        ft.init_dict_entries_if_absent(self.attributes_descriptions, 'version_sources', dict)
             
         for j in gv.radars_all:
             key_extensions = ('_V','_Z') if j in gv.radars_with_datasets else ('',)
+            source = gv.data_sources[j]
+            reset_attrs_radar = self.attributes_descriptions['version_sources'].get(source, None) != self.attributes_version_sources.get(source, None)
             for i in key_extensions:
-                if j+i not in self.attributes_descriptions: self.attributes_descriptions[j+i] = {}
-                if j+i not in self.attributes_IDs: self.attributes_IDs[j+i] = {}
-                if j+i not in self.attributes_variable: self.attributes_variable[j+i] = {}
+                if reset_attrs_radar or j+i not in self.attributes_descriptions: self.attributes_descriptions[j+i] = {}
+                if reset_attrs_radar or j+i not in self.attributes_IDs: self.attributes_IDs[j+i] = {}
+                if reset_attrs_radar or j+i not in self.attributes_variable: self.attributes_variable[j+i] = {}
+        self.attributes_descriptions['version_sources'] = self.attributes_version_sources
                 
         
     def get_scans_information(self, set_data):
@@ -196,8 +208,6 @@ class DataSource_General():
         # of attributes stored in a file, or in case of newly determining attributes will start with initialization of empty dictionary.
         # Should only be updated when setting data
         self.attrs_before = {j:self.__dict__[j] for j in gv.volume_attributes_all}
-        if len(self.scannumbers_all.get('z', [])) == 0:
-            print('attrs_before scannumbers_all length 0')
         self.attrs_before['scannumbers_forduplicates'] = self.scannumbers_forduplicates
         self.scanpair_present_before = self.check_presence_large_range_large_nyquistvelocity_scanpair() if\
                                        self.attrs_before['scannumbers_all'] else False
@@ -207,10 +217,10 @@ class DataSource_General():
         if not attributes_available:
             try:
                 self.nyquist_velocities_all_mps = {}; self.low_nyquist_velocities_all_mps = {}; self.high_nyquist_velocities_all_mps = {}
-                for i in gv.volume_attributes_p: #Defined in nlr_globalvars.
-                    self.__dict__[i] = {}
+                for attr in gv.volume_attributes_p: #Defined in nlr_globalvars.
+                    self.__dict__[attr] = {}
                     for j in (gv.i_p[p] for p in gv.products_with_tilts):
-                        self.__dict__[i][j] = {}
+                        self.__dict__[attr][j] = {}
                     
                 self.scans_doublevolume = [] #scans_doublevolume is used for the new radars of the KNMI, where the volume can be divided into 2 parts.
                 #It is also saved to self.attributes_descriptions[radar_dataset]. It gets defined in the functions get_scans_information in
@@ -226,6 +236,18 @@ class DataSource_General():
                 # keys will have the product version appended to them. See self.process_products_with_pvs_in_keys for more info.
                 if all(len(j) == 0 for i,j in self.scannumbers_all.items() if i[0] == 'z'):
                     raise Exception
+
+                # Make sure that all volume attribute dictionaries are sorted in order of increasing scans. In the past an issue has been noted
+                # due to non-ascending scans in one of the import classes, and sorting volume attributes here guarantees that this won't occur again,
+                # regardless of the implementation of get_scans_information in the import classes. The time this sorting takes is negligible.
+                for attr in gv.volume_attributes_save:
+                    if isinstance(self.__dict__[attr], dict):
+                        if attr in gv.volume_attributes_p:
+                            for p in self.__dict__[attr]:
+                                # Sorting only integer keys is done because there might be string keys for derived products in self.scannumbers_all['z']
+                                self.__dict__[attr][p] = dict(sorted((i,j) for i,j in self.__dict__[attr][p].items() if type(i) == int))
+                        else:
+                            self.__dict__[attr] = dict(sorted(self.__dict__[attr].items()))
                 
                 self.store_volume_attributes()
                         
@@ -239,21 +261,18 @@ class DataSource_General():
 
         self.get_derived_volume_attributes()
                 
-        if set_data:
-            if self.crd.selected_scanangles != self.selected_scanangles_before:
+        if set_data:            
+            self.scanpair_present = self.check_presence_large_range_large_nyquistvelocity_scanpair(update_scanpairs_indices=True)
+            
+            if not self.pb.firstplot_performed or (self.crd.scans != self.pb.scans_before and not self.gui.setting_saved_choice):
+                # Initialize self.selected_scanangles for all panels when not self.pb.firstplot_performed
+                self.update_selected_scanangles(update_allpanels=not self.pb.firstplot_performed)
+            
+            if self.selected_scanangles != self.selected_scanangles_before:
                 #Is only updated in the case of purposeful scan changes, i.e. changes in scans caused by pressing UP/DOWN or a number key, or by
                 #pressing F1-F12 for a saved panel choice, or when the scans change during a change in panels (see function
                 #self.pb.change_panels).
                 self.time_last_purposefulscanchanges = pytime.time()
-                
-            if self.crd.scans != self.pb.scans_before and not self.gui.setting_saved_choice:
-                self.check_presence_large_range_large_nyquistvelocity_scanpair(update_range_nyquistvelocity_scanpairs_indices = True)
-            
-            if not self.attrs_before['scannumbers_all'] or\
-            [len(j) for j in self.attrs_before['scannumbers_all']['z'].values()] != [len(j) for j in self.scannumbers_all['z'].values()]:
-                #Update self.scannumbers_forduplicates and self.crd.scans if scannumbers_all has changed, because their current values might be invalid
-                #for the new scannumbers_all.
-                self.update_scannumbers_forduplicates()
                 
             #Ensure that the selected scans are available for panellist. This might not be the case after a change of radar/dataset
             panellist = self.pb.panellist if self.pb.firstplot_performed else range(self.pb.max_panels)
@@ -262,16 +281,14 @@ class DataSource_General():
                 print('set_max_scan', max_scan, self.scannumbers_all, self.scanangles_all)
                 raise Exception('max scan should not be 0!!!!!!!!')
             for j in panellist:
-                if self.crd.scans[j] > max_scan:
-                    self.crd.scans[j] = max_scan
-                    
-            if not self.pb.firstplot_performed:
-                # Initialize self.crd.selected_scanangles
-                self.crd.update_selected_scanangles(update_allpanels=True)
-             
-            self.scanpair_present = self.check_presence_large_range_large_nyquistvelocity_scanpair()
-            if self.scanpair_present or self.scanpair_present_before:
-                print('scanpair_present', self.scanpair_present, self.scanpair_present_before)
+                self.crd.scans[j] = min(self.crd.scans[j], max_scan)
+                            
+            if not self.attrs_before['scannumbers_all'] or\
+            [len(j) for j in self.attrs_before['scannumbers_all']['z'].values()] != [len(j) for j in self.scannumbers_all['z'].values()]:
+                #Update self.scannumbers_forduplicates and self.crd.scans if scannumbers_all has changed, because their current values might be invalid
+                #for the new scannumbers_all.
+                self.update_scannumbers_forduplicates()
+                                                 
             if self.crd.scan_selection_mode != 'scan' or self.gui.setting_saved_choice:
                 self.check_need_scans_change()
             else:
@@ -557,14 +574,46 @@ class DataSource_General():
             # In this case import product is saved instead of actual product, since the latter can be cheaply calculated from import product.
             product = gv.i_p[product]
         productunfiltered = self.crd.using_unfilteredproduct[j]
-        polarization = 'V' if self.crd.using_verticalpolarization[j] else 'H'
+        polarization = {True:'V', False:'H'}[self.crd.using_verticalpolarization[j]]
         apply_dealiasing = self.crd.apply_dealiasing[j]
         proj = self.dp.meta_PP[product]['proj'] if product in gv.plain_products else None
         dataspecs_string = self.generate_dataspecs_string(product,productunfiltered,polarization,apply_dealiasing,j,proj)
         if return_params:
-            return dataspecs_string, product, productunfiltered, polarization, apply_dealiasing, proj
+            return dataspecs_string, productunfiltered, polarization, apply_dealiasing, proj
         else:
             return dataspecs_string
+        
+    def store_data_in_memory(self, j): #j is the panel
+        product = self.crd.products[j]
+        dataspecs_string, productunfiltered, polarization, apply_dealiasing, proj = self.get_dataspecs_string_panel(j, True)
+        # if not data changed we can still use self.crd.using_verticalpolarization[j] etc due to dataspecs_string_requested below
+        if self.data_changed[j]:  
+            self.stored_data[dataspecs_string] = {'last_use_time':pytime.time(),'data':self.data[j].copy(),'data_azimuth_offset':self.data_azimuth_offset[j],'data_radius_offset':self.data_radius_offset[j],'scantime':self.scantimes[j],'using_unfilteredproduct':self.crd.using_unfilteredproduct[j],'using_verticalpolarization':self.crd.using_verticalpolarization[j]}
+        else:
+            self.stored_data[dataspecs_string] = {'last_use_time':pytime.time(),'data':np.zeros((1,1))}
+            
+        if product in gv.plain_products:
+            self.stored_data[dataspecs_string]['meta_PP'] = self.dp.meta_PP[product].copy()
+                
+        if productunfiltered != self.crd.productunfiltered[j] or polarization != self.crd.polarization[j]:
+            # In this case the new data array is both stored for the actual and the requested combination of productunfiltered and 
+            # polarization, but for the requested combination only the key for the actual combination is given as value.
+            # This key can then be used to obtain the desired dictionary with data
+            dataspecs_string_requested = self.generate_dataspecs_string(product,self.crd.productunfiltered[j],self.crd.polarization[j],apply_dealiasing,j,proj)
+            self.stored_data[dataspecs_string_requested] = dataspecs_string    
+            
+        stored_data_size = np.sum([float(sys.getsizeof(j['data'])) for j in self.stored_data.values() if not isinstance(j, str)])
+        #Convert to float, since the number might exceed the maximum value for 32-bit ints.
+        while stored_data_size>1e9*self.gui.max_radardata_in_memory_GBs:
+            #Remove the dataset with the most outdated last_use_time
+            index = np.argmax([pytime.time()-j['last_use_time'] for j in self.stored_data.values() if not isinstance(j, str)])
+            most_outdated_last_use_time_key = list(self.stored_data)[index]
+            # Also remove possible other keys that map onto the key that will be removed
+            keys_remove = [most_outdated_last_use_time_key]+\
+                [j for j in self.stored_data if type(self.stored_data[j]) == str and self.stored_data[j] == most_outdated_last_use_time_key]
+            for key in keys_remove:
+                del self.stored_data[key]
+            stored_data_size = np.sum([float(sys.getsizeof(j['data'])) for j in self.stored_data.values() if not isinstance(j, str)])
         
     def check_presence_data_in_memory(self,product,productunfiltered,polarization,apply_dealiasing,panel):
         if self.gui.max_radardata_in_memory_GBs <= 0:
@@ -590,52 +639,29 @@ class DataSource_General():
             last_use_time = data_dict['last_use_time']
             if last_use_time<self.pb.cmap_lastmodification_time[product] or last_use_time<self.gui.time_last_removal_volumeattributes:
                 return False #In this case the color map has been modified in the mean time, implying that
-                #self.pb.masked_values_int[product] could have been changed. If this is the case then the number of masked elements
+                #self.pb.mask_values_int[product] could have been changed. If this is the case then the number of masked elements
                 #will likely change, which requires an update of the data.
             
-            self.data[panel] = data_dict['data']
-            if derived_nosave:
-                # Make a copy of data, since otherwise data of import product will be altered when calculating derived product
-                self.data[panel] = self.data[panel].copy()
-            self.data_azimuth_offset[panel] = data_dict['data_azimuth_offset']
-            self.data_radius_offset[panel] = data_dict['data_radius_offset']
-            self.scantimes[panel] = data_dict['scantime']
-            self.crd.using_unfilteredproduct[panel] = data_dict['using_unfilteredproduct']
-            self.crd.using_verticalpolarization[panel] = data_dict['using_verticalpolarization']
-            if product in gv.plain_products:
-                self.dp.meta_PP[product] = data_dict['meta_PP'].copy()
-            
-            self.data_changed[panel] = True
+            # An empty array has been saved to memory when attempts to import data were unsuccessful. In this case don't update the data
+            # array and attributes, but also don't re-import data, which requires that self.import_data[panel] is still set to False.
+            if data_dict['data'].size > 1:
+                self.data[panel] = data_dict['data']
+                if derived_nosave:
+                    # Make a copy of data, since otherwise data of import product will be altered when calculating derived product
+                    self.data[panel] = self.data[panel].copy()
+                self.data_azimuth_offset[panel] = data_dict['data_azimuth_offset']
+                self.data_radius_offset[panel] = data_dict['data_radius_offset']
+                self.scantimes[panel] = data_dict['scantime']
+                self.crd.using_unfilteredproduct[panel] = data_dict['using_unfilteredproduct']
+                self.crd.using_verticalpolarization[panel] = data_dict['using_verticalpolarization']
+                if product in gv.plain_products:
+                    self.dp.meta_PP[product] = data_dict['meta_PP'].copy()
+                
+                self.data_changed[panel] = True
             self.import_data[panel] = False
             data_dict['last_use_time'] = pytime.time()
             
-    def store_data_in_memory(self, j): #j is the panel
-        dataspecs_string, product, productunfiltered, polarization, apply_dealiasing, proj = self.get_dataspecs_string_panel(j, True)
-        
-        self.stored_data[dataspecs_string] = {'last_use_time':pytime.time(),'data':self.data[j].copy(),'data_azimuth_offset':self.data_azimuth_offset[j],'data_radius_offset':self.data_radius_offset[j],'scantime':self.scantimes[j],'using_unfilteredproduct':self.crd.using_unfilteredproduct[j],'using_verticalpolarization':self.crd.using_verticalpolarization[j]}
-        if product in gv.plain_products:
-            self.stored_data[dataspecs_string]['meta_PP'] = self.dp.meta_PP[product].copy()
-                
-        if productunfiltered != self.crd.productunfiltered[j] or polarization != self.crd.polarization[j]:
-            # In this case the new data array is both stored for the actual and the requested combination of productunfiltered and 
-            # polarization, but for the requested combination only the key for the actual combination is given as value.
-            # This key can then be used to obtain the desired dictionary with data
-            dataspecs_string_requested = self.generate_dataspecs_string(product,self.crd.productunfiltered[j],self.crd.polarization[j],apply_dealiasing,j,proj)
-            self.stored_data[dataspecs_string_requested] = dataspecs_string    
             
-        stored_data_size = np.sum([float(sys.getsizeof(j['data'])) for j in self.stored_data.values() if not isinstance(j, str)])
-        #Convert to float, since the number might exceed the maximum value for 32-bit ints.
-        while stored_data_size>1e9*self.gui.max_radardata_in_memory_GBs:
-            #Remove the dataset with the most outdated last_use_time
-            index = np.argmax([pytime.time()-j['last_use_time'] for j in self.stored_data.values() if not isinstance(j, str)])
-            most_outdated_last_use_time_key = list(self.stored_data)[index]
-            # Also remove possible other keys that map onto the key that will be removed
-            keys_remove = [most_outdated_last_use_time_key]+\
-                [j for j in self.stored_data if type(self.stored_data[j]) == str and self.stored_data[j] == most_outdated_last_use_time_key]
-            for key in keys_remove:
-                del self.stored_data[key]
-            stored_data_size = np.sum([float(sys.getsizeof(j['data'])) for j in self.stored_data.values() if not isinstance(j, str)])
-
     def convert_dtype_float_to_uint(self,data,product,inverse=False):
         """Convert the data to unsigned integers.
         For an explanation of the process of converting floating point data values to unsigned integers, see nlr_globalvars.py.
@@ -645,16 +671,16 @@ class DataSource_General():
         pm_lim = gv.products_maxrange_masked[product]
             
         if not inverse:
-            data_notmasked = (data!= self.pb.masked_values[product])
+            data_notmasked = (data!= self.pb.mask_values[product])
             #These 2 lines are necessary, to assure that no errors arise when p_lim does not capture the whole range of 
             #product values.
             data[(data<p_lim[0]) & data_notmasked] = p_lim[0]
             data[data>p_lim[1]] = p_lim[1]
-            new_data = np.full(data.shape, self.pb.masked_values_int[product], f'uint{n_bits}')
+            new_data = np.full(data.shape, self.pb.mask_values_int[product], f'uint{n_bits}')
             new_data[data_notmasked] = ft.convert_float_to_uint(data[data_notmasked],n_bits,pm_lim)
         else:
-            data_notmasked = data != self.pb.masked_values_int[product]
-            new_data = np.full(data.shape, self.pb.masked_values[product], 'float32')
+            data_notmasked = data != self.pb.mask_values_int[product]
+            new_data = np.full(data.shape, self.pb.mask_values[product], 'float32')
             new_data[data_notmasked] = ft.convert_uint_to_float(data[data_notmasked],n_bits,pm_lim)
         return new_data
     
@@ -666,7 +692,7 @@ class DataSource_General():
         if initial_dtype != 'float32':
             self.data[j] = self.data[j].astype('float32')
         for i in range(3):
-            data_mask = self.data[j] == 0. if initial_dtype != 'float32' else self.data[j] == self.pb.masked_values[self.crd.products[j]]
+            data_mask = self.data[j] == 0. if initial_dtype != 'float32' else self.data[j] == self.pb.mask_values[self.crd.products[j]]
             neighbours = ft.get_window_sum((data_mask == False).astype('float32'), [0,1,0])
             bins_to_fill = (data_mask) & (neighbours >= 2)
             
@@ -674,14 +700,14 @@ class DataSource_General():
                 self.data[j][data_mask] = 0
             self.data[j][bins_to_fill] = ft.get_window_sum(self.data[j], [0,1,0])[bins_to_fill] / neighbours[bins_to_fill]
             if initial_dtype == 'float32':
-                self.data[j][(data_mask) & (bins_to_fill == False)] = self.pb.masked_values[self.crd.products[j]]
+                self.data[j][(data_mask) & (bins_to_fill == False)] = self.pb.mask_values[self.crd.products[j]]
                 
             unfill = np.zeros(self.data[j].shape, dtype='bool')
             if initial_dtype == 'float32':
                 unfill[bins_to_fill] = self.data[j][bins_to_fill] < 20
             else:
                 unfill[bins_to_fill] = self.data[j][bins_to_fill] < ft.convert_float_to_uint(20, gv.products_data_nbits[self.crd.products[j]], gv.products_maxrange_masked[self.crd.products[j]])
-            self.data[j][unfill] = 0 if initial_dtype != 'float32' else self.pb.masked_values[self.crd.products[j]]
+            self.data[j][unfill] = 0 if initial_dtype != 'float32' else self.pb.mask_values[self.crd.products[j]]
         if initial_dtype != 'float32':
             self.data[j] = self.data[j].astype(initial_dtype)
 
@@ -745,6 +771,12 @@ class DataSource_General():
             self.data_radius_offset[j] = 0.
             
             self.check_presence_data_in_memory(self.crd.products[j],self.crd.productunfiltered[j],self.crd.polarization[j],self.crd.apply_dealiasing[j],j)
+            
+            i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
+            duplicate = self.scannumbers_forduplicates[scan]
+            if duplicate >= len(self.scannumbers_all[i_p].get(scan, [])):
+                # In this case the requested duplicate scan is not available for this product
+                self.import_data[j] = False
 
         self.update_volume_attributes = False
         
@@ -764,7 +796,8 @@ class DataSource_General():
             for j in panellist_notplain:
                 i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
                 if scan in self.scannumbers_all[i_p]:
-                    self.scannumbers_panels[j] = self.scannumbers_all[i_p][scan]
+                    # Convert to string, as self.scannumbers_all[i_p][scan] might contain entities that can't be sorted (e.g. None)
+                    self.scannumbers_panels[j] = str(self.scannumbers_all[i_p][scan])
             panellist_notplain = sorted(self.scannumbers_panels, key=self.scannumbers_panels.get)
             for j in panellist_notplain:
                 ft.create_subdicts_if_absent(self.scanangles, [self.crd.radar, self.crd.date])
@@ -785,7 +818,7 @@ class DataSource_General():
                         azimuth = ft.azimuthal_angle(panel_center_xy, deg=True)
                         row = int(azimuth//1)
                         if j in self.pb.data_attr['scantime'] and self.scantimes[j] != self.pb.data_attr['scantime'][j] and\
-                        np.all(self.data[j][row] == self.pb.masked_values[self.crd.products[j]]):
+                        np.all(self.data[j][row] == self.pb.mask_values[self.crd.products[j]]):
                             print('back to before', j)
                             self.data[j], self.scantimes[j], self.data_azimuth_offset[j], self.data_radius_offset[j] = before
                             continue
@@ -810,24 +843,24 @@ class DataSource_General():
                 for j in panellist_plain:
                     self.data_changed[j] = True
            
-        for j in (i for i in panellist_import if self.data_changed[i]): 
+        for j in panellist_import:    
             product = self.crd.products[j]
-            required_dtype = 'uint'+str(gv.products_data_nbits[product])
-            
             if product in gv.products_possibly_exclude_lowest_values:
-                #Hide product values that are below the minimum value that the user wants to view
-                if self.data[j].dtype != required_dtype:
-                    min_value = self.pb.data_values_colors[product][0]; masked_value = self.pb.masked_values[product]
+                # Hide product values that are below the minimum value that the user wants to view
+                if self.data[j].dtype.name.startswith('float'):
+                    min_value, mask_value = self.pb.data_values_colors[product][0], self.pb.mask_values[product]
                 else:
-                    min_value = self.pb.data_values_colors_int[product][0]; masked_value = self.pb.masked_values_int[product]
-                self.data[j][self.data[j]<min_value] = masked_value
-                
-            if self.data[j].dtype == 'float32':
+                    min_value, mask_value = self.pb.data_values_colors_int[product][0], self.pb.mask_values_int[product]
+                self.data[j][self.data[j] < min_value] = mask_value
+            if self.data[j].dtype.name.startswith('float'):
                 self.data[j] = self.convert_dtype_float_to_uint(self.data[j], product)
             
+            # When self.data_changed[j]=False an empty array (created in self.store_data_in_memory) will be saved to memory, to indicate that no
+            # data has been obtained. In the past nothing was saved to memory at all, but this had as disadvantage that new requests of the same
+            # data would lead to renewed attempts to import, which were a waste of time.
             if self.gui.max_radardata_in_memory_GBs > 0:
                 self.store_data_in_memory(j)
-                
+
         for j in (i for i in panellist if self.data_changed[i]):
             if self.crd.products[j] in gv.products_with_tilts_derived:
                 self.calculate_derived_with_tilts(j)
@@ -840,7 +873,7 @@ class DataSource_General():
             self.store_volume_attributes()
             self.get_derived_volume_attributes()
                   
-        self.selected_scanangles_before = self.crd.selected_scanangles.copy()
+        self.selected_scanangles_before = self.selected_scanangles.copy()
         # profiler.disable()
         # import pstats
         # stats = pstats.Stats(profiler).sort_stats('cumtime')
@@ -851,7 +884,7 @@ class DataSource_General():
         if not hasattr(self, 'vda'):
             from dealiasing.unet_vda.unet_vda import Unet_VDA
             self.vda = Unet_VDA()
-        data[data == self.pb.masked_values['v']] = np.nan
+        data[data == self.pb.mask_values['v']] = np.nan
         t = pytime.time()
         vn = self.nyquist_velocities_all_mps[self.crd.scans[j]] if vn is None else vn
         data = self.vda(data, vn, azis, da, extra_dealias='extra' in self.gui.dealiasing_setting)
@@ -868,7 +901,7 @@ class DataSource_General():
         This might then be done in this function too.
         """
         product, i_p = self.crd.products[j], gv.i_p[self.crd.products[j]]
-        mask_value_ip, mask_value_p = self.pb.masked_values_int[i_p], self.pb.masked_values_int[product]
+        mask_value_ip, mask_value_p = self.pb.mask_values_int[i_p], self.pb.mask_values_int[product]
         data_mask = self.data[j] == mask_value_ip
         if product == 's':
             self.data[j] = dt.calculate_srv_array(self.data[j], self.gui.stormmotion, self.data_azimuth_offset[j])
@@ -914,7 +947,19 @@ class DataSource_General():
                     #self.scannumbers_forduplicates_radars[self.crd.radar] gets updated in self.pb.set_newdata each time that function is called.
                     previous_val_radar = self.scannumbers_forduplicates_radars.get(self.crd.radar, {self.crd.radar:{}}).get(i, 100)
                     self.scannumbers_forduplicates[i] = min(len(j)-1, previous_val_radar)  
-                        
+                  
+                    
+    def update_selected_scanangles(self, update_allpanels=False):
+        panellist = range(self.pb.max_panels) if update_allpanels else self.pb.panellist
+        for j in panellist:
+            #'z' is always available as key for the volume attributes
+            product = gv.i_p[self.crd.products[j]] if self.scanangles_all_m[gv.i_p[self.crd.products[j]]] else 'z'
+            max_scanangle = max(self.scanangles_all_m[product].values())
+            lowest_scan = (1, 2)[self.range_nyquistvelocity_scanpairs_indices[j]] if self.scanpair_present else 1
+            if self.crd.scans[j] == lowest_scan:
+                self.selected_scanangles[j] = 0.
+            else:
+                self.selected_scanangles[j] = self.scanangles_all_m[product].get(self.crd.scans[j], max_scanangle)          
                     
     def get_scanangles_allproducts(self, scanangles_all):
         """This function combines the dictionaries with per product the scanangles for all scans, given in scanangles_all, into one dictionary, that contains
@@ -922,20 +967,20 @@ class DataSource_General():
         to scanangles_all[product], where product is any of the availabe products.
         """
         scanangles_allproducts = {}
-        products = [p for p in scanangles_all if len(scanangles_all[p])>0]
+        products = [p for p in scanangles_all if len(scanangles_all[p])]
         for j in scanangles_all['z']: #scanangles_all['z'] should contain keys for all available scans
             if j==1:
                 scanangles_allproducts[j] = np.min([scanangles_all[p][1] for p in products])
             else:
                 diff_greaterthanzero = [scanangles_all[p][j]-scanangles_allproducts[j-1] for p in products if scanangles_all[p][j]-scanangles_allproducts[j-1]>0.]
-                if len(diff_greaterthanzero)>0:
+                if len(diff_greaterthanzero):
                     products_diff_greaterthanzero = [p for p in products if scanangles_all[p][j]-scanangles_allproducts[j-1]>0.]
                     p = products_diff_greaterthanzero[np.argmin(diff_greaterthanzero)]
                 else: 
                     p = 'z'
                 scanangles_allproducts[j] = scanangles_all[p][j]
         return scanangles_allproducts
-    
+        
     def get_panel_center_heights(self, dist_to_radar_panels, scanangles, scanangles_all, scanpair_present, panellist=None):
         panellist = self.pb.panellist if panellist is None else panellist
         heights = {}
@@ -1021,7 +1066,7 @@ class DataSource_General():
                 self.crd.scans = self.scans_radars[self.radar_dataset]['scans'].copy()
                 #Only when choosing the nearest elevation. In other cases the selected scanangle should not change.
                 for j in self.pb.panellist:
-                    self.crd.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
+                    self.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
                 self.time_last_choosenearestheight = pytime.time()
             elif condition1 and choose_nearest_scanangle and all([j < self.scans_radars[self.radar_dataset]['time'] for j in (
             self.crd.time_last_change_scan_selection_mode, self.time_last_choosenearestheight)]) and not self.gui.setting_saved_choice:
@@ -1071,11 +1116,11 @@ class DataSource_General():
                         """Find the scanangle that is closest to the selected scanangle. If there are 2 scanangles that are equally close,
                         then the one is chosen that is closest to the scanangle for which currently data is displayed in panel j.
                         """
-                        new_scanangle, index = ft.closest_value(scanangles_all_values,self.crd.selected_scanangles[j], return_index=True)
+                        new_scanangle, index = ft.closest_value(scanangles_all_values,self.selected_scanangles[j], return_index=True)
                         if len(scanangles_all) > 1:
                             scanangles_all_without_newscanangle = np.delete(scanangles_all_values, index)
-                            next_closest_scanangle = ft.closest_value(scanangles_all_without_newscanangle, self.crd.selected_scanangles[j])
-                            if abs(self.crd.selected_scanangles[j]-new_scanangle) == abs(self.crd.selected_scanangles[j]-next_closest_scanangle) and\
+                            next_closest_scanangle = ft.closest_value(scanangles_all_without_newscanangle, self.selected_scanangles[j])
+                            if abs(self.selected_scanangles[j]-new_scanangle) == abs(self.selected_scanangles[j]-next_closest_scanangle) and\
                             abs(scanangles_before[j]-next_closest_scanangle) < abs(scanangles_before[j]-new_scanangle):
                                 new_scanangle = next_closest_scanangle
                                           
@@ -1099,14 +1144,14 @@ class DataSource_General():
                     
                     if choose_nearest_height:
                         #Only in this case. In other cases the selected scanangle should not change.
-                        self.crd.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
+                        self.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
                         
                 if choose_nearest_height:
                     self.time_last_choosenearestheight = pytime.time()
                 else:
                     self.time_last_choosenearestscanangle = pytime.time()
                     
-    def check_presence_large_range_large_nyquistvelocity_scanpair(self,update_range_nyquistvelocity_scanpairs_indices = False):
+    def check_presence_large_range_large_nyquistvelocity_scanpair(self,update_scanpairs_indices = False):
         """A range-nyquist velocity scan pair is a pair of scans of which the first has a large range but low Nyquist velocity, and the second has
         a lower range but larger Nyquist velocity, while the scanangles for both scans differ by at most 0.1 degrees. When such a pair is present,
         it might be desired to display e.g. reflectivity for the scan with the larger range, and velocity for the scan with the higher Nyquist
@@ -1118,7 +1163,7 @@ class DataSource_General():
         
         This function determines whether a scan pair is present, and returns True if this is the case, and False otherwise. If a pair is present, but
         the scans involved are not 1 and 2, then scanpair_present = False, as in this case handling such a scan pair is much more difficult.
-        Further, if update_range_nyquistvelocity_scanpairs_indices = True, then this function determines the index of the scan in the scan pair that
+        Further, if update_scanpairs_indices = True, then this function determines the index of the scan in the scan pair that
         is currently being displayed. This index is 0 for the first scan, and 1 for the second.
         """
         scanpair_present = False
@@ -1144,7 +1189,7 @@ class DataSource_General():
             np.abs(self.nyquist_velocities_all_mps[2]/self.nyquist_velocities_all_mps[1]) > 1.25):
                 scanpair_present = True
                 
-                if update_range_nyquistvelocity_scanpairs_indices:
+                if update_scanpairs_indices:
                     for i in (1,2):
                         for j in self.pb.panellist:
                             if self.crd.scans[j]==i and not self.crd.products[j] in gv.plain_products:
@@ -1336,14 +1381,14 @@ class DataSource_General():
         dir_string = self.get_dir_string(radar,dataset)        
         lastdir = bg.get_last_directory(dir_string,radar,self.get_filenames_directory)
         lastdir_filenames = self.get_filenames_directory(radar,lastdir)
-        lastdir_datetimes = self.get_datetimes_from_files(radar,lastdir_filenames)
+        lastdir_datetimes = self.get_datetimes_from_files(radar,lastdir_filenames,lastdir)
         n1 = len(lastdir_datetimes)
         if n1 > 1:
             return lastdir_datetimes[-2:][::-1]
         else:
             secondlastdir = bg.get_next_directory(dir_string,-1,radar,self.get_filenames_directory,current_dir = lastdir)
             secondlastdir_filenames = self.get_filenames_directory(radar,secondlastdir)
-            secondlastdir_datetimes = self.get_datetimes_from_files(radar,secondlastdir_filenames)
+            secondlastdir_datetimes = self.get_datetimes_from_files(radar,secondlastdir_filenames,secondlastdir)
             returns = np.append(lastdir_datetimes, secondlastdir_datetimes[-(2-n1):][::-1])
             if len(returns) == 0:
                 return None, None
@@ -1358,14 +1403,16 @@ class DataSource_General():
         if directory is None: return [] #Calling os.listdir with argument None lists the current working directory, which is not desired.
         return self.source_classes[self.data_source(radar)].get_filenames_directory(radar,directory)
                
-    def get_datetimes_from_files(self,radar,filenames,dtype = str,return_unique_datetimes = True, mode='simple'):
+    def get_datetimes_from_files(self,radar,filenames,directory=None,dtype = str,return_unique_datetimes = True, mode='simple'):
+        # directory is in most cases not needed to determine datetimes from filenames, but Meteo-France archived files are an exception, since
+        # they contain only time in their names. Hence directory is added as argument.
         """If filenames = None this function returns the datetimes of the files that are present in the directory corresponding to the particular 
         radar and dataset. If not filenames = None, then this function returns the datetimes of the filenames that are given as input.
         Mode can be either 'simple' or 'dates ', and the latter should be used when it is desired to also return dates present in the current
         directory if they are determined (is the case for TU Delft).
         The returned object is either an array of datetimes, 1 for each filename, or it is a dictionary with 
         """
-        return self.source_classes[self.data_source(radar)].get_datetimes_from_files(filenames,dtype,return_unique_datetimes, mode)
+        return self.source_classes[self.data_source(radar)].get_datetimes_from_files(filenames,directory,dtype,return_unique_datetimes, mode)
     
     def get_datetimes_directory(self,radar,directory,dtype = str,return_unique_datetimes = True):
         filenames = self.get_filenames_directory(radar,directory)
@@ -1375,7 +1422,7 @@ class DataSource_General():
         if not hasattr(self, 'nfiles_directory'):
             self.nfiles_directory, self.datetimes_directory = {}, {}
         if not directory in self.nfiles_directory or self.nfiles_directory[directory] != len(filenames):
-            self.datetimes_directory[directory] = self.get_datetimes_from_files(radar,filenames,dtype,return_unique_datetimes, mode='simple')
+            self.datetimes_directory[directory] = self.get_datetimes_from_files(radar,filenames,directory,dtype,return_unique_datetimes, mode='simple')
             self.nfiles_directory[directory] = len(filenames)
         return self.datetimes_directory[directory]
     
@@ -1398,12 +1445,12 @@ class DataSource_General():
         if radar in gv.radars_with_onefileperdate:
             #Here there is one file per date, and therefore multiple radar volumes per file. datetimes contains datetimes of all the radar volumes
             #within all the files, while dates lists just one date for each file.
-            datetimes, self.dates = self.get_datetimes_from_files(radar,self.files,dtype = str,return_unique_datetimes = False, mode='dates')
+            datetimes, self.dates = self.get_datetimes_from_files(radar,self.files,directory,dtype = str,return_unique_datetimes = False, mode='dates')
             #self.dates is used in the function self.get_dates_with_archived_data
             datetimes_unique = np.unique(datetimes)
             self.files_datetimesdict = {self.dates[j]: self.files[j] for j in range(len(self.dates))}
         else:
-            datetimes = self.get_datetimes_from_files(radar,self.files,dtype = str,return_unique_datetimes = False)
+            datetimes = self.get_datetimes_from_files(radar,self.files,directory,dtype = str,return_unique_datetimes = False)
             datetimes_unique = np.unique(datetimes)
             self.files_datetimesdict = {j:self.files[datetimes==j] for j in datetimes_unique}
             
@@ -1445,7 +1492,7 @@ class DataSource_General():
             filenames = self.get_filenames_directory(radar,i)
             if return_abspaths:
                 filenames = np.array([opa(i+'/'+j) for j in filenames])
-            datetimes = self.get_datetimes_from_files(radar,filenames,dtype = 'int64',return_unique_datetimes = False)
+            datetimes = self.get_datetimes_from_files(radar,filenames,i,dtype = 'int64',return_unique_datetimes = False)
         
             if not startdatetime is None and not enddatetime is None:
                 requested = (datetimes>= int(startdatetime)) & (datetimes<= int(enddatetime))
@@ -1504,7 +1551,7 @@ class DataSource_General():
                         if i in gv.radars_with_onefileperdate:
                             for path in dirs_abspaths:
                                 files = np.sort(self.get_filenames_directory(i, path))
-                                _, dates = self.get_datetimes_from_files(i, files, mode='dates')
+                                _, dates = self.get_datetimes_from_files(i, files, path, mode='dates')
                                 if date in dates:
                                     radars_with_data.append(radar_dataset)
                                     break

@@ -57,7 +57,7 @@ class Change_RadarData(QObject):
         self.dsg=DataSource_General(gui_class=self.gui, crd_class=self)
         self.ani=Animate(crd_class=self)
         
-        self.directory=None
+        self.directory = self.previous_directory = None
         self.selected_radar=radar; self.selected_date=date; self.selected_time=time
         self.radar=radar; self.date=date; self.time=time
         if date == 'c':
@@ -115,14 +115,7 @@ class Change_RadarData(QObject):
         self.process_datetimeinput_call_ID=0
         self.process_keyboardinput_call_ID=None # See nlr_animate.py for reason for setting this to None
         self.update_current_call_ID=0
-        
-        self.selected_scanangles={} #selected_scanangles is used when the radar volume structure changes during the course of a day, as can be the case
-        #for the radar in Zaventem. When selecting a particular scanangle, that is not available with the next volume structure, then it is chosen 
-        #automatically again when the structure changes back to something that contains the selected scanangle.
-        #Should not be updated when going to the left/right.
-        #Gets initialized in the function self.dsg.get_scans_information, because its initialization requires information that is not present before calling that
-        #function for the first time.
-        
+                
         self.time_last_change_scan_selection_mode=0 #is used in nlr_datasourcegeneral.py
         self.time_last_leftright=0
         self.time_last_productchange=0
@@ -149,6 +142,9 @@ class Change_RadarData(QObject):
         # switch to the nth nearest radar
         date, time = self.gui.datew.text().replace(' ',''), self.gui.timew.text().replace(' ','')
         radar_keys = [i for i,j in gv.radar_bands.items() if j in self.gui.radar_bands_view_nearest_radar]
+        if self.check_viewing_most_recent_data():
+            radar_keys = [j for j in radar_keys if j in self.gui.radars_automatic_download]
+            
         if (check_date_availability and (not ft.correct_datetimeinput(date,time) or date=='c' or time=='c')) or not radar_keys:
             return False
 
@@ -197,7 +193,7 @@ class Change_RadarData(QObject):
                 if not self.lrstep_beingperformed:
                     date_present = any(abs(ft.datetimediff_s(date+time, k)) < 60*20 for k in datetimes)
                 else:
-                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)                                
+                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)                       
                     date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
                                    if desired_radar == self.radar else\
                                    (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
@@ -250,20 +246,25 @@ class Change_RadarData(QObject):
             self.change_radar_call_ID=call_ID
             
     def check_viewing_most_recent_data(self):
-        timediff = pytime.time() - ft.get_absolutetimes_from_datetimes(self.date+self.time)
+        date, time = self.gui.datew.text().replace(' ',''), self.gui.timew.text().replace(' ','')
+        if not ft.correct_datetimeinput(date, time):
+            date, time = self.selected_date, self.selected_time
+        elif date == 'c':
+            return True
+        datetime = date+time
+        timediff = pytime.time() - ft.get_absolutetimes_from_datetimes(datetime)
         if self.pb.firstplot_performed and timediff < 900:
             # First entry is newest datetime, second is second-newest
             # The second-newest datetime is also used, since it can happen that for the latest datetime only
             # a very incomplete volume is available.
             newest_datetimes = self.dsg.get_newest_datetimes_currentdata(self.radar,self.selected_dataset)
-            current_datetime = self.selected_date+self.selected_time
             duplicate = self.dsg.scannumbers_forduplicates[self.scans[0]]
             max_duplicate = len(self.dsg.scannumbers_all['z'][self.scans[0]])-1
             # Also consider which duplicates are currently shown. For the newest datetime this should be either the
             # last or second-to-last duplicate (the last duplicate scan might not be fully available yet), while for 
             # the second-newest datetime the last duplicate should be shown.
-            if current_datetime == newest_datetimes[0] and duplicate in (max_duplicate, max_duplicate-1) or\
-            current_datetime == newest_datetimes[1] and duplicate == max_duplicate:
+            if datetime == newest_datetimes[0] and duplicate in (max_duplicate, max_duplicate-1) or\
+            datetime == newest_datetimes[1] and duplicate == max_duplicate:
                 return True
         return False
             
@@ -485,9 +486,18 @@ class Change_RadarData(QObject):
         files_datetimes=np.array([],dtype='int64')
         try:
             if not (date is None or time is None):
+                # from cProfile import Profile
+                # profiler = Profile()
+                # profiler.enable()
                 t = pytime.time()
+                self.previous_directory = self.directory
                 self.directory = self.dsg.get_nearest_directory(self.selected_radar,dataset,date,time)
-                print(pytime.time()-t, 'nearest')
+                # profiler.disable()
+                if pytime.time()-t > 1:
+                    print(pytime.time()-t, 'nearest')
+                    # import pstats
+                    # stats = pstats.Stats(profiler).sort_stats('cumtime')
+                    # stats.print_stats(10)  
                 
             files_datetimes=self.dsg.get_files(self.selected_radar,self.directory,return_datetimes=True)
             if self.directory in self.filedatetimes_errors:
@@ -532,11 +542,8 @@ class Change_RadarData(QObject):
         if not files_available: 
             self.filedatetimes=[np.array([]),np.array([])]
         else:
-            files_available=True if len(files_datetimes)>0 else False
-            if files_available: #It is possible that removing datetimes of files that caused errors leads to an empty datetimes list.
-                files_absolutetimes=np.array(ft.get_absolutetimes_from_datetimes(files_datetimes))
-                self.filedatetimes=[files_datetimes,files_absolutetimes]
-            #Else self.filedatetimes remains unchanged
+            files_absolutetimes=np.array(ft.get_absolutetimes_from_datetimes(files_datetimes))
+            self.filedatetimes=[files_datetimes,files_absolutetimes]
             self.volume_timestep_m = self.determine_volume_timestep_m()
             
         if not files_available:
@@ -580,7 +587,6 @@ class Change_RadarData(QObject):
                     else:
                         lr_step = -1
             
-            original_directory = self.directory
             #If this is the case, then the first or last file in self.filedatetimes is reached.
             if (lr_step<0 and index==0 and mintimediff>0) or (lr_step>0 and index==len(timediffs)-1 and mintimediff<0):
                 if self.ani.starting_iteration_action:
@@ -592,15 +598,16 @@ class Change_RadarData(QObject):
                     if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
                         # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
                         desired_newdate = desired_newtime = None
-                print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
-                self.directory=self.dsg.get_next_directory(self.selected_radar,self.selected_dataset,current_date,current_time,int(np.sign(lr_step)),desired_newdate,desired_newtime)
-                print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
+                # print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
+                self.previous_directory = self.directory
+                self.directory = self.dsg.get_next_directory(self.selected_radar,self.selected_dataset,current_date,current_time,int(np.sign(lr_step)),desired_newdate,desired_newtime)
+                # print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
                 self.determine_list_filedatetimes()
 
                 #If not files_available, then the 'old' list with datetimes is still used.
                 timediffs=np.abs(self.filedatetimes[1]-ft.get_absolutetimes_from_datetimes(date+time))
                 #Determine the index of the datetime that is closest to date and time.
-                index=np.argmin(timediffs)      
+                index=np.argmin(timediffs) 
                 
             # Check whether the timestep is at least nonzero. If not, then if possible go one volume backward/forward.
             datetime, current_datetime = int(self.filedatetimes[0][index]), int(self.date+self.time)
@@ -611,7 +618,7 @@ class Change_RadarData(QObject):
             # and reset directory if needed
             datetime = self.filedatetimes[0][index]
             if lr_step != 0 and abs(ft.datetimediff_s(self.date+self.time,datetime)/60) > self.gui.max_timestep_minutes:
-                if original_directory != self.directory:
+                if self.previous_directory != self.directory:
                     self.reset_dirinfo()
                     index = -1 if lr_step > 0 else 0
                 else:
@@ -626,8 +633,9 @@ class Change_RadarData(QObject):
     
     def reset_dirinfo(self):
         #Reset the working directory, list of file datetimes etc.
-        self.directory = self.dsg.get_directory(self.date,self.time,self.radar,self.dataset)
-        self.determine_list_filedatetimes(source=self.reset_dirinfo)
+        if self.previous_directory:
+            self.directory = self.previous_directory
+            self.determine_list_filedatetimes(source=self.reset_dirinfo)
         
     
     def process_datetimeinput(self,call_ID=None,set_data=True,change_datetime=None):
@@ -1017,18 +1025,11 @@ class Change_RadarData(QObject):
                 # radar selection with storm-following view. In that case update all panels.
                 d, d_before = self.dsg.scannumbers_forduplicates, self.current_variables['scannumbers_forduplicates']
                 for j in self.pb.panellist:
-                    try:
-                        if (self.products[j] in gv.products_with_tilts and d[self.scans[j]] != d_before[self.scans[j]]) or (
-                        self.products[j] in gv.plain_products_affected_by_double_volume and d[self.products[j]] != d_before[self.products[j]]):
-                            panellist_change.append(j)
-                    except Exception as e:
-                        print(e, d, d_before, [self.scans[j] for j in self.pb.panellist])
-                        1/0
+                    if (self.products[j] in gv.products_with_tilts and d[self.scans[j]] != d_before[self.scans[j]]) or (
+                    self.products[j] in gv.plain_products_affected_by_double_volume and d[self.products[j]] != d_before[self.products[j]]):
+                        panellist_change.append(j)
             elif leftright_step!=0:
                 panellist_change=[j for j in self.pb.panellist]
-            
-            if new_scan!=0 or downup_step!=0: 
-                self.update_selected_scanangles()
             
             if panellist_change:
                 change_datetime = leftright_step != 0
@@ -1053,15 +1054,7 @@ class Change_RadarData(QObject):
             self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False
             print(e,'process_keyboardinput')
         
-        
-    def update_selected_scanangles(self, update_allpanels=False):
-        panellist = range(self.pb.max_panels) if update_allpanels else self.pb.panellist
-        for j in panellist:
-            #'z' is always available as key for the volume attributes
-            product = gv.i_p[self.products[j]] if self.dsg.scanangles_all_m[gv.i_p[self.products[j]]] else 'z'
-            max_scanangle = max(self.dsg.scanangles_all_m[product].values())
-            self.selected_scanangles[j] = self.dsg.scanangles_all_m[product].get(self.scans[j], max_scanangle)
-        
+                
     def change_variable_in_row(self,variable,panel='selected_panel'):
         if panel=='selected_panel':
             panel=self.pb.panel #Else the reference panel (whose scan or product is used for other panels) should be given as input
@@ -1142,7 +1135,7 @@ class Change_RadarData(QObject):
         available for the newest datetime).
         """
         print('update current')
-        if not radar == self.selected_radar:
+        if radar != self.selected_radar:
             #It could be that the radar changes in between emitting the signal in nlr_currentdata.py and actually calling this function.
             self.update_current_call_ID=call_ID
             return
@@ -1201,9 +1194,8 @@ class Change_RadarData(QObject):
                     _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
                     if not second_newest_datetime is None:
                         date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
-                        if not (date == save_date and time == save_time):
-                            print('use second newest time')
-                            return self.update_current(radar, call_ID, ani_iteration_end, date, time)
+                        print('use second newest time')
+                        return self.update_current(radar, call_ID, ani_iteration_end, date, time)
                 if call_ID is None:
                     return self.reset_datetime(save_date, save_time)
             elif call_ID is None or ani_iteration_end:

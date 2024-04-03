@@ -59,15 +59,15 @@ def dict_sublists_to_list(input_dict):
         output_list += sublist
     return output_list
 
-def create_subdicts_if_absent(input_dict, subdicts_keys):
+def create_subdicts_if_absent(input_dict, subdicts_keys, type_last_entry=dict):
     if not type(subdicts_keys) in (tuple, list, np.ndarray):
         subdicts_keys = [subdicts_keys]
-    for key in subdicts_keys:
+    for i,key in enumerate(subdicts_keys):
         if not key in input_dict:
-            input_dict[key] = {}
+            input_dict[key] = {} if i < len(subdicts_keys)-1 else type_last_entry()
         input_dict = input_dict[key]
         
-def initialise_dict_entries_if_absent(input_dict, keys, types):
+def init_dict_entries_if_absent(input_dict, keys, types):
     if not type(keys) in (tuple, list, np.ndarray):
         keys = [keys]
     if not type(types) in (tuple, list, np.ndarray):
@@ -133,6 +133,9 @@ def to_number(string,allow_leading_zeros=True):
 def correct_datetimeinput(dateinput,timeinput):
     if not (dateinput=='c' and timeinput=='c'): 
         try:
+            if len(dateinput) != 8 or len(timeinput) != 4:
+                # It has been observed that inputting e.g. 2018323 as date is treated as correct, while this is not desired.
+                return False
             datetime = dt.datetime.strptime(dateinput+timeinput, '%Y%m%d%H%M')
         except Exception:
             return False

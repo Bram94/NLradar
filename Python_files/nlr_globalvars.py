@@ -30,7 +30,7 @@ for j in data:
     else:
         radar = j[0]
         radars_all.append(radar)
-        ft.initialise_dict_entries_if_absent(radars, data_source, list)
+        ft.init_dict_entries_if_absent(radars, data_source, list)
         radars[data_source].append(radar)
         data_sources[radar] = data_source
         rplaces_to_ridentifiers[radar] = j[1]*(j[1] != '.')

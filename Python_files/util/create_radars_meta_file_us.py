@@ -29,10 +29,11 @@ if __name__ == '__main__':
         radar_elevations = {i[0].upper():int(round(float(i[4]))) for i in data}
         rplaces_to_ridentifiers = {i:'' for i in radar_elevations}
         data_sources = {i:'NWS' for i in radar_elevations}
-        # 1 S-band, 2 C-band, 3 X-band
         radar_bands = {i[0].upper():'C' if i[0][0] == 't' and i[-2] != 'PR' else 'S' for i in data}
+        for j in ('FWLX', 'MZZU', 'WILU'):
+            radar_bands[j] = 'X'
         
-    radars_exclude = ['fwlx', 'mzzu', 'KULM']
+    radars_exclude = ['MZZU'] # MZZU is in SIGMET format, not NEXRAD L2
     radars = [j for j in radars if not j in radars_exclude]
     
     attrs = [radars, rplaces_to_ridentifiers, lats, lons, radar_elevations, elevs, radar_bands]

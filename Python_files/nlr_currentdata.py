@@ -678,6 +678,7 @@ class Source_DWD():
         self.files[self.cd.radar][index]=[]
 
         error_received = False
+        t = pytime.time()
         for j in urls:
             try: 
                 contents = requests.get(j).content.decode('UTF-8')
@@ -685,6 +686,7 @@ class Source_DWD():
                 self.cd.show_error_info(str(error)+',update_downloadlist')
                 error_received = True
                 continue
+            print(pytime.time()-t, j)
         
             start_indices=[s.start() for s in re.finditer('="ras', contents)]
             end_indices=[s.end() for s in re.finditer('hd5"', contents)]
@@ -963,20 +965,22 @@ class Source_MeteoFrance():
                     self.urls_datetimes[self.cd.radar][index].append(ft.format_datetime(title[-20:], 'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM'))
             except Exception as e:
                 self.cd.show_error_info(str(e)+', update_downloadlist')
-                                
-        datetimes = np.unique(self.urls_datetimes[self.cd.radar][index])
+                  
+        # -5 minutes, since end instead of start datetimes are given for files
+        datetimes = np.unique([ft.next_datetime(j, -5) for j in self.urls_datetimes[self.cd.radar][index]])
         absolutetimes = ft.get_absolutetimes_from_datetimes(datetimes)
         self.cd.datetimes_downloadlist[index] = [datetimes.astype('uint64'), absolutetimes]
         self.cd.emit_info(None, None) #Remove the message given self.cd.cd_message_updating_downloadlist
         return len(self.urls[self.cd.radar][index]) > 0 # files_availabe    
 
     def get_urls_and_savenames_downloadfile(self, index):
-        directory = self.dsg.get_directory(self.cd.date[index], self.cd.time[index], self.cd.radar)
         download_directory = self.dsg.get_download_directory(self.cd.radar)
         station = gv.rplaces_to_ridentifiers[self.cd.radar]
         
-        datetimes = self.urls_datetimes[self.cd.radar][index]
-        for i,datetime in enumerate(datetimes):
+        url_datetimes = self.urls_datetimes[self.cd.radar][index]
+        for i,url_datetime in enumerate(url_datetimes):
+            # -5 minutes, since end instead of start datetimes are given for files
+            datetime = ft.next_datetime(url_datetime, -5)
             if datetime != self.cd.date[index]+self.cd.time[index]:
                 continue
             
@@ -984,7 +988,10 @@ class Source_MeteoFrance():
             file_type = 'PAM' if 'PAM' in url else 'PAG'
             antenna_tour = url[-1]
             unknown = 'LFPW' if file_type == 'PAM' else 'EODC'
-            filename = f'T_{file_type}{antenna_tour}{station}_C_{unknown}_{datetime}00.bufr.gz'
+            filename = f'T_{file_type}{antenna_tour}{station}_C_{unknown}_{url_datetime}00.bufr.gz'
+            # Use url_datetime for directory, since that leads to the most logical ordening of files into directories (in a way that is in agreement
+            # with how you would unpack an archived dataset).
+            directory = self.dsg.get_directory(url_datetime[:8], url_datetime[-4:], self.cd.radar)
             
             self.cd.datetimes[index].append(datetime)
             self.cd.urls[index].append(url)

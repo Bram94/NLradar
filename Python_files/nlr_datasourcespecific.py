@@ -48,7 +48,7 @@ class Source_KNMI():
         filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j[:15]=='RAD_NL'+gv.rplaces_to_ridentifiers[radar]+'_VOL_NA']))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[-15:-3] for j in filenames],dtype=dtype)
         return datetimes
 
@@ -242,7 +242,7 @@ class Source_KMI():
         filenames=np.sort(np.array([j for j in entries if os.path.splitext(j)[1][1:] in ('hdf','h5','vol')]))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[:12] for j in filenames],dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes   
     
@@ -362,7 +362,7 @@ class Source_skeyes():
         
         return filenames_filtered
     
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         """For the skeyes hdf5 format there are multiple files (usually 3) per volume, such that the 
         datetimes determined here (per volume) are not simply the datetimes for all files, but the datetimes
         of the first files of all volumes. 
@@ -444,10 +444,7 @@ class Source_DWD():
         filename = self.dsg.files_datetime[0] if not filename else filename
         return filename[-3:]
         
-    def get_file_availability_info(self):
-        self.files_per_filenumber = {}; self.products_per_filenumber = {}
-        self.filenumbers_per_product = {}; self.files_per_product_per_filenumber = {}
-        
+    def get_file_availability_info(self):        
         if self.get_extension() == 'hd5':
             n = len(self.dsg.files_datetime)
             files_pvs, pvs = self.files_product_versions_datetimesdict[self.crd.date+self.crd.time], self.dsg.product_versions_datetime
@@ -463,6 +460,7 @@ class Source_DWD():
         else:
             filenames = self.dsg.files_datetime
                 
+        self.products_per_fileid, self.fileids_per_product, self.files_per_product_per_fileid = {}, {}, {}
         for j in filenames:
             for i in gv.productnames_DWD:
                 for product in ('z', 'v'):
@@ -471,54 +469,46 @@ class Source_DWD():
                         index = j.index(product_str)+len(product_str)
                         # Historical DWD BUFR files do not always contain a file index, but instead of that they then contain a
                         # scanangle towards the end of the filename
-                        filenumber = int(j[index: j.index('-20')]) if '-20' in j else float(j[index+15: -11])
+                        fileid = int(j[index: j.index('-20')]) if '-20' in j else float(j[index+15: -11])
                         break
                 else:
                     continue  # only executed if the inner loop did NOT break
                 break  # only executed if the inner loop DID break
                         
-            if not product in self.filenumbers_per_product:
-                self.filenumbers_per_product[product] = []
-                self.files_per_product_per_filenumber[product] = {}
-            if not filenumber in self.files_per_filenumber: 
-                self.files_per_filenumber[filenumber] = []; self.products_per_filenumber[filenumber] = []
-            if not filenumber in self.files_per_product_per_filenumber[product]:
-                self.files_per_product_per_filenumber[product][filenumber] = []
+            ft.init_dict_entries_if_absent(self.fileids_per_product, product, list)
+            ft.init_dict_entries_if_absent(self.products_per_fileid, fileid, list)
+            ft.create_subdicts_if_absent(self.files_per_product_per_fileid, [product, fileid], type_last_entry=list)
                 
-            self.files_per_filenumber[filenumber].append(j); self.products_per_filenumber[filenumber].append(product)
-            self.filenumbers_per_product[product].append(filenumber)
-            self.files_per_product_per_filenumber[product][filenumber].append(j)
+            self.products_per_fileid[fileid].append(product)
+            self.fileids_per_product[product].append(fileid)
+            self.files_per_product_per_fileid[product][fileid].append(j)
         
     def get_scans_information(self):
         self.get_file_availability_info()
-        
+    
         filepaths = {}; products = {}
-        for filenumber in self.files_per_filenumber:
-            #If present, then use for each filenumber the file that contains the velocity, because otherwise the Nyquist velocity cannot be
+        for fileid in self.products_per_fileid:
+            #If present, then use for each fileid the file that contains the velocity, because otherwise the Nyquist velocity cannot be
             #determined.
-            if 'v' in self.products_per_filenumber[filenumber]:
-                filepaths[filenumber] = opa(self.crd.directory+'/'+self.files_per_product_per_filenumber['v'][filenumber][0])
-                products[filenumber] = 'v'
-            else:
-                filepaths[filenumber] = opa(self.crd.directory+'/'+self.files_per_filenumber[filenumber][0])     
-                products[filenumber] = self.products_per_filenumber[filenumber][0]
-        
-        self.import_classes[self.get_extension()].get_scans_information(filepaths, products, self.filenumbers_per_product)
+            products[fileid] = 'v' if 'v' in self.products_per_fileid[fileid] else self.products_per_fileid[fileid][0]
+            filepaths[fileid] = opa(self.crd.directory+'/'+self.files_per_product_per_fileid[products[fileid]][fileid][0])
+            
+        self.import_classes[self.get_extension()].get_scans_information(filepaths, products, self.fileids_per_product)
                         
         
     def get_data(self, j): #j is the panel
         self.get_file_availability_info()
          
         i_p = gv.i_p[self.crd.products[j]]
-        if i_p in self.filenumbers_per_product:
-            filenumber = self.dsg.scannumbers_all[i_p][self.crd.scans[j]][0]
+        if i_p in self.fileids_per_product:
+            fileid = self.dsg.scannumbers_all[i_p][self.crd.scans[j]][0]
             extension = self.get_extension()
             if extension == 'hd5':
                 # When combining data for the 2 product versions, both filenames need to be supplied
-                filepaths = [opa(os.path.join(self.crd.directory, i)) for i in self.files_per_product_per_filenumber[i_p][filenumber]]
+                filepaths = [opa(os.path.join(self.crd.directory, i)) for i in self.files_per_product_per_fileid[i_p][fileid]]
                 self.import_classes[extension].get_data(filepaths, j)
             else:
-                filepath = opa(os.path.join(self.crd.directory, self.files_per_product_per_filenumber[i_p][filenumber][0]))
+                filepath = opa(os.path.join(self.crd.directory, self.files_per_product_per_fileid[i_p][fileid][0]))
                 self.import_classes[extension].get_data(filepath, j)
         else:
             raise Exception('Product not available')
@@ -528,10 +518,10 @@ class Source_DWD():
         self.get_file_availability_info()
         extension = self.get_extension()
         if extension == 'hd5':
-            filepaths = {i: [opa(os.path.join(self.crd.directory, k)) for k in j] for i,j in self.files_per_product_per_filenumber[product].items()}
+            filepaths = {i: [opa(os.path.join(self.crd.directory, k)) for k in j] for i,j in self.files_per_product_per_fileid[product].items()}
             return self.import_classes[extension].get_data_multiple_scans(filepaths,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
         else:
-            filepaths = {i: opa(os.path.join(self.crd.directory, j[0])) for i,j in self.files_per_product_per_filenumber[product].items()}
+            filepaths = {i: opa(os.path.join(self.crd.directory, j[0])) for i,j in self.files_per_product_per_fileid[product].items()}
             return self.import_classes[extension].get_data_multiple_scans(filepaths,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
 
 
@@ -559,12 +549,12 @@ class Source_DWD():
         except Exception: entries=[]        
         return np.sort([j for j in entries if any([j.endswith(i) for i in self.import_classes])])
     
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         #Flooring to 5 minutes is performed, because the DWD puts data for each scan separately in files, with a corresponding range of datetimes, 
         #while all these files belong to the same radar volume, that starts at the datetime to which a datetime below gets floored.
         # Historical DWD BUFR files might have a different naming compared to files made available on DWD's open data server, 
         # in which case the datetime also needs to be determined in a different way. Also note that just indexing on '20'
-        # doesn't work, because '20' can be a filenumber
+        # doesn't work, because '20' can be a fileid
         datetimes=np.array([int(np.floor(int(j[j.index('-20')+1: j.index('-20')+13] if '-20' in j\
                                              else j[j.index('20'): j.index('20')+12])/5)*5) for j in filenames],dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes   
@@ -605,7 +595,7 @@ class Source_TUDelft():
         return filenames
         
         
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         """This function actually returns both datetimes and dates instead of just datetimes. This is done because there is one file per date, and
         the dates are also used in nlr_datasourcegeneral.py.
         """
@@ -678,7 +668,7 @@ class Source_IMGW():
         return filenames
         
         
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([int(os.path.basename(j)[:12]) for j in filenames],dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes   
     
@@ -717,7 +707,7 @@ class Source_DMI():
         filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j.startswith(gv.rplaces_to_ridentifiers[radar])]))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[-19:-7] for j in filenames],dtype=dtype)
         return datetimes
     
@@ -732,27 +722,50 @@ class Source_MeteoFrance():
         self.crd=self.dsg.crd
         self.dp=self.dsg.dp
         self.pb = self.gui.pb
+                
         
-        self.product_filetypes = {'z':'PAM', 'v':'PAG', 's':'PAG', 'w':'PAG', 'c':'PAM', 'd':'PAM', 'p':'PAM'}
+    def get_file_availability_info(self):
+        filenames = self.dsg.files_datetime
         
-        
-    def get_files_for_product(self, product):
-        return [self.crd.directory+'/'+i for i in self.dsg.files_datetime if self.product_filetypes[product] in i]
-        
+        self.filetypes_per_fileid, self.fileids_per_filetype, self.file_per_filetype_per_fileid = {}, {}, {}
+        for j in filenames:
+            filetype = 'PAG' if 'PAG' in j else 'PAM'
+            fileid = j[j.index(filetype)+3]
+                        
+            ft.init_dict_entries_if_absent(self.fileids_per_filetype, filetype, list)
+            ft.init_dict_entries_if_absent(self.filetypes_per_fileid, fileid, list)
+            ft.init_dict_entries_if_absent(self.file_per_filetype_per_fileid, filetype, dict)
+                
+            self.filetypes_per_fileid[fileid].append(filetype)
+            self.fileids_per_filetype[filetype].append(fileid)
+            self.file_per_filetype_per_fileid[filetype][fileid] = j
+            
     def get_scans_information(self):
-        filepaths = self.get_files_for_product('v')
-        if len(filepaths) == 0:
-            filepaths = self.get_files_for_product('z')
-        self.dsg.MeteoFrance_BUFR.get_scans_information(filepaths)
+        self.get_file_availability_info()
+    
+        filepaths = {}
+        for fileid in self.filetypes_per_fileid:
+            filetype = self.filetypes_per_fileid[fileid][0]
+            filepaths[fileid] = opa(self.crd.directory+'/'+self.file_per_filetype_per_fileid[filetype][fileid])
+            
+        self.dsg.MeteoFrance_BUFR.get_scans_information(filepaths, self.filetypes_per_fileid)
 
     def get_data(self, j): #j is the panel
-        product, scan = self.crd.products[j], self.crd.scans[j]
-        file_index = self.dsg.scannumbers_all['z'][scan][self.dsg.scannumbers_forduplicates[self.crd.scans[j]]]
-        filepaths = self.get_files_for_product(product)
-        self.dsg.MeteoFrance_BUFR.get_data(filepaths[file_index], j)
+        self.get_file_availability_info()
+    
+        i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
+        filetype, fileid = self.dsg.scannumbers_all[i_p][scan][self.dsg.scannumbers_forduplicates[self.crd.scans[j]]].split(',')[:2]
+        filepath = opa(self.crd.directory+'/'+self.file_per_filetype_per_fileid[filetype][fileid])
+        self.dsg.MeteoFrance_BUFR.get_data(filepath, j)
 
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
-        filepaths = self.get_files_for_product(product)
+        self.get_file_availability_info()
+        
+        i_p = gv.i_p[product]
+        filepaths = {}
+        for j in scans:
+            filetype, fileid = self.dsg.scannumbers_all[i_p][j][0].split(',')[:2]
+            filepaths[j] = opa(self.crd.directory+'/'+self.file_per_filetype_per_fileid[filetype][fileid])
         return self.dsg.MeteoFrance_BUFR.get_data_multiple_scans(filepaths,product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
                     
     def get_filenames_directory(self, radar, directory):
@@ -762,16 +775,18 @@ class Source_MeteoFrance():
         filenames = np.sort([j for j in entries if any(i in j for i in ('PAM', 'PAG'))])
         return filenames
     
-    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
         if not len(filenames):
             return []
         if filenames[0].startswith('T_'):
-            datetimes = np.array([j[16:28] for j in filenames], dtype=dtype)
+            datetimes = [j[16:28] for j in filenames]
         else:
             _, _, current_dir_string, _ = self.dsg.get_variables(self.crd.selected_radar, self.crd.selected_dataset)
-            date, _ = bg.get_date_and_time_from_dir(self.crd.directory, current_dir_string, self.crd.selected_radar)
-            # -5 minutes, since end instead of start datetimes are given in the filenames
-            datetimes = np.array([ft.next_datetime(date+j[12:16], -5) for j in filenames], dtype=dtype)
+            # No date is given in the filename, it therefore has to be determined from the directory 
+            date, _ = bg.get_date_and_time_from_dir(directory, current_dir_string, self.crd.selected_radar)
+            datetimes = [date+j[12:16] for j in filenames]
+        # -5 minutes, since end instead of start datetimes are given in the filenames
+        datetimes = np.array([ft.next_datetime(j, -5) for j in datetimes], dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes
 
 
@@ -787,7 +802,7 @@ class Source_NWS():
         self.pb = self.gui.pb
         
         self.import_classes = {2:self.dsg.NEXRAD_L2, 3:self.dsg.NEXRAD_L3}
-        self.filenumber_pos = {'N':2, 'T':3}
+        self.fileid_pos = {'N':2, 'T':3}
         # For NEXRAD 'Z' contains long-range low-res reflectivity, 'R' short-range higher-res
         # For TDWR 'Z' contains super-res reflectivity, 'R' legacy-res
         # In case of list the labels are listed in order of decreasing preference
@@ -803,10 +818,10 @@ class Source_NWS():
         if not filename:
             filename = self.dsg.files_datetime[0]
         return filename[12] # Either 'N' for NEXRAD or 'T' for TDWR
-    def l3_scandescr(self, l3_type, p_label, filenumber):
+    def l3_scandescr(self, l3_type, p_label, fileid):
         descr = f'_{l3_type}{p_label}'
-        pos = self.filenumber_pos[l3_type]
-        return descr[:pos]+f'{filenumber}'+descr[pos:]
+        pos = self.fileid_pos[l3_type]
+        return descr[:pos]+f'{fileid}'+descr[pos:]
     def get_product_labels(self, l3_type, product):
         labels = self.product_labels_l3[product]
         if type(labels) == dict:
@@ -824,23 +839,23 @@ class Source_NWS():
         else:
             files = self.dsg.files_datetime
             l3_type = self.get_l3_type()
-            filenumbers = np.array([j[j.index(f'_{l3_type}')+self.filenumber_pos[l3_type]:][0] for j in files])
+            fileids = np.array([j[j.index(f'_{l3_type}')+self.fileid_pos[l3_type]:][0] for j in files])
             filedatetimes = np.array([j[-12:] for j in files])
-            indices = np.argsort([filenumbers[i]+filedatetimes[i] for i in range(len(files))])
-            files, filenumbers = files[indices], filenumbers[indices]
+            indices = np.argsort([fileids[i]+filedatetimes[i] for i in range(len(files))])
+            files, fileids = files[indices], fileids[indices]
             _files = {}
             for i,file in enumerate(files):
-                filenumber = filenumbers[i]
-                fileproduct = [p for p,labels in self.product_labels_l3.items() if any(self.l3_scandescr(l3_type, j, filenumber) in file for j in 
+                fileid = fileids[i]
+                fileproduct = [p for p,labels in self.product_labels_l3.items() if any(self.l3_scandescr(l3_type, j, fileid) in file for j in 
                                                                                        self.get_product_labels(l3_type, p))][0]
-                ft.initialise_dict_entries_if_absent(_files, filenumber, dict)
-                ft.initialise_dict_entries_if_absent(_files[filenumber], fileproduct, list)
-                _files[filenumber][fileproduct].append(self.crd.directory+'/'+file)
+                ft.init_dict_entries_if_absent(_files, fileid, dict)
+                ft.init_dict_entries_if_absent(_files[fileid], fileproduct, list)
+                _files[fileid][fileproduct].append(self.crd.directory+'/'+file)
             if scan:
                 # see NEXRAD_L3.get_scans_information for how scannumbers_all is set up
-                filenumber = self.dsg.scannumbers_all[product][scan][0][0]
+                fileid = self.dsg.scannumbers_all[product][scan][0][0]
                 fileindex = self.dsg.scannumbers_all[product][scan][duplicate][1]
-                return _files[filenumber][product][fileindex]
+                return _files[fileid][product][fileindex]
             elif product:
                 return {fnum:fdict[product] for fnum,fdict in _files.items()}
             else:
@@ -902,7 +917,7 @@ class Source_NWS():
         filenames = np.sort(entries)
         return filenames
     
-    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
         try:
             level = self.get_level(filenames[0])
             if level == 2:
@@ -952,7 +967,7 @@ class Source_ARRC():
         _files = {}
         for i,file in enumerate(files):
             scannumber = scannumbers[i]
-            ft.initialise_dict_entries_if_absent(_files, scannumber, list)
+            ft.init_dict_entries_if_absent(_files, scannumber, list)
             _files[scannumber].append(self.crd.directory+'/'+file)
         if scan:
             scannumber = self.dsg.scannumbers_all['z'][scan][0]
@@ -980,7 +995,7 @@ class Source_ARRC():
         # print(list(filenames[indices]))
         return filenames[indices]
     
-    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
         # print(filenames)
         scannumbers = self.get_scannumbers(filenames)
         datetimes = []

@@ -17,7 +17,7 @@ if gpus:
         # tf.config.experimental.set_memory_growth(gpu, True)
     # Restrict TensorFlow to only allocate x GB of memory on the first GPU
     tf.config.experimental.set_virtual_device_configuration(gpus[0],
-        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=384)])
+        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=500)])
 
 from dealiasing.unet_vda.src.dealias import VelocityDealiaser
 from dealiasing.unet_vda.src.feature_extraction import create_downsampler, create_upsampler

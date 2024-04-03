@@ -1,0 +1,69 @@
+D15-FA-1                            	54.3256, 2.9358
+P11-B                               	52.36, 3.3417
+K14-FA-1C                           	53.2694, 3.6278
+A12-CPP                             	55.3992, 3.8103
+L9-FF-1                             	53.6144, 4.9603
+AWG-1                               	53.4917, 5.9417
+IJMOND WP                           	52.4636, 4.5175
+J6-A                                	53.8242, 2.9453
+BG-OHVS2                            	54.0369, 6.0417
+VOORSCHOTEN AWS                     	52.1397, 4.4364
+Hollandse Kust Zuid Alfa (HKZA)     	52.3194, 4.0422
+IJMUIDEN WP                         	52.4622, 4.555
+TEXELHORS WP                        	52.995, 4.72
+Assendelft BTP                      	52.4819, 4.7258
+DE KOOY VK                          	52.9269, 4.7811
+Muiden BTP                          	52.3353, 5.0922
+Nieuw Vennep BTP                    	52.255, 4.6478
+Nieuwkoop BTP                       	52.1514, 4.765
+F3-FB-1                             	54.8539, 4.6961
+AMSTERDAM/SCHIPHOL AP               	52.3172, 4.7897
+VLIELAND                            	53.24, 4.9208
+WIJDENES WP                         	52.6325, 5.1736
+BERKHOUT AWS                        	52.6428, 4.9789
+TERSCHELLING HOORN AWS              	53.3911, 5.3458
+K13-A                               	53.2178, 3.2203
+WIJK AAN ZEE AWS                    	52.5053, 4.6031
+HOUTRIBDIJK WP                      	52.6481, 5.4006
+DE BILT AWS                         	52.0989, 5.1797
+STAVOREN AWS                        	52.8967, 5.3833
+LELYSTAD AP                         	52.4483, 5.5081
+LEEUWARDEN                          	53.2231, 5.7517
+MARKNESSE AWS                       	52.7019, 5.8875
+DEELEN                              	52.0547, 5.8722
+LAUWERSOOG AWS                      	53.4117, 6.1992
+HEINO AWS                           	52.4344, 6.2589
+HOOGEVEEN AWS                       	52.7489, 6.5731
+GRONINGEN AP EELDE                  	53.1236, 6.5847
+HUPSEL AWS                          	52.0678, 6.6567
+HUIBERTGAT WP                       	53.5739, 6.3983
+NIEUW BEERTA AWS                    	53.1944, 7.1492
+TWENTHE AWS                         	52.2731, 6.8908
+CADZAND WP                          	51.38, 3.3792
+VLISSINGEN AWS                      	51.4414, 3.5958
+OOSTERSCHELDE WP                    	51.7667, 3.6217
+VLAKTE VAN DE RAAN                  	51.5036, 3.2419
+HANSWEERT                           	51.4458, 3.9975
+OOSTERSCHELDE 4                     	51.6558, 3.6939
+BORSSELE ALFA (BSA)                 	51.7, 3.0567
+WESTDORPE AWS                       	51.2247, 3.8611
+LICHTEILAND GOEREE                  	51.9258, 3.67
+EURO PLATFORM                       	51.9978, 3.275
+WILHELMINADORP AWS                  	51.5258, 3.8836
+STAVENISSE                          	51.5956, 4.0061
+HOEK VAN HOLLAND AWS                	51.9911, 4.1217
+MAROLLEGAT                          	51.4786, 4.1925
+WOENSDRECHT                         	51.4478, 4.3419
+ROTTERDAM GEULHAVEN                 	51.8919, 4.3125
+ROTTERDAM THE HAGUE AP              	51.9606, 4.4469
+CABAUW TOWER AWS                    	51.9692, 4.9258
+GILZE RIJEN                         	51.565, 4.9353
+HERWIJNEN AWS                       	51.8578, 5.1453
+EINDHOVEN AP                        	51.4497, 5.3769
+VOLKEL                              	51.6586, 5.7067
+ELL AWS                             	51.1967, 5.7625
+MAASTRICHT AACHEN AP                	50.9053, 5.7619
+ARCEN AWS                           	51.4972, 6.1961
+JUANCHO E. YRAUSQUIN AIRPORT SABA   	17.6461, -63.2208
+F.D. ROOSEVELT AIRPORT ST. EUSTATIUS	17.4956, -62.9828
+FLAMINGO AIRPORT BONAIRE            	12.13, -68.2758

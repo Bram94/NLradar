@@ -1291,6 +1291,8 @@ if __name__ == "__main__":
     filename = "D:/radar_data_NLradar/NWS/20190528/KILN/KILN20190528_035544_V06"
     filename = "D:/radar_data_NLradar/NWS/19990503/KTLX/KTLX19990503_223406.gz"
     filename = "D:/radar_data_NLradar/NWS/19980624/KUEX/KUEX19980624_002337.gz"
+    filename = "D:/radar_data_NLradar/NWS/20240326/MZZU/MZZU20240326_1226"
+    filename = "D:/NLradar/Notes/KDYX20240401_2114"
     # t = pytime.time()
     # test = NEXRADLevel2File(filename)
     # angles = test.get_elevation_angles()

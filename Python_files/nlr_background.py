@@ -590,10 +590,13 @@ def check_dir_empty_radar(radar,dir_path,function_get_filenames_directory):
     return len(filenames) == 0
     
 def get_direntries(abs_path,compare_substring):
+    direntries = []
     if os.path.exists(abs_path):
-        direntries=[j for j in os.listdir(abs_path) if os.path.isdir(opa(abs_path+'/'+j))]
-    else: direntries=[]
-    return np.sort([j for j in direntries if check_correspondence_real_dir_to_dir_string(j,compare_substring)])
+        # Earlier os.path.isdir was called to make sure that all dir entries are actually directories. But calling os.path.isdir appeared to
+        # be quite slow on the first call, so it's now left out and hoped/assumed that the call of check_correspondence_real_dir_to_dir_string
+        # filters out any non-directory entries.
+        direntries = [j for j in os.listdir(abs_path) if check_correspondence_real_dir_to_dir_string(j, compare_substring)]
+    return np.sort(direntries)
     
 def replace_radar_variables(dir_string,radar):
     if '${radar}' in dir_string:
@@ -829,8 +832,8 @@ def determine_nearest_dir(radar,trial_dir1,trial_dir2,desired_datetime,function_
     """
     filenames1=function_get_filenames_directory(radar,trial_dir1)
     filenames2=function_get_filenames_directory(radar,trial_dir2)
-    datetimes1=function_get_datetimes_from_files(radar,filenames1)
-    datetimes2=function_get_datetimes_from_files(radar,filenames2)
+    datetimes1=function_get_datetimes_from_files(radar,filenames1,trial_dir1)
+    datetimes2=function_get_datetimes_from_files(radar,filenames2,trial_dir2)
     
     if len(datetimes1)==0:
         return trial_dir2
@@ -892,9 +895,10 @@ def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_dire
             
         substring1=substrings1[substrings_indices[0]]
         desired_dir_substring1=substrings2[substrings_indices[0]]
-        #Include path_end1, to prevent that subdirectories are chosen that certainly do not contain data for the radar.
-        direntries1=[j for j in os.listdir(opa(abs_paths[0])) if os.path.isdir(opa(abs_paths[0]+'/'+j+path_end1))]
-        direntries1_plus_desired_dir=np.sort([j for j in direntries1 if check_correspondence_real_dir_to_dir_string(j,substring1)]+[desired_dir_substring1])
+        direntries1=get_direntries(opa(abs_paths[0]), substring1)
+        #Check existence path_end1, to prevent that subdirectories are chosen that certainly do not contain data for the radar.
+        direntries1 = [j for j in direntries1 if os.path.exists(opa(abs_paths[0]+'/'+j+path_end1))]
+        direntries1_plus_desired_dir=np.sort(direntries1+[desired_dir_substring1])
         n_direntries=len(direntries1_plus_desired_dir)
         index=np.where(direntries1_plus_desired_dir==desired_dir_substring1)[0][0]
             
@@ -928,9 +932,10 @@ def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_dire
                         
                         substring2=substrings1[substrings_indices[-1]]
                         desired_dir_substring2=substrings2[substrings_indices[-1]]
-                        #Include path_end2, to prevent that subdirectories are chosen that certainly do not contain data for the radar.
-                        direntries2=[j for j in os.listdir(opa(abs_paths[-1])) if os.path.isdir(opa(abs_paths[-1]+'/'+j+path_end2))]
-                        direntries2_plus_desired_dir=np.sort([j for j in direntries2 if check_correspondence_real_dir_to_dir_string(j,substring2)]+[desired_dir_substring2])
+                        direntries2=get_direntries(opa(abs_paths[-1]), substring2)
+                        #Check existence path_end2, to prevent that subdirectories are chosen that certainly do not contain data for the radar.
+                        direntries2 = [j for j in direntries2 if os.path.exists(opa(abs_paths[-1]+'/'+j+path_end2))]
+                        direntries2_plus_desired_dir=np.sort(direntries2+[desired_dir_substring2])
                         n_direntries=len(direntries2_plus_desired_dir)
                         index=np.where(direntries2_plus_desired_dir==desired_dir_substring2)[0][0]
                         

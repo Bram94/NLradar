@@ -114,7 +114,7 @@ class Plotting(QObject,app.Canvas):
         self.cm1={}; self.cm2={}; 
         self.data_values_colors={}; self.data_values_colors_int={}
         self.data_values_ticks={}; self.tick_map = {}
-        self.masked_values={}; self.masked_values_int={}; self.clim_int={}
+        self.mask_values={}; self.mask_values_int={}; self.clim_int={}
         self.cmap_lastmodification_time={}
         self.cmaps_minvalues_before=self.gui.cmaps_minvalues.copy(); self.cmaps_maxvalues_before=self.gui.cmaps_maxvalues.copy()
         self.cbars_products_before=[]
@@ -867,7 +867,7 @@ class Plotting(QObject,app.Canvas):
                 n_bits=gv.products_data_nbits[product]
                 pm_lim=gv.products_maxrange_masked[product]
                 cursor_datavalue_int=self.dsg.data[panel][row,col]
-                if cursor_datavalue_int==self.masked_values_int[product]:
+                if cursor_datavalue_int==self.mask_values_int[product]:
                     self.cursor_datavalue='--'
                 else:
                     self.cursor_datavalue=ft.convert_uint_to_float(cursor_datavalue_int,n_bits,pm_lim)
@@ -953,7 +953,7 @@ class Plotting(QObject,app.Canvas):
             self.in_view_mask = (x >= corners[0][0]) & (x  <= corners[-1][0]) & (y >= corners[1][1]) & (y <= corners[0][1])
             self.in_view_mask_specs = self.get_in_view_mask_specs(data, panel)
             
-        in_view = data[self.in_view_mask & (data != self.masked_values_int[self.crd.products[panel]])]
+        in_view = data[self.in_view_mask & (data != self.mask_values_int[self.crd.products[panel]])]
         return in_view.min(), in_view.max()
         
     def get_max_dist_mouse_to_marker(self, f=1):
@@ -1156,7 +1156,7 @@ class Plotting(QObject,app.Canvas):
             #Reset self.dsg.data, to prevent that data for the old radar/dataset is shown when new data is unavailable for a particular panel.
             #Also reset it when changing the time through self.crd.process_datetimeinput, because otherwise the old data could differ greatly
             #in time from the curently selected date and time.
-            self.dsg.data={j:-1e6*np.ones((360,1)).astype('float32') for j in range(self.max_panels)}
+            self.dsg.data = {j:np.zeros((1,1), dtype='uint8') for j in range(self.max_panels)}
             self.data_empty={j:True for j in range(self.max_panels)}
             self.data_isold={j:True for j in range(self.max_panels)}
             self.data_attr = {j:{} for j in self.data_attr}
@@ -1268,14 +1268,14 @@ class Plotting(QObject,app.Canvas):
                     if 'grid' in self.gui.lines_show:
                         self.set_grid(gh_panellist); gh_changed=True
                 
-                products_plainproducts=[[j,self.data_attr['product'][j]] for j in panellist if j in self.data_attr['product'] and self.data_attr['product'][j] in gv.plain_products]
-                productsbefore_plainproducts=[[j,self.products_before[j]] for j in panellist if self.products_before[j] in gv.plain_products]
+                plain_products=[[j,self.data_attr['product'][j]] for j in panellist if self.data_attr['product'].get(j, None) in gv.plain_products]
+                plain_products_before=[[j,self.data_attr_before['product'][j]] for j in panellist if self.data_attr_before['product'].get(j, None) in gv.plain_products]
                 
                 #Update height rings only if the scanangle differs by more than 0.05 degrees from the angle on which the height rings are currently
                 #based, to prevent that there are too much changes (which leads to undesired flickering and slows down plotting a bit).
                 scanangles_updated = self.update_heightrings_scanangles()
                 if not self.firstplot_performed or (not self.postpone_plotting_gridheightrings and (radar_changed or scanangles_updated or (
-                plain_products_parameters_changed or products_plainproducts != productsbefore_plainproducts))) or move_view_with_storm:
+                plain_products_parameters_changed or plain_products != plain_products_before))) or move_view_with_storm:
                     if 'heightrings' in self.gui.lines_show:
                         self.set_heightrings(gh_panellist); gh_changed=True
                 
@@ -1334,17 +1334,16 @@ class Plotting(QObject,app.Canvas):
                         xy_bins = self.data_attr['xy_bins'][j]
                         self.cartesian_transforms_individual['scale_translate'][j].scale = (res, res)
                         self.cartesian_transforms_individual['scale_translate'][j].translate = (-xy_bins*res/2, -xy_bins*res/2)                    
-                    
-                    #self.products_before and self.scans_before contain information about the products and scans that were used during the last.
-                    #plotting session.
-                    self.products_before[j]=self.data_attr['product'][j]
-                    self.scans_before[j]=self.crd.scans[j]                
-                                                
+                                                                    
                 elif self.data_empty[j] and not j in self.ref_radial_bins:
                     #Ensure that the reference number of radial bins is correct when the first image that is viewed after starting 
                     #the program is 'empty' (or in fact a 362*1 invisible array).
+                    print(self.dsg.data[j].shape, 'ref_shape')
                     self.ref_azimuthal_bins[j], self.ref_radial_bins[j] = self.dsg.data[j].shape
                        
+            self.products_before = self.crd.products.copy()
+            self.scans_before = self.crd.scans.copy()
+                    
             self.set_interpolation()
             self.set_titles()
             update_cbars_products = self.set_cbars(set_cmaps=False) #The colormaps have already been set.
@@ -1571,7 +1570,7 @@ class Plotting(QObject,app.Canvas):
                     #The leftmost and upper panels are taken as reference panels, where the number of reference panels depends on the number of panels.
                     if self.crd.plot_mode=='Row': self.crd.row_mode(panel=j)
                     else: self.crd.column_mode(panel=j)
-                self.crd.update_selected_scanangles()
+                self.dsg.update_selected_scanangles()
         elif self.firstplot_performed:
             notplain_products_panels=[j for j in products_panels if not j in gv.plain_products]
             if len(set(notplain_products_panels))==len(notplain_products_panels) and not self.gui.setting_saved_choice: 
@@ -1586,7 +1585,7 @@ class Plotting(QObject,app.Canvas):
                     scanangle_0=self.data_attr['scanangle'].get(0, scanangle_j)
                     if scanangle_j != scanangle_0:  
                         self.crd.scans[j]=self.crd.scans[0]
-                self.crd.update_selected_scanangles()                     
+                self.dsg.update_selected_scanangles()                     
 
         if not self.firstplot_performed:
             self.crd.process_datetimeinput()
@@ -1674,8 +1673,8 @@ class Plotting(QObject,app.Canvas):
                 self.data_values_colors[product][self.data_values_colors[product]<c_lim[0]]=c_lim[0]
                 self.data_values_colors[product][self.data_values_colors[product]>c_lim[1]]=c_lim[1]
                 
-                self.masked_values[product]=pm_lim[0]    
-                self.masked_values_int[product]=0
+                self.mask_values[product]=pm_lim[0]    
+                self.mask_values_int[product]=0
                 self.clim_int[product]=list(ft.convert_float_to_uint(np.array(cm_lim),n_bits,pm_lim))
                 self.data_values_colors_int[product]=ft.convert_float_to_uint(self.data_values_colors[product],n_bits,pm_lim)
                 
@@ -1689,7 +1688,7 @@ class Plotting(QObject,app.Canvas):
                 color_list1=cbar_colors[:,1:4]
                 color_list2=cbar_colors[:,4:]
                 color_list=np.zeros(8)
-                color_data_values=[self.masked_values[product],c_lim[0]]
+                color_data_values=[self.mask_values[product],c_lim[0]]
                 
                 if not product in gv.products_possibly_exclude_lowest_values:
                     #Ensure that product values below the minimum value in self.data_values_color[product], but above the minimum allowed value (given by c_lim[0]),

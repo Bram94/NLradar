@@ -526,7 +526,7 @@ class DerivedPlain():
         """
         heights, radii = {j:heights_scan1 for j in panellist}, {j:radii_scan1 for j in panellist}
         
-        x = ((self.pb.corners[-1,0]-self.pb.corners[0,0])*self.pb.ncolumns)
+        x = ((self.pb.corners[0][-1,0]-self.pb.corners[0][0,0])*self.pb.ncolumns)
         dr = x/8
         for j in panellist:
             if self.crd.products[j] in gv.plain_products_show_true_elevations:
@@ -615,7 +615,7 @@ class DerivedPlain():
 
         self.product_array = np.max(Zmax_3D, axis = 0)            
         empty = self.product_array==-30.
-        self.product_array[empty] = self.pb.masked_values['m']
+        self.product_array[empty] = self.pb.mask_values['m']
     
         
     def calculate_PCAPPI(self, param):
@@ -657,7 +657,7 @@ class DerivedPlain():
         
         self.product_array[Zt] = self.Zavg_3D[-1, Zt]
         self.product_array[Zb] = self.Zavg_3D[0, Zb]           
-        self.product_array[np.abs(self.product_array+35.)<0.1] = self.pb.masked_values['a']
+        self.product_array[np.abs(self.product_array+35.)<0.1] = self.pb.mask_values['a']
                 
         
     def calculate_VIL(self, param = None):
@@ -732,8 +732,8 @@ class DerivedPlain():
                 VIL_threshold = eval(param_h)[1]
                 select_h = self.product_array < VIL_threshold
                 self.product_arrays[p_param] = product_array_h.copy()
-                self.product_arrays[p_param][select_h] = self.pb.masked_values['h']
-        self.product_array[select] = self.pb.masked_values['l']
+                self.product_arrays[p_param][select_h] = self.pb.mask_values['h']
+        self.product_array[select] = self.pb.mask_values['l']
         
         
     def convert_dBZ_to_mmph(self, data, inverse = False):
@@ -746,4 +746,4 @@ class DerivedPlain():
     def calculate_R(self, param = None):
         self.product_array = np.log10(self.convert_dBZ_to_mmph(self.product_arrays[f'a_{gv.CAPPI_height_R}']))
         #Log10 is used because the colormap for 'r' is logarithmic.
-        self.product_array[self.product_array<=1e-6]=self.pb.masked_values['r']
+        self.product_array[self.product_array<=1e-6]=self.pb.mask_values['r']
