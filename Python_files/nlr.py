@@ -2039,6 +2039,7 @@ class GUI(QWidget):
         for j in new_panellist:
             self.crd.products[j] = choice['products'][j]
             if self.crd.scan_selection_mode in ('scan', 'scanangle') and j in choice['selected_scanangles']:
+                print('set_choice', j, choice['selected_scanangles'][j])
                 self.dsg.selected_scanangles[j] = choice['selected_scanangles'][j]
             if j in choice['range_nyquistvelocity_scanpairs_indices']:
                 #Using self.dsg.range_nyquistvelocity_scanpairs_indices makes it possible to determine which scan is desired when there is 
@@ -2117,13 +2118,13 @@ class GUI(QWidget):
         def get_product_upper(product):
             return 'u'*(len(product) > 1)+product[-1].upper()
         def is_product_upper(product):
-            return product == get_product_upper(product)
+            return product and product == get_product_upper(product)
         items = text.split(' ')
         panels = len(items)
         cmpr_text = {0:'', 1:''}
         for i,j in enumerate(items):
             row = self.pb.rows_panels[panels][i]
-            ncols = self.pb.columns_panels[panels][panels-1]+1
+            ncols = self.pb.cols_panels[panels][panels-1]+1
             product, value = get_product(j), get_value(j)
             value_before = items[i-1][1:]
             if i and value and product in items[i-1]:
@@ -2155,6 +2156,7 @@ class GUI(QWidget):
                 for j,k in enumerate(items[i]):
                     if k[0].isalpha():
                         product = k[0]
+                    product = product.lower() if k[0] != product else product
                     k_notproduct = k.replace(product, '')
                     if k_notproduct.replace('.', '').isdigit():
                         value = k_notproduct

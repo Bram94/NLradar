@@ -346,7 +346,7 @@ class CurrentData(QObject):
             else:
                 print('dont run 1!!!!!!!!!!!!!', self.date[index]+self.time[index])
             if index == 1:
-                # Include also previous datetime for automatic downloading, since radar volume for last datetime might not be incomplete yet
+                # Include also previous datetime for automatic downloading, since radar volume for last datetime might not be complete yet
                 self.date[index], self.time[index] = self.get_previous_datetime(datetimes_list, self.date[index], self.time[index])
                 if not (self.isrunning[other_index] and self.date[index]+self.time[index] == self.date[other_index]+self.time[other_index]):
                     self.cds.run(self,'get_urls_and_savenames_downloadfile', index)
@@ -678,7 +678,6 @@ class Source_DWD():
         self.files[self.cd.radar][index]=[]
 
         error_received = False
-        t = pytime.time()
         for j in urls:
             try: 
                 contents = requests.get(j).content.decode('UTF-8')
@@ -686,7 +685,6 @@ class Source_DWD():
                 self.cd.show_error_info(str(error)+',update_downloadlist')
                 error_received = True
                 continue
-            print(pytime.time()-t, j)
         
             start_indices=[s.start() for s in re.finditer('="ras', contents)]
             end_indices=[s.end() for s in re.finditer('hd5"', contents)]

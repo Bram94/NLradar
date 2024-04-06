@@ -1132,8 +1132,8 @@ class DataSource_General():
                                 for i in self.pb.panellist[:self.pb.panellist.index(j)]:
                                     scanangle_i = scanangles_all[self.crd.scans[i]]
                                     if new_scanangle == scanangle_i and self.crd.products[i] == self.crd.products[j] and (self.gui.setting_saved_choice or 
-                                    all(var[i] == var[j] for var in (self.crd.apply_dealiasing, self.crd.productunfiltered))) and\
-                                    len(scanangles_all_values)-index > 1:
+                                    (gv.i_p[self.crd.products[i]] != 'v' or self.crd.apply_dealiasing[i] == self.crd.apply_dealiasing[j]) and
+                                    self.crd.productunfiltered[i] == self.crd.productunfiltered[j]) and len(scanangles_all_values)-index > 1:
                                         new_scanangle = scanangles_all_values[index+1]
                                         index += 1
                                                          

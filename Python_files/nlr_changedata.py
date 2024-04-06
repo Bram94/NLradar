@@ -598,10 +598,10 @@ class Change_RadarData(QObject):
                     if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
                         # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
                         desired_newdate = desired_newtime = None
-                # print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
+                print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
                 self.previous_directory = self.directory
                 self.directory = self.dsg.get_next_directory(self.selected_radar,self.selected_dataset,current_date,current_time,int(np.sign(lr_step)),desired_newdate,desired_newtime)
-                # print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
+                print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
                 self.determine_list_filedatetimes()
 
                 #If not files_available, then the 'old' list with datetimes is still used.

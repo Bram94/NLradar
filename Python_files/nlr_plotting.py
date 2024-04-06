@@ -135,7 +135,7 @@ class Plotting(QObject,app.Canvas):
         #For panelnumber the presence of 8 panels is assumed, and the number corresponds to the position in a 2x4 grid. An exception is the presence of 2 panels, where the second panel (panel 1, it starts at 0)
         #is assigned a panelnumber of 4 (meaning 5th panel), although it should have panelnumber 2 according to the above rule. The reason for this exception is that it works nicer when changing the number of panels.
         self.rows_panels={1:{0:0},2:{0:0,1:0},3:{0:0,1:0,2:0},4:{0:0,1:0,2:1,3:1},6:{0:0,1:0,2:0,3:1,4:1,5:1},8:{0:0,1:0,2:0,3:0,4:1,5:1,6:1,7:1},10:{0:0,1:0,2:0,3:0,4:0,5:1,6:1,7:1,8:1,9:1}}
-        self.columns_panels={1:{0:0},2:{0:0,1:1},3:{0:0,1:1,2:2},4:{0:0,1:1,2:0,3:1},6:{0:0,1:1,2:2,3:0,4:1,5:2},8:{0:0,1:1,2:2,3:3,4:0,5:1,6:2,7:3},10:{0:0,1:1,2:2,3:3,4:4,5:0,6:1,7:2,8:3,9:4}}
+        self.cols_panels={1:{0:0},2:{0:0,1:1},3:{0:0,1:1,2:2},4:{0:0,1:1,2:0,3:1},6:{0:0,1:1,2:2,3:0,4:1,5:2},8:{0:0,1:1,2:2,3:3,4:0,5:1,6:2,7:3},10:{0:0,1:1,2:2,3:3,4:4,5:0,6:1,7:2,8:3,9:4}}
         self.plotnumber_to_panelnumber={1:{0:0},2:{0:0,1:5},3:{0:0,1:1,2:2},4:{0:0,1:1,2:5,3:6},6:{0:0,1:1,2:2,3:5,4:6,5:7},8:{0:0,1:1,2:2,3:3,4:5,5:6,6:7,7:8},10:{0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9}}
         self.panelnumber_to_plotnumber={}
         for j in self.plotnumber_to_panelnumber: 
@@ -407,11 +407,11 @@ class Plotting(QObject,app.Canvas):
     def determine_panellist_nrows_ncolumns(self):  
         self.panellist=tuple(self.plotnumber_to_panelnumber[self.panels][j] for j in range(0,self.panels))
         self.nrows=self.rows_panels[self.panels][self.panels-1]+1
-        self.ncolumns=self.columns_panels[self.panels][self.panels-1]+1
+        self.ncolumns=self.cols_panels[self.panels][self.panels-1]+1
 
     def get_row_col_panel(self,panel):
         p=self.panelnumber_to_plotnumber[self.panels][panel]
-        return self.rows_panels[self.panels][p],self.columns_panels[self.panels][p]
+        return self.rows_panels[self.panels][p],self.cols_panels[self.panels][p]
         
     def get_panel_for_position(self,pos):
         rel_pos=np.array(pos)-self.wpos['main'][0] #Position relative to top left corner of the main part of the canvas
