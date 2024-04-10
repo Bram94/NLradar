@@ -562,17 +562,14 @@ class DataSource_General():
             if proj == 'car':
                 dataspecs_string+= '_'+str(self.gui.stormmotion)+'_'+str(self.gui.cartesian_product_res)+'_'+str(self.gui.cartesian_product_maxrange)
         else: 
-            if product == 'v':
+            if gv.i_p[product] == 'v':
                 dataspecs_string += '_'+str(apply_dealiasing) + '_' + self.gui.dealiasing_setting + '_' + str(self.gui.dealiasing_dualprf_n_it)
             dataspecs_string+= '_'+str(productunfiltered)+'_'+polarization
             dataspecs_string+= '_'+str(scannumbers_all[scan][duplicate])
         return dataspecs_string
     
-    def get_dataspecs_string_panel(self, j, return_params=False): #j is the panel
-        product = self.crd.products[j]
-        if product in gv.products_with_tilts_derived_nosave:
-            # In this case import product is saved instead of actual product, since the latter can be cheaply calculated from import product.
-            product = gv.i_p[product]
+    def get_dataspecs_string_panel(self, j, product=None, return_params=False): #j is the panel
+        product = self.crd.products[j] if product is None else product
         productunfiltered = self.crd.using_unfilteredproduct[j]
         polarization = {True:'V', False:'H'}[self.crd.using_verticalpolarization[j]]
         apply_dealiasing = self.crd.apply_dealiasing[j]
@@ -585,7 +582,11 @@ class DataSource_General():
         
     def store_data_in_memory(self, j): #j is the panel
         product = self.crd.products[j]
-        dataspecs_string, productunfiltered, polarization, apply_dealiasing, proj = self.get_dataspecs_string_panel(j, True)
+        if product in gv.products_with_tilts_derived_nosave:
+            # In this case import product is saved instead of actual product, since the latter can be cheaply calculated from import product.
+            product = gv.i_p[product]
+        
+        dataspecs_string, productunfiltered, polarization, apply_dealiasing, proj = self.get_dataspecs_string_panel(j, product, True)
         # if not data changed we can still use self.crd.using_verticalpolarization[j] etc due to dataspecs_string_requested below
         if self.data_changed[j]:  
             self.stored_data[dataspecs_string] = {'last_use_time':pytime.time(),'data':self.data[j].copy(),'data_azimuth_offset':self.data_azimuth_offset[j],'data_radius_offset':self.data_radius_offset[j],'scantime':self.scantimes[j],'using_unfilteredproduct':self.crd.using_unfilteredproduct[j],'using_verticalpolarization':self.crd.using_verticalpolarization[j]}

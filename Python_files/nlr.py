@@ -2039,7 +2039,6 @@ class GUI(QWidget):
         for j in new_panellist:
             self.crd.products[j] = choice['products'][j]
             if self.crd.scan_selection_mode in ('scan', 'scanangle') and j in choice['selected_scanangles']:
-                print('set_choice', j, choice['selected_scanangles'][j])
                 self.dsg.selected_scanangles[j] = choice['selected_scanangles'][j]
             if j in choice['range_nyquistvelocity_scanpairs_indices']:
                 #Using self.dsg.range_nyquistvelocity_scanpairs_indices makes it possible to determine which scan is desired when there is 
@@ -2456,11 +2455,11 @@ class GUI(QWidget):
             animation_filename = self.animation_filename+f'.{ext}'
             if ext == 'gif':
                 filenames_string = ' '.join(frames)+f' -o "{animation_filename}"'
-                subprocess.run(f'gifsicle -d{self.ani_delay:.0f} --loop {filenames_string}'+' --optimize'*(self.ani_delay_ref == 'frame'))
+                subprocess.run(f'gifsicle/gifsicle -d{self.ani_delay:.0f} --loop {filenames_string}'+' --optimize'*(self.ani_delay_ref == 'frame'))
                 
                 if self.ani_delay_ref == 'minute':
                     string = ' '.join([f'-d{j:.0f} "#{i}"' for i,j in enumerate(deltas)])
-                    subprocess.run(f'gifsicle -b "{animation_filename}" {string} --optimize')
+                    subprocess.run(f'gifsicle/gifsicle -b "{animation_filename}" {string} --optimize')
             elif ext == 'mp4':
                 container = av.open(animation_filename, mode='w')
                 shape = Image.open(frames[0]).size

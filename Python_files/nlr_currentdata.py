@@ -261,7 +261,7 @@ class CurrentData(QObject):
         
         self.isrunning = {1:False, 2:False}
         
-        self.plot_signal.connect(self.crd.update_current)
+        self.plot_signal.connect(self.crd.plot_current)
         self.textbar_signal.connect(self.gui.set_textbar)
         self.determine_list_filedatetimes_signal.connect(self.crd.determine_list_filedatetimes)
 
@@ -385,7 +385,7 @@ class CurrentData(QObject):
                     elif self.crd.selected_radar == self.radar and\
                     any([j in (None, self.crd.selected_date+self.crd.selected_time) for j in newest_datetimes]):
                         """Always emit a plot_signal when these conditions are satisfied, but additional constraints for plotting are present in
-                        the function self.crd.update_current. These contraints require that all scans for which data is currently shown, are present in the new volume.
+                        the function self.crd.plot_current. These contraints require that all scans for which data is currently shown, are present in the new volume.
                         """
                         self.plot_signal.emit(self.radar)
                         
@@ -720,7 +720,7 @@ class Source_DWD():
         self.cd.urls[index] = np.append(self.cd.urls[index], self.files[self.cd.radar][index][select])
         self.cd.datetimes[index] = np.append(self.cd.datetimes[index], datetimes[select].astype('str'))
         
-        filenumbers, self.cd.savenames[index], self.cd.download_savenames[index] = [], [], []
+        file_ids, self.cd.savenames[index], self.cd.download_savenames[index] = [], [], []
         for datetime, url in zip(self.cd.datetimes[index], self.cd.urls[index]):
             date, time = datetime[:8], datetime[-4:]
             directory=self.dsg.get_directory(date, time,self.cd.radar,'Z' if 'pcp' in url else 'V',dir_index = 0)
@@ -729,10 +729,10 @@ class Source_DWD():
             download_directory=self.dsg.get_download_directory(self.cd.radar,'Z' if 'pcp' in url else 'V')
             self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]
             i = filename.index(date)
-            filenumbers += [int(filename[i-3:i-1])]
+            file_ids += [int(filename[i-3:i-1])]
             
         elevations_map = {0:5, 1:4, 2:3, 3:2, 4:1, 5:0, 6:6, 7:7, 8:8, 9:9}
-        elevations = [elevations_map[j] for j in filenumbers]
+        elevations = [elevations_map[j] for j in file_ids]
         # Sort files based on elevation, in order to download the lowest scans first
         indices = np.argsort(elevations)
         self.cd.urls[index], self.cd.datetimes[index] = np.array(self.cd.urls[index])[indices], np.array(self.cd.datetimes[index])[indices]
@@ -984,9 +984,9 @@ class Source_MeteoFrance():
             
             url = self.urls[self.cd.radar][index][i]
             file_type = 'PAM' if 'PAM' in url else 'PAG'
-            antenna_tour = url[-1]
+            file_id = url[-1]
             unknown = 'LFPW' if file_type == 'PAM' else 'EODC'
-            filename = f'T_{file_type}{antenna_tour}{station}_C_{unknown}_{url_datetime}00.bufr.gz'
+            filename = f'T_{file_type}{file_id}{station}_C_{unknown}_{url_datetime}00.bufr.gz'
             # Use url_datetime for directory, since that leads to the most logical ordening of files into directories (in a way that is in agreement
             # with how you would unpack an archived dataset).
             directory = self.dsg.get_directory(url_datetime[:8], url_datetime[-4:], self.cd.radar)
@@ -995,7 +995,14 @@ class Source_MeteoFrance():
             self.cd.urls[index].append(url)
             self.cd.url_kwargs[index].append({'params':{'apikey':self.gui.api_keys['Météo-France']['radardata']}})
             self.cd.savenames[index].append(directory+'/'+filename)
-            self.cd.download_savenames[index].append(download_directory+'/'+filename)        
+            self.cd.download_savenames[index].append(download_directory+'/'+filename)     
+            
+        file_ids = [j[-1] for j in self.cd.urls[index]]
+        # Sort files in order of decreasing file id. This is done since the last file_id always contains the lowest scan. For other file_ids 
+        # the map from scan to file_id is not always this simple, and radar-dependent.
+        indices = np.argsort(file_ids)[::-1]
+        for attr in ('urls', 'datetimes', 'savenames', 'download_savenames'):
+            self.cd.__dict__[attr][index] = [self.cd.__dict__[attr][index][i] for i in indices]
 
         
      

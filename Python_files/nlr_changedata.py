@@ -114,7 +114,7 @@ class Change_RadarData(QObject):
         self.change_radar_call_ID=0
         self.process_datetimeinput_call_ID=0
         self.process_keyboardinput_call_ID=None # See nlr_animate.py for reason for setting this to None
-        self.update_current_call_ID=0
+        self.plot_current_call_ID=0
                 
         self.time_last_change_scan_selection_mode=0 #is used in nlr_datasourcegeneral.py
         self.time_last_leftright=0
@@ -236,7 +236,7 @@ class Change_RadarData(QObject):
             self.update_download_widgets(limit_update_download)
             
         if set_data and self.check_viewing_most_recent_data():
-            self.plot_mostrecent_data()
+            self.plot_current()
         else:
             self.process_datetimeinput(set_data=set_data)
             
@@ -415,15 +415,8 @@ class Change_RadarData(QObject):
         
     def plot_mostrecent_data(self,plot_data=True):
         self.signal_set_datetimewidgets.emit('c','c')
-        if self.pb.firstplot_performed:
-            for j in self.dsg.scannumbers_all['z']:
-                try: #Exception occurs when self.dsg.scannumbers_all['z'] is not complete
-                    self.dsg.scannumbers_forduplicates[j]=len(self.dsg.scannumbers_all['z'][j])-1
-                except Exception: pass
         if plot_data:
-            self.requesting_latest_data = True
-            self.process_datetimeinput()
-            self.requesting_latest_data = False
+            self.plot_current()
         
     def back_to_previous_plot(self,change_datetime=False):
         if not self.pb.firstplot_performed or (
@@ -1127,49 +1120,43 @@ class Change_RadarData(QObject):
         
         return panellist_change
 
-            
-    def update_current(self, radar, call_ID=None, ani_iteration_end=None, date='c', time='c'):
+                    
+    def plot_current(self, radar=None, call_ID=None, ani_iteration_end=None):
         """Switches to the most recent datetime when all scans available.
         Is called either during automatic downloading (with call_ID = None) or when updating the end datetime of an animation.
         A date and time should be given when requesting the second-newest datetime (as is done below when the desired scans are not yet 
         available for the newest datetime).
         """
         print('update current')
+        radar = self.selected_radar if radar is None else radar
         if radar != self.selected_radar:
             #It could be that the radar changes in between emitting the signal in nlr_currentdata.py and actually calling this function.
-            self.update_current_call_ID=call_ID
+            self.plot_current_call_ID=call_ID
             return
         save_date = self.date; save_time = self.time
         
         self.pb.set_radarmarkers_data() #To assure that the correct radarmarker is colored red
         
-        if gv.fileperscan_autodownload[self.dsg.data_source(radar)] and not self.pb.firstplot_performed:
-            # When scans are delivered in multiple files, it is well possible that the desired scans are not yet available for the newest
-            # datetime. So in that case choose the 2nd-newest datetime, because when no 1st plot has been performed it is not possible to 
-            # check whether these desired scans are already available.
-            _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
-            if not second_newest_datetime:
-                return
-            date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
-            
-        self.signal_set_datetimewidgets.emit(date, time)
+        _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
+        if not second_newest_datetime:
+            # In this case just plot the most recent data and return
+            self.signal_set_datetimewidgets.emit('c', 'c')
+            self.process_datetimeinput()
+            return
+        date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
         
-        if not self.pb.firstplot_performed:
-            self.process_datetimeinput(set_data = True)
-            self.update_current_scannumbers_all = self.dsg.scannumbers_all
-        else:
-            scanangles_all_m_before = copy.deepcopy(self.dsg.scanangles_all_m)
-            retrieved_attrs = self.process_datetimeinput(set_data=False) #Determine volume attributes
-            # self.update_current_scannumbers_all is used in self.ani.update_datetimes_and_perform_firstplot to update 
-            # self.ani.animation_end_duplicates. It cannot simply be set equal to self.dsg.scannumbers_forduplicates, since this variable
-            # doesn't get updated with set_data=False.
-            self.update_current_scannumbers_all = retrieved_attrs.get('scannumbers_all', {}) if retrieved_attrs else {}
-            
-            availibility_scans_panels = {j:False for j in self.pb.panellist}
+        self.signal_set_datetimewidgets.emit(date, time)
+        change_radar = radar != self.radar
+        self.process_datetimeinput(set_data=change_radar)
+        ref_scanangles_all_m = self.dsg.scanangles_all_m
+        
+        self.signal_set_datetimewidgets.emit('c', 'c')
+        retrieved_attrs = self.process_datetimeinput(set_data=False) #Determine volume attributes
+        scanangles_all_m = retrieved_attrs.get('scanangles_all_m', {})
+                
+        availibility_scans_panels = {j:False for j in self.pb.panellist}
+        if scanangles_all_m:
             for j in self.pb.panellist:
-                if not retrieved_attrs:
-                    # Happens when obtaining volume attributes raised an error, in which case retrieved_attrs is an empty dict
-                    continue
                 """Check whether data is available for the new time for all scans that are currently shown. If not, then
                 the canvas is not updated.
                 Checking whether data is available for the scans is not simply done by checking whether self.scans[j] is
@@ -1177,32 +1164,30 @@ class Change_RadarData(QObject):
                 and new volume, then self.scans[j] might be present, but could point to other data.
                 """
                 i_p = gv.i_p[self.products[j]]
-                if self.products[j] in gv.plain_products and len(retrieved_attrs['scanangles_all_m'][i_p]) >= len(scanangles_all_m_before[i_p]):
+                if not i_p in scanangles_all_m or not i_p in ref_scanangles_all_m:
+                    # This prevents errors
                     availibility_scans_panels[j] = True
-                
-                if self.products[j] not in gv.plain_products:
+                elif self.products[j] in gv.plain_products and len(scanangles_all_m[i_p]) >= len(ref_scanangles_all_m[i_p]):
+                    availibility_scans_panels[j] = True
+                elif self.products[j] not in gv.plain_products:
                     # It can happen that no scan at all is available for product i_p in scanangles_all_m_before,
                     # in which case self.scans[j] is not within scanangles_all_m_before[i_p]. In that case any
-                    # download of new data should lead to plotting, so set availibility_scans_panels[j] = True                    
-                    if not self.scans[j] in scanangles_all_m_before[i_p]:
+                    # download of new data should lead to plotting, so set availibility_scans_panels[j] = True 
+                    if not self.scans[j] in ref_scanangles_all_m[i_p]:
                         availibility_scans_panels[j] = True
-                    elif any(abs(scanangles_all_m_before[i_p][self.scans[j]]-i) < 0.2 for i in retrieved_attrs['scanangles_all_m'][i_p].values()):
+                    elif any(abs(ref_scanangles_all_m[i_p][self.scans[j]]-i) < 0.2 for i in scanangles_all_m[i_p].values()):
                         availibility_scans_panels[j] = True
-                        
-            if not all(availibility_scans_panels.values()):
-                if date == 'c' and time == 'c':
-                    _, second_newest_datetime = self.dsg.get_newest_datetimes_currentdata(self.selected_radar,self.selected_dataset)
-                    if not second_newest_datetime is None:
-                        date, time = second_newest_datetime[:8], second_newest_datetime[-4:]
-                        print('use second newest time')
-                        return self.update_current(radar, call_ID, ani_iteration_end, date, time)
-                if call_ID is None:
-                    return self.reset_datetime(save_date, save_time)
-            elif call_ID is None or ani_iteration_end:
-                # Doing this also at the end of an iteration ensures that when a new scan comes available it is already included in the same iteration
-                self.requesting_latest_data = True
-                self.pb.set_newdata(self.pb.panellist, change_datetime = save_date+save_time!=self.selected_date+self.selected_time,
-                                    apply_storm_centering=True)
-                self.requesting_latest_data = False
+        self.plot_current_scannumbers_all = retrieved_attrs['scannumbers_all'] if all(availibility_scans_panels.values()) else self.dsg.scannumbers_all
+        
+        set_data = call_ID is None or ani_iteration_end
+        if not all(availibility_scans_panels.values()):
+            self.signal_set_datetimewidgets.emit(date, time)
+            self.process_datetimeinput(set_data=not change_radar and set_data) # Not for change_radar, since already done above
+        elif set_data:
+            # Doing this also at the end of an iteration ensures that when a new scan comes available it is already included in the same iteration
+            self.requesting_latest_data = True
+            self.pb.set_newdata(self.pb.panellist, change_datetime = save_date+save_time!=self.selected_date+self.selected_time,
+                                apply_storm_centering=True)
+            self.requesting_latest_data = False
     
-        self.update_current_call_ID=call_ID
+        self.plot_current_call_ID=call_ID

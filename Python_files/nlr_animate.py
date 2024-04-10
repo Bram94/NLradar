@@ -30,7 +30,7 @@ import numpy as np
 class Animate(QThread):
     signal_process_keyboardinput=pyqtSignal(int,int,int,str,int,bool)
     signal_process_datetimeinput=pyqtSignal(int,bool) #int for call ID, bool for set_data
-    signal_update_current=pyqtSignal(str,int,bool) #str for radar, int for call ID, bool for ani_start
+    signal_plot_current=pyqtSignal(str,int,bool) #str for radar, int for call ID, bool for ani_start
     signal_change_radar = pyqtSignal(str,int,bool)
     signal_move_to_next_case = pyqtSignal(int,int,str,bool)
     signal_set_panels_sttransforms_manually = pyqtSignal(np.ndarray, np.ndarray, bool, bool)
@@ -43,7 +43,7 @@ class Animate(QThread):
         
         self.signal_process_keyboardinput.connect(self.crd.process_keyboardinput)
         self.signal_process_datetimeinput.connect(self.crd.process_datetimeinput)
-        self.signal_update_current.connect(self.crd.update_current)
+        self.signal_plot_current.connect(self.crd.plot_current)
         self.signal_change_radar.connect(self.crd.change_radar)
         self.signal_move_to_next_case.connect(self.gui.move_to_next_case)
         self.signal_set_panels_sttransforms_manually.connect(self.pb.set_panels_sttransforms_manually)
@@ -53,7 +53,7 @@ class Animate(QThread):
         self.last_ani_time=0
         self.process_datetimeinput_call_ID=0
         self.process_keyboardinput_call_ID=0
-        self.update_current_call_ID=0
+        self.plot_current_call_ID=0
         self.change_radar_call_ID=0
         self.loop_start_case_index=None
         self.move_to_next_case_call_ID=0
@@ -174,13 +174,13 @@ class Animate(QThread):
         
         if self.continue_type == 'ani':
             if self.animation_enddate == 'c':
-                self.update_current_call_ID += 1
+                self.plot_current_call_ID += 1
                 ani_iteration_end = start
-                self.signal_update_current.emit(self.crd.selected_radar, self.update_current_call_ID, ani_iteration_end)
-                while self.crd.update_current_call_ID != self.update_current_call_ID:
+                self.signal_plot_current.emit(self.crd.selected_radar, self.plot_current_call_ID, ani_iteration_end)
+                while self.crd.plot_current_call_ID != self.plot_current_call_ID:
                     pytime.sleep(0.01)
                 # Update self.animation_end_duplicates in this case
-                self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.update_current_scannumbers_all.get('z', {}).items()}
+                self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.plot_current_scannumbers_all.get('z', {}).items()}
             else:
                 self.process_datetimeinput_call_ID += 1
                 #set_data=False, because it is not desired that data is plotted for the end date and time at this point.

@@ -1957,13 +1957,13 @@ class MeteoFrance_BUFR():
         self.product_filetypes = {'z':['PAM','PAG'], 'v':['PAG'], 'c':['PAM'], 'd':['PAM'], 'p':['PAM']}
         
         # Sigma denotes the standard deviation of reflectivity
-        self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':4}
+        self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':1}
         # Offsets for 'v' and 'sigma' include a correction for the fact that integer data values represent the start of an interval,
         # with the average being 0.5 higher
         self.product_offset = {'z':-10.5, 'v':60, 'c':30.5, 'd':-9.85, 'p':0.5, 'sigma':0.125}
         self.product_scale = {'z':1., 'v':-0.5, 'c':1., 'd':0.1, 'p':1., 'sigma':0.25}
-        self.product_nbits = {'z':8, 'v':8, 'c':8, 'd':8, 'p':16}
-        self.product_maskvals = {'z':'minmax', 'v':'min', 'c':'max', 'd':'max', 'p':'max'}
+        self.product_nbits = {'z':8, 'v':8, 'c':8, 'd':8, 'p':16, 'sigma':8}
+        self.product_maskvals = {'z':'minmax', 'v':'min', 'c':'max', 'd':'max', 'p':'max', 'sigma':'max'}
             
 
     def get_file_content(self, filepath, product):
@@ -2038,14 +2038,36 @@ class MeteoFrance_BUFR():
             self.dsg.scannumbers_all[p] = bg.sort_volume_attributes(self.dsg.scanangles_all[p], self.dsg.radial_bins_all[p], self.dsg.radial_res_all[p], extra_attrs)
             # print(p, self.dsg.scanangles_all[p], self.dsg.scannumbers_all[p])
         
+        
+    def read_extra_product(self, product, scan, data_shape):
+        p = 'v' if product == 'sigma' else product
+        filetype, fileid = self.dsg.scannumbers_all[p][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
+        filepath = opa(self.crd.directory+'/'+self.dsg.source_MeteoFrance.file_per_filetype_per_fileid[filetype][fileid])
+        p_data, p_data_mask = self.read_data(filepath, product, scan)[:2]
+        
+        na, nr = data_shape
+        na_p, nr_p = p_data.shape
+        # p_data might have a different shape than data, in which case regridding is necessary
+        if na_p*nr_p > na*nr:
+            a_ratio, r_ratio = na_p//na, nr_p//nr
+            n = nr*r_ratio
+            i = np.floor(np.linspace(0.5, nr_p-0.5, n, dtype='float32')).astype('uint16')                
+            p_data[p_data_mask] = np.nan
+            return np.nanmean(np.reshape(p_data[:,i], (360, a_ratio, nr, r_ratio)), axis=(1,3))
+        elif na_p*nr_p < na*nr:
+            a, r = 0.5+np.arange(na), 0.5+np.arange(nr)
+            a_ratio, r_ratio = na/na_p, nr/nr_p
+            ia, ir = np.floor(a/a_ratio).astype('uint16'), np.floor(r/r_ratio).astype('uint16')
+            return p_data[ia][:,ir]
+        return p_data
 
-    def read_data(self, filepath, product, scan, apply_dealiasing=False, slice=None):
-        i_p = gv.i_p[product]
+    def read_data(self, filepath, product, scan, apply_dealiasing=False, productunfiltered=False, slice=None):
+        i_p = gv.i_p.get(product, product) # product='sigma' is not included in gv.i_p
         content = self.get_file_content(filepath, i_p)
         _, _, data_info, data_loops = self.bufr_decoder(content, read_mode='all')
         data_info, data_loops = data_info[0], data_loops[0]
         
-        n_rad = self.dsg.radial_bins_all[i_p][scan]
+        n_rad = self.dsg.radial_bins_all[i_p if i_p != 'sigma' else 'v'][scan]
         offset, scale = self.product_offset[i_p], self.product_scale[i_p]
         loop_id = list(data_loops)[-2]
         data = offset+scale*data_loops[loop_id]['030001'].astype('float32')
@@ -2061,18 +2083,14 @@ class MeteoFrance_BUFR():
         else:
             data_mask = data == (min(bounds) if self.product_maskvals[i_p] == 'min' else max(bounds))
             
+        if not productunfiltered and product != 'sigma':
+            sigma_data = self.read_extra_product('sigma', scan, data.shape)
+            data_mask[sigma_data < 2.5] = True
+            
         if i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
             c_data = None
             try:
-                filetype, fileid = self.dsg.scannumbers_all['c'][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
-                filepath = opa(self.crd.directory+'/'+self.dsg.source_MeteoFrance.file_per_filetype_per_fileid[filetype][fileid])
-                c_data, c_data_mask = self.read_data(filepath, 'c', scan)[:2]
-                # CC data has a different shape than V data, so regrid the CC array before passing it to self.dealias_velocity
-                ratio = c_data.shape[1]//data.shape[1]
-                n = data.shape[1]*ratio
-                i = np.floor(np.linspace(0.5, c_data.shape[1]-0.5, n, dtype='float32')).astype('uint16')                
-                c_data[c_data_mask] = np.nan
-                c_data = np.nanmean(np.reshape(c_data[:,i], (360, 2, data.shape[1], ratio)), axis=(1,3))
+                c_data = self.read_extra_product('c', scan, data.shape)
             except Exception:
                 print('C array not available')
             data = self.dealias_velocity(data, data_mask, scan, c_data)
@@ -2092,10 +2110,11 @@ class MeteoFrance_BUFR():
         product = self.crd.products[j]
         scan = self.crd.scans[j]
         
-        self.dsg.data[j], data_mask, self.dsg.scantimes[j] = self.read_data(filepath, product, scan, self.crd.apply_dealiasing[j])
+        self.dsg.data[j], data_mask, self.dsg.scantimes[j] = self.read_data(filepath, product, scan, self.crd.apply_dealiasing[j], self.crd.productunfiltered[j])
         self.dsg.data[j][data_mask] = self.pb.mask_values[product]
         
-        self.crd.using_unfilteredproduct[j] = self.crd.using_verticalpolarization[j] = False
+        self.crd.using_unfilteredproduct[j] = self.crd.productunfiltered[j]
+        self.crd.using_verticalpolarization[j] = False
         
         
     def dealias_velocity(self, data, data_mask, scan, c_array=None):
@@ -2119,12 +2138,12 @@ class MeteoFrance_BUFR():
         data = {}; scantimes = {}
         for j in scans:
             s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
-            data[j], data_mask, scantimes[j] = self.read_data(filepaths[j], product, j, apply_dealiasing, s)
+            data[j], data_mask, scantimes[j] = self.read_data(filepaths[j], product, j, apply_dealiasing, productunfiltered, s)
             data[j][data_mask] = np.nan
             data[j], scantimes[j] = [data[j]], [scantimes[j]]
         
         volume_starttime, volume_endtime = ft.get_start_and_end_volumetime_from_scantimes([i[0] for i in scantimes.values()])                
-        meta = {'using_unfilteredproduct': False, 'using_verticalpolarization': False}
+        meta = {'using_unfilteredproduct': productunfiltered, 'using_verticalpolarization': False}
         return data, scantimes, volume_starttime, volume_endtime, meta  
     
     

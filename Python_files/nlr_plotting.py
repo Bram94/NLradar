@@ -1263,8 +1263,7 @@ class Plotting(QObject,app.Canvas):
                 gh_changed = any([self.data_empty_before[j] != self.data_empty[j] for j in panellist]) 
                 #When self.timer_setback_gridheightrins_running=True, then heightrings are currently not visible, and  will be plotted after the
                 #timer is finished. In this case it is therefore not desired to update them here, as this will make them visible.
-                if not self.firstplot_performed or (not self.postpone_plotting_gridheightrings and 
-                source_function==self.crd.process_datetimeinput) or move_view_with_storm:
+                if not self.firstplot_performed or (radar_changed and not self.postpone_plotting_gridheightrings) or move_view_with_storm:
                     if 'grid' in self.gui.lines_show:
                         self.set_grid(gh_panellist); gh_changed=True
                 
