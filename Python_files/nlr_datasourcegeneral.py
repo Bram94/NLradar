@@ -90,6 +90,12 @@ class DataSource_General():
         # Similarly as for the azimuth, with radius offsets between -1 and +1 km supported
         self.data_radius_offset = {j:0. for j in range(10)}
         self.stored_data = {}
+        # For data sources listed here, any change in product/scan availability/content should be reflected in a corresponding change in scannumbers_all.
+        # For these sources scannumbers_all is used to determine whether a product/scan in memory needs to be updated, in contrast to self.total_files_size.
+        # Has as advantage that product/scan is updated only when actually needed (and not when some other part of the radar volume is updated/expanded). 
+        # Disadvantage is that it can be cumbersome to get product/scan availability/content reflected in scannumbers_all, especially when there's a
+        # difference in availability for filtered/unfiltered products.
+        self.stored_data_sources_with_scannumbers_as_content_marker = ('DWD', 'NWS')
         
         self.range_nyquistvelocity_scanpairs_indices = {j:0 for j in range(10)}
         self.scans_radars = {} #Gets updated in self.pb.set_newdata!
@@ -118,7 +124,7 @@ class DataSource_General():
         self.attributes_version = 16
         # Should be updated when the structure of volume attributes has changed only for particular data sources.
         # Updating it resets only attributes for that particular data source.
-        self.attributes_version_sources = {'Météo-France':1}
+        self.attributes_version_sources = {'Météo-France':2}
                     
         self.scanangles = {}
         
@@ -549,15 +555,17 @@ class DataSource_General():
         # dataspecs_string += str(self.total_files_size)+'_'+self.crd.date+self.crd.time+'_'+product+'_'+str(data_selected_startazimuth)
         dataspecs_string += '_'+self.crd.date+self.crd.time+'_'+product+'_'+str(data_selected_startazimuth)
         
-        # It is assumed that any change in volume/scan content is reflected in a change in scannumbers_all
+        # It is assumed that any change in product/scan content is reflected either in a change in scannumbers_all or in a change in self.total_files_size.
+        # For data sources in self.stored_data_sources_with_scannumbers_as_content_marker it is assumed to be the former.
         scannumbers_all = self.scannumbers_all[gv.i_p[product]]
         scan = self.crd.scans[panel]
         duplicate = self.scannumbers_forduplicates[product if product in gv.plain_products else scan]
+        scannumbers = scannumbers_all if product in gv.plain_products else scannumbers_all[scan][duplicate]
         if product in gv.plain_products:
             if product in gv.plain_products_with_parameters:
                 dataspecs_string+= '_'+str(self.gui.PP_parameter_values[product][self.gui.PP_parameters_panels[panel]])
             dataspecs_string+= '_'+str(productunfiltered)+'_'+polarization
-            dataspecs_string+= '_'+str(scannumbers_all)+str(duplicate)
+            content_marker = scannumbers if self.data_source() in self.stored_data_sources_with_scannumbers_as_content_marker else self.total_files_size
             dataspecs_string+= '_'+proj
             if proj == 'car':
                 dataspecs_string+= '_'+str(self.gui.stormmotion)+'_'+str(self.gui.cartesian_product_res)+'_'+str(self.gui.cartesian_product_maxrange)
@@ -565,7 +573,9 @@ class DataSource_General():
             if gv.i_p[product] == 'v':
                 dataspecs_string += '_'+str(apply_dealiasing) + '_' + self.gui.dealiasing_setting + '_' + str(self.gui.dealiasing_dualprf_n_it)
             dataspecs_string+= '_'+str(productunfiltered)+'_'+polarization
-            dataspecs_string+= '_'+str(scannumbers_all[scan][duplicate])
+            content_marker = str(scannumbers) if self.data_source() in self.stored_data_sources_with_scannumbers_as_content_marker else\
+                             str(self.total_files_size)+str(scan)+str(duplicate)
+            dataspecs_string+= '_'+content_marker
         return dataspecs_string
     
     def get_dataspecs_string_panel(self, j, product=None, return_params=False): #j is the panel

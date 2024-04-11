@@ -597,13 +597,16 @@ class Source_KNMI():
         self.gui=gui_class
         self.dsg=self.gui.dsg
         self.cds=cds_class
+        
+        self.urls = {'Den Helder':'https://api.dataplatform.knmi.nl/open-data/datasets/radar_volume_denhelder/versions/2.0/files',
+                     'Herwijnen':'https://api.dataplatform.knmi.nl/open-data/datasets/radar_volume_full_herwijnen/versions/1.0/files'}
             
     
             
     def update_downloadlist(self,index):
         self.cd.emit_info(self.cd.cd_message_updating_downloadlist,'Progress_info')
         
-        url = gv.download_sourceURLs_KNMI[self.cd.radar]
+        url = self.urls[self.cd.radar]
         if not (self.cd.date[index] == 'c' or self.cd.time[index] == 'c'):
             startdatetime = ft.next_datetime(self.cd.date[index]+self.cd.time[index], -720)
         else:
@@ -639,7 +642,7 @@ class Source_KNMI():
         will be renamed to the name given in self.cd.savenames[index].
         """
         datetime = self.cd.date[index]+self.cd.time[index]
-        url = gv.download_sourceURLs_KNMI[self.cd.radar]+'/RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+datetime+'.h5/url'
+        url = self.urls[self.cd.radar]+'/RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+datetime+'.h5/url'
         try:
             get_file_response = requests.get(url, headers={"Authorization": self.gui.api_keys['KNMI']['opendata']})
             self.cd.urls[index] += [get_file_response.json().get("temporaryDownloadUrl")]

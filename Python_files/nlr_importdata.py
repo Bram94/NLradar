@@ -1954,10 +1954,12 @@ class MeteoFrance_BUFR():
         table_path = os.path.join('Tables',table_type)
         self.bufr_decoder = decode_bufr.DecodeBUFR(table_path, table_type)
         
-        self.product_filetypes = {'z':['PAM','PAG'], 'v':['PAG'], 'c':['PAM'], 'd':['PAM'], 'p':['PAM']}
+        # sigma is containt in both PAM (cartesian 1*1 km res) and PAG (polar 1 deg*1 km res) files. Preferentially use PAG, 
+        # since it is of higher resolution near the radar, where clutter filtering matters most.
+        self.product_filetypes = {'z':['PAM','PAG'], 'v':['PAG'], 'c':['PAM'], 'd':['PAM'], 'p':['PAM'], 'sigma':['PAG','PAM']}
         
         # Sigma denotes the standard deviation of reflectivity
-        self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':1}
+        self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':[1,4]}
         # Offsets for 'v' and 'sigma' include a correction for the fact that integer data values represent the start of an interval,
         # with the average being 0.5 higher
         self.product_offset = {'z':-10.5, 'v':60, 'c':30.5, 'd':-9.85, 'p':0.5, 'sigma':0.125}
@@ -1975,10 +1977,16 @@ class MeteoFrance_BUFR():
                 # to be excluded to prevent errors in the gzip library
                 indices += [content.rindex(b'\x1f\x9d\x90B')]
             index = self.product_order[product]
+            if product == 'sigma':
+                index = index[1] if index[1]+1 < len(indices) else index[0]
             i1, i2 = indices[index], indices[index+1] if index+1 < len(indices) else None
             return content[i1:i2]
 
     def get_scans_information(self, filepaths, filetypes_per_fileid):
+        for attr in gv.volume_attributes_p:
+            # Add 'sigma' to volume attributes, since that is easiest in remainder of code.
+            self.dsg.__dict__[attr]['sigma'] = {}
+            
         for fileid, filepath in filepaths.items():
             try:
                 content = self.get_file_content(filepath, 'z')
@@ -1994,15 +2002,10 @@ class MeteoFrance_BUFR():
                     # 'None' is just used to indicate that this product is not yet available. And it is important to not keep filetype_p unchanged in
                     # case of unavailability, since it becomes part of the scannumber. And this scannumber is used to check whether new content has
                     # come available for a certain product and scan, and thus whether any data array already stored in memory has to be updated.
-                    filetype_p = filetypes[1] if p == 'z' else 'None'
+                    filetype_p = filetypes[1] if len(filetypes) == 2 else 'None'
                 # j will become the scannumber. It contains both filetype and fileid, in order to get a new Z array requested when its filetype changes
                 # (Z is contained in both PAG and PAM files, with preferential use of high-res PAM file, but in real-time use PAG might come available first).
                 j = filetype_p+','+fileid
-                if p == 'v':
-                    # Append information about CC availability to scannumber, in order to get a new velocity array requested when CC availability changes
-                    # from False to True (as can happen during real-time downloading when PAG file might come available before PAM file).
-                    c_array_available = 'PAM' in filetypes_per_fileid[fileid]
-                    j += f',{c_array_available}'
                 
                 self.dsg.scanangles_all[p][j] = data_info['007021'][0]
                 if round(self.dsg.scanangles_all[p][j]) == 90.:
@@ -2010,6 +2013,9 @@ class MeteoFrance_BUFR():
                     self.dsg.scanangles_all[p][j] = 90.
                 self.dsg.radial_bins_all[p][j] = 1066 if filetype_p == 'PAM' else 256
                 self.dsg.radial_res_all[p][j] = 0.24 if filetype_p == 'PAM' else 1.
+                if p == 'sigma' and filetype_p == 'PAM':
+                    self.dsg.radial_bins_all[p][j] = 512
+                    self.dsg.radial_res_all[p][j] = 1.
                 
                 if p == 'v':
                     prfs = np.array(data_loops[1]['002125'])
@@ -2040,15 +2046,21 @@ class MeteoFrance_BUFR():
         
         
     def read_extra_product(self, product, scan, data_shape):
-        p = 'v' if product == 'sigma' else product
-        filetype, fileid = self.dsg.scannumbers_all[p][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
+        filetype, fileid = self.dsg.scannumbers_all[product][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
         filepath = opa(self.crd.directory+'/'+self.dsg.source_MeteoFrance.file_per_filetype_per_fileid[filetype][fileid])
         p_data, p_data_mask = self.read_data(filepath, product, scan)[:2]
         
         na, nr = data_shape
         na_p, nr_p = p_data.shape
         # p_data might have a different shape than data, in which case regridding is necessary
-        if na_p*nr_p > na*nr:
+        if product == 'sigma' and filetype == 'PAM':
+            # In this case sigma is delivered on a 512*512 cartesian grid, centered at the radar
+            a, r = 2*np.pi/na*(0.5+np.arange(na)), 256/nr*(0.5+np.arange(nr))
+            a, r = np.meshgrid(a, r, indexing='ij')
+            x, y = r*np.sin(a), r*np.cos(a)
+            ix, iy = 256+np.floor(x).astype('int16'), 256-np.ceil(y).astype('int16')
+            return p_data[(iy, ix)]
+        elif na_p*nr_p > na*nr:
             a_ratio, r_ratio = na_p//na, nr_p//nr
             n = nr*r_ratio
             i = np.floor(np.linspace(0.5, nr_p-0.5, n, dtype='float32')).astype('uint16')                
@@ -2067,7 +2079,7 @@ class MeteoFrance_BUFR():
         _, _, data_info, data_loops = self.bufr_decoder(content, read_mode='all')
         data_info, data_loops = data_info[0], data_loops[0]
         
-        n_rad = self.dsg.radial_bins_all[i_p if i_p != 'sigma' else 'v'][scan]
+        n_rad = self.dsg.radial_bins_all[i_p][scan]
         offset, scale = self.product_offset[i_p], self.product_scale[i_p]
         loop_id = list(data_loops)[-2]
         data = offset+scale*data_loops[loop_id]['030001'].astype('float32')
@@ -2084,8 +2096,11 @@ class MeteoFrance_BUFR():
             data_mask = data == (min(bounds) if self.product_maskvals[i_p] == 'min' else max(bounds))
             
         if not productunfiltered and product != 'sigma':
-            sigma_data = self.read_extra_product('sigma', scan, data.shape)
-            data_mask[sigma_data < 2.5] = True
+            try:
+                sigma_data = self.read_extra_product('sigma', scan, data.shape)
+                data_mask[sigma_data < 2.5] = True
+            except Exception:
+                print('Product filtering not possible')
             
         if i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
             c_data = None

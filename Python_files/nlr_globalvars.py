@@ -47,7 +47,7 @@ def replace_characters(string):
 radars_nospecialchar_names = {radar:replace_characters(radar) for radar in radars_all}    
 
 
-radars_with_datasets=('Jabbeke','Wideumont','Borkum','Boostedt','Dresden','Eisberg','Emden','Essen','Feldberg','Flechtdorf','Hannover','Isen','Memmingen','Neuhaus','Neuheilenbach','Offenthal','Pr\u00F6tzel','Rostock','T\u00FCrkheim','Ummendorf','Brzuchania','Gda\u0144sk','Legionowo','Pastewnik','Pozna\u0144','Ram\u017ca','Rzesz\u00F3w','\u015Awidwin','U\u017cranki','Juvre','Sindal','Bornholm','Stevns','Virring Skanderborg') 
+radars_with_datasets=['Jabbeke','Wideumont']+radars['DWD']+radars['IMGW']+radars['DMI'] 
 #Radars for which the data is distributed over two datasets; one with large maximum range but small Nyquist velocity, and the other vice versa.
 radars_with_double_volume=('Den Helder','Herwijnen') 
 #Radars for which the volume can devided into two parts, with slightly different scans. This is the case for the new radars of the KNMI.
@@ -66,11 +66,9 @@ for source in radars:
         elif source in ('KMI', 'skeyes', 'IMGW', 'DMI', 'NWS', 'Météo-France'):
             radarsources_dirs_Default[key] += '${date}/${radar}'+f'_{j}'*len(j)
         elif source == 'DWD':
-            radarsources_dirs_Default[key] += '${date}/${radar}_'+j+'/${time60}-${time60+}'      
+            radarsources_dirs_Default[key] += '${date}/${radar}_'+j+'/${time60}-${time60+}'
 derivedproducts_dir_Default=programdir+'/Radar_data/Derived_products'
 
-#Currently only required for data from the KNMI. For data from the DWD it is not required.
-download_sourceURLs_KNMI={'De Bilt':'/','Den Helder':'https://api.dataplatform.knmi.nl/open-data/datasets/radar_volume_denhelder/versions/2.0/files','Herwijnen':'https://api.dataplatform.knmi.nl/open-data/datasets/radar_volume_full_herwijnen/versions/1.0/files'}
 intervals_autodownload={'KNMI':300,'KMI':300,'skeyes':300,'VMM':300,'DWD':300,'TU Delft':300,'IMGW':600,'DMI':300,'NWS':300,'ARRC':300,'Météo-France':300}
 timeoffsets_autodownload={'KNMI':[75,120,180,240],'KMI':[75,120,180,240],'skeyes':[75,120,180,240],'VMM':[75,120,180,240],'DWD':[45,105,165,225,285],'TU Delft': [45,105,165,225,285],'IMGW':[240,300,540,600],'DMI':[135,180,240,300],'NWS':list(range(0, 300, 30)),'ARRC':[0],'Météo-France':list(range(0, 300, 60))}
 multifilevolume_autodownload={'KNMI':False,'KMI':True,'skeyes':True,'VMM':True,'DWD':True,'TU Delft':False,'IMGW':True,'DMI':False,'NWS':False,'ARRC':False,'Météo-France':True}
