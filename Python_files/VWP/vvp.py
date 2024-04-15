@@ -46,6 +46,8 @@ class VVP():
         
         # Should change when either the structure of the hdf5 file changes, or when the VVP calculation method changes
         self.file_content_version = 1
+        self.file_content_version_sources = {'Météo-France':1} # Update when only content for particular data source changes
+
         
     
     def __call__(self, range_limits = None, height_limits = None, v_min = None, h0=0, V0=None):
@@ -293,8 +295,7 @@ class VVP():
             return False
         
         with h5py.File(filename, 'r') as f:
-            version, total_volume_files_size = f.attrs['version'], f.attrs['total_volume_files_size']
-            if version != self.file_content_version or total_volume_files_size != self.dsg.total_files_size:
+            if self.check_need_update(f):
                 return False
             
             group_name = self.get_data_group_name()
@@ -305,21 +306,26 @@ class VVP():
             for name in group:
                 self.__dict__[name] = group[name][:]  
             self.volume_starttime, self.volume_endtime = f.attrs['producttime'].split('-')
-        return True         
+        return True      
+    
+    def check_need_update(self, f):
+        version, version_source = f.attrs['version'], f.attrs.get('version_source', 0)
+        total_volume_files_size = f.attrs['total_volume_files_size']
+        return version != self.file_content_version or version_source != self.file_content_version_sources.get(self.dsg.data_source(), 0) or\
+               total_volume_files_size != self.dsg.total_files_size      
         
     def write_data_to_file(self):
         directory, filename = self.get_dir_and_filename()
         os.makedirs(directory, exist_ok=True)
         try:
             with h5py.File(filename, 'r') as f:
-                version, total_volume_files_size = f.attrs['version'], f.attrs['total_volume_files_size']
-                new_file = version != self.file_content_version or total_volume_files_size != self.dsg.total_files_size
-                action = 'w' if new_file else 'a'
+                action = 'w' if self.check_need_update(f) else 'a'
         except Exception: 
             action = 'w'
         
         with h5py.File(filename, action) as f:
             f.attrs['version'] = self.file_content_version
+            f.attrs['version_source'] = self.file_content_version_sources.get(self.dsg.data_source(), 0)
             f.attrs['total_volume_files_size'] = self.dsg.total_files_size
             f.attrs['producttime'] = self.volume_starttime+'-'+self.volume_endtime
             

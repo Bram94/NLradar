@@ -2073,7 +2073,7 @@ class MeteoFrance_BUFR():
             return p_data[ia][:,ir]
         return p_data
 
-    def read_data(self, filepath, product, scan, apply_dealiasing=False, productunfiltered=False, slice=None):
+    def read_data(self, filepath, product, scan, apply_dealiasing=False, productunfiltered=False):
         i_p = gv.i_p.get(product, product) # product='sigma' is not included in gv.i_p
         content = self.get_file_content(filepath, i_p)
         _, _, data_info, data_loops = self.bufr_decoder(content, read_mode='all')
@@ -2085,8 +2085,6 @@ class MeteoFrance_BUFR():
         data = offset+scale*data_loops[loop_id]['030001'].astype('float32')
         n_azi = int(len(data)/n_rad)
         data = data.reshape((n_azi, n_rad))
-        if slice:
-            data = data[slice]
         
         bounds = [offset, offset+scale*(2**self.product_nbits[i_p]-1)]
         # For velocity offset represents the maximum product value
@@ -2152,9 +2150,10 @@ class MeteoFrance_BUFR():
         
         data = {}; scantimes = {}
         for j in scans:
-            s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
-            data[j], data_mask, scantimes[j] = self.read_data(filepaths[j], product, j, apply_dealiasing, productunfiltered, s)
+            data[j], data_mask, scantimes[j] = self.read_data(filepaths[j], product, j, apply_dealiasing, productunfiltered)
             data[j][data_mask] = np.nan
+            s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
+            data[j] = data[j][s]
             data[j], scantimes[j] = [data[j]], [scantimes[j]]
         
         volume_starttime, volume_endtime = ft.get_start_and_end_volumetime_from_scantimes([i[0] for i in scantimes.values()])                

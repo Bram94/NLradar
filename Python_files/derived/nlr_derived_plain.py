@@ -31,8 +31,10 @@ class DerivedPlain():
         if not self.gui.derivedproducts_filename_version == self.filename_version and os.path.exists(self.gui.derivedproducts_dir):
             shutil.rmtree(self.gui.derivedproducts_dir)
         
-        self.hdf5_structure_version = 38
+        self.file_content_version = 38
+        self.file_content_version_sources = {'Météo-France':1} # Update when only content for particular data source changes
         self.product_version = {'e':16,'r':11,'a':5,'m':5,'h':8,'l':17} #Product version, must be updated when the method for calculating the product has changed.
+        
         self.product_parameters = {'e':'min_dBZ_value_echotops','a':'PCAPPI_height','m':'Zmax_minheight','h':'cap_dBZ, VIL_threshold','l':'cap_dBZ, VIL_minheight'}
         self.product_attributes = {'e':['scans_ranges','elevations_minside','elevations_plusside'],'m':['scans_ranges','elevations_minside','elevations_plusside'],'h':['scans_ranges','elevations_minside','elevations_plusside'],'l':['scans_ranges','elevations_minside','elevations_plusside']}
         self.product_proj_attributes = {'pol': ['product_radial_bins','product_radial_res','product_azimuthal_bins','product_azimuthal_res'],
@@ -75,8 +77,7 @@ class DerivedPlain():
         product_at_disk = False
         try:
             with h5py.File(filename,'r+') as f:
-                version, total_volume_files_size = f.attrs['version'], f.attrs['total_volume_files_size']
-                if version != self.hdf5_structure_version or total_volume_files_size != self.dsg.total_files_size:
+                if self.check_need_update(f):
                     return False
                 
                 # When requesting an unfiltered product while this unfiltered version is unavailable (which becomes clear when importing the volumetric
@@ -136,12 +137,18 @@ class DerivedPlain():
         
         return product_at_disk
     
+    def check_need_update(self, f):
+        version, version_source = f.attrs['version'], f.attrs.get('version_source', 0)
+        total_volume_files_size = f.attrs['total_volume_files_size']
+        return version != self.file_content_version or version_source != self.file_content_version_sources.get(self.dsg.data_source(), 0) or\
+               total_volume_files_size != self.dsg.total_files_size      
+
     def get_dataset_name(self, product, param, proj):
         dataset_name = 'data' if not product in self.gui.PP_parameter_values else f'data_pval{param}'
         if proj == 'car':
             dataset_name += f'_res{self.gui.cartesian_product_res}_maxrange{self.gui.cartesian_product_maxrange}'
         return dataset_name
-
+    
     def write_file(self, p_param, proj):
         product, param = self.get_product_and_param(p_param)
         double_volume_index = self.dsg.scannumbers_forduplicates[product]
@@ -150,14 +157,13 @@ class DerivedPlain():
         os.makedirs(directory, exist_ok=True)
         try:
             with h5py.File(filename, 'r') as f:
-                version, total_volume_files_size = f.attrs['version'], f.attrs['total_volume_files_size']
-                new_file = version != self.hdf5_structure_version or total_volume_files_size != self.dsg.total_files_size
-                action = 'w' if new_file else 'a'
+                action = 'w' if self.check_need_update(f) else 'a'
         except Exception: 
             action = 'w'
         
         with h5py.File(filename, action) as f:
-            f.attrs['version'] = self.hdf5_structure_version
+            f.attrs['version'] = self.file_content_version
+            f.attrs['version_source'] = self.file_content_version_sources.get(self.dsg.data_source(), 0)
             f.attrs['total_volume_files_size'] = self.dsg.total_files_size
             if self.productunfiltered and not self.using_unfilteredproduct:
                 # Indicate that the unfiltered version of the import product is unavailable, such that no time will be wasted on trying again 

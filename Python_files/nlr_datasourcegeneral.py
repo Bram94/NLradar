@@ -155,7 +155,7 @@ class DataSource_General():
         for j in gv.radars_all:
             key_extensions = ('_V','_Z') if j in gv.radars_with_datasets else ('',)
             source = gv.data_sources[j]
-            reset_attrs_radar = self.attributes_descriptions['version_sources'].get(source, None) != self.attributes_version_sources.get(source, None)
+            reset_attrs_radar = self.attributes_descriptions['version_sources'].get(source, 0) != self.attributes_version_sources.get(source, 0)
             for i in key_extensions:
                 if reset_attrs_radar or j+i not in self.attributes_descriptions: self.attributes_descriptions[j+i] = {}
                 if reset_attrs_radar or j+i not in self.attributes_IDs: self.attributes_IDs[j+i] = {}
