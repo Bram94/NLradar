@@ -28,12 +28,6 @@ radars_IMGW=['Brzuchania','Gda\u0144sk','Legionowo','Pastewnik','Pozna\u0144','R
 radars_DMI=['Juvre','Sindal','Bornholm','Stevns','Virring Skanderborg']
 radars_MeteoFrance=list(french_meta)
 radars=radars_KNMI+radars_TUDelft+radars_KMI+radars_skeyes+radars_VMM+radars_DWD+radars_IMGW+radars_DMI+radars_MeteoFrance
-def replace_characters(string):
-    character_map = {'\u00F6':'oe','\u00FC':'ue','\u0144':'n','\u017c':'z','\u00F3':'o','\u015A':'S'}
-    for character in character_map:
-        string = string.replace(character, character_map[character])
-    return string
-radars_nonspecialchar_names = {radar:replace_characters(radar) for radar in radars}
 
 data_sources_all=['KNMI','KMI','skeyes','VMM','DWD','TU Delft','IMGW','DMI','Météo-France']
 data_sources={}
