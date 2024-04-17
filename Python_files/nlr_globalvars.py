@@ -40,7 +40,7 @@ for j in data:
         radar_bands[radar] = j[6]
     
 def replace_characters(string):
-    character_map = {'\u00F6':'oe','\u00FC':'ue','\u0144':'n','\u017c':'z','\u00F3':'o','\u015A':'S'}
+    character_map = {'\u00F6':'oe','\u00FC':'ue','\u0144':'n','\u017c':'z','\u00F3':'o','\u015A':'S','\u0119':'e'}
     for character in character_map:
         string = string.replace(character, character_map[character])
     return string
