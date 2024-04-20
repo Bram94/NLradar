@@ -666,19 +666,10 @@ def cbar_interpolate(cbarlist,res,log=False): # product values must increase fro
     return colorsint
 
 def determine_latlon_from_inputstring(input_marker_latlon):
-    input_marker_latlon = input_marker_latlon.strip()
+    input_marker_latlon = input_marker_latlon.strip().replace('′', "'").replace('″', '"')
     deg = u'\u00b0'
-    if ',' in input_marker_latlon:
-        input_marker_lat, input_marker_lon = [j.replace(deg, '') for j in input_marker_latlon.split(',')]
-    elif ' ' in input_marker_latlon:
-        input_marker_lat, input_marker_lon = [j.replace(deg, '') for j in input_marker_latlon.split(' ')]
-    elif '\t' in input_marker_latlon:
-        # Assumes SPC storm reports notation
-        input_marker_lat, input_marker_lon = input_marker_latlon.split('\t')
-        input_marker_lat = input_marker_lat[:-2]+'.'+input_marker_lat[-2:]
-        input_marker_lon = '-'+input_marker_lon[:-2]+'.'+input_marker_lon[-2:]
-    elif deg in input_marker_latlon: 
-        # Assumes DMS notation
+    dms_notation = "'" in input_marker_latlon
+    if dms_notation:
         index=input_marker_latlon.find('N')
         if index==-1: index=input_marker_latlon.find('S')
         
@@ -696,6 +687,15 @@ def determine_latlon_from_inputstring(input_marker_latlon):
         if '"' in lon: 
             input_marker_lon=str(input_marker_lon+1/3600*float(lon[lon.index("'")+1:lon.index('"')]))+lon[lon.index('"')+1:]
         else: input_marker_lon=str(input_marker_lon)+lon[lon.index("'")+1:]
+    elif ',' in input_marker_latlon:
+        input_marker_lat, input_marker_lon = [j.replace(deg, '') for j in input_marker_latlon.split(',')]
+    elif ' ' in input_marker_latlon:
+        input_marker_lat, input_marker_lon = [j.replace(deg, '') for j in input_marker_latlon.split(' ')]
+    elif '\t' in input_marker_latlon:
+        # Assumes SPC storm reports notation
+        input_marker_lat, input_marker_lon = input_marker_latlon.split('\t')
+        input_marker_lat = input_marker_lat[:-2]+'.'+input_marker_lat[-2:]
+        input_marker_lon = '-'+input_marker_lon[:-2]+'.'+input_marker_lon[-2:]
     else: 
         raise Exception('Incorrect input')
         
@@ -709,9 +709,13 @@ def determine_latlon_from_inputstring(input_marker_latlon):
         raise Exception('Incorrect input')
     else:
         return number1, number2
-    
-# print(determine_latlon_from_inputstring('33.52° N, 86.93° W'))
+# print(determine_latlon_from_inputstring("""50°48'17.6"N 3°02'08.5"E"""))
 # print(determine_latlon_from_inputstring('32.733°N 98.3358°W'))
+# print(determine_latlon_from_inputstring('50.80492075901461, 3.0356987435071896'))
+# print(determine_latlon_from_inputstring('32.82° N, 89° W'))
+# print(determine_latlon_from_inputstring('45.32 N, 9.84 E'))
+# print(determine_latlon_from_inputstring('	4152	9755'))
+# print(determine_latlon_from_inputstring("""38° 44′ 9.24″ N, 85° 28′ 27.84″ W"""))
 
 previous_radar_latlon = None
 proj = None
@@ -734,7 +738,7 @@ def aeqd(latlon_0, latlon_or_xy_1, degrees=True, inverse=False):
         output = np.transpose(output)
     return output
 
-print(aeqd([52,6], [300, 0], inverse=True))
+# print(aeqd([52,6], [300, 0], inverse=True))
 
 def calculate_great_circle_distance_from_latlon(latlon_0, latlon_1): #latlon_0 should be a list/array with a single latitude 
     #and longitude, and latlon_1 can either also be a List/array that contains a single latitude and longitude, 

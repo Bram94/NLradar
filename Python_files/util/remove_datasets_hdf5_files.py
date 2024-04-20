@@ -59,7 +59,7 @@ radars = ['Den Helder', 'Herwijnen']
 for radar in radars:
     dates = os.listdir(directory+'/'+radar.replace(' ', ''))
     for date in dates:
-        if 20080101 <= int(date) < 20230825:
+        if 20080101 <= int(date) < 20240415:
             continue
     
         files = os.listdir(directory+'/'+radar.replace(' ', '')+'/'+date)

@@ -2206,6 +2206,10 @@ class NEXRAD_L2():
         i_scans_z = []
         i_scans_exclude = [0] if gv.radar_bands[self.crd.radar] == 'C' else []
         if gv.radar_bands[self.crd.radar] == 'S':
+            if unambig_ranges[0]/unambig_ranges[1] < 1:
+                # In this case the first z-scan/v-scan pair is incomplete, with only velocity available. Remove this v-scan, as in case of duplicates
+                # not doing so leads to showing z-scans and v-scans from different pairs. 
+                i_scans_exclude.append(0)
             for i in (j for j in range(n_scans-1) if abs(scanangles[j+1]-scanangles[j]) <= 0.4):
                 ratio = unambig_ranges[i]/unambig_ranges[i+1]
                 if ratio > 1.25:

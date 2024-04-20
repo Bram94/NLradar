@@ -981,14 +981,12 @@ class DataSource_General():
         products = [p for p in scanangles_all if len(scanangles_all[p])]
         for j in scanangles_all['z']: #scanangles_all['z'] should contain keys for all available scans
             if j==1:
-                scanangles_allproducts[j] = np.min([scanangles_all[p][1] for p in products])
+                scanangles_allproducts[j] = min(scanangles_all[p][1] for p in products)
             else:
-                diff_greaterthanzero = [scanangles_all[p][j]-scanangles_allproducts[j-1] for p in products if scanangles_all[p][j]-scanangles_allproducts[j-1]>0.]
-                if len(diff_greaterthanzero):
-                    products_diff_greaterthanzero = [p for p in products if scanangles_all[p][j]-scanangles_allproducts[j-1]>0.]
-                    p = products_diff_greaterthanzero[np.argmin(diff_greaterthanzero)]
-                else: 
-                    p = 'z'
+                # print(j, scanangles_all, scanangles_allproducts)
+                diff_greaterthanzero = np.array([[p, scanangles_all[p][j]-scanangles_allproducts[j-1]] for p in products if j in scanangles_all[p] and
+                                                 scanangles_all[p][j]-scanangles_allproducts[j-1] > 0])
+                p = diff_greaterthanzero[diff_greaterthanzero[:,1].argmin()][0] if len(diff_greaterthanzero) else 'z'
                 scanangles_allproducts[j] = scanangles_all[p][j]
         return scanangles_allproducts
         
