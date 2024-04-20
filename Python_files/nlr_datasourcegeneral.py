@@ -1262,11 +1262,10 @@ class DataSource_General():
         
         directory = bg.get_last_directory(current_dir_string,radar,self.get_filenames_directory) if find_last_dir else\
                     bg.get_nearest_directory(current_dir_string,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)
-        if not directory:
-            return None
-        dir_date,_ = bg.get_date_and_time_from_dir(directory,current_dir_string,radar)
-        if n == 1 or dir_date == date:
-            return directory
+        if directory:
+            dir_date,_ = bg.get_date_and_time_from_dir(directory,current_dir_string,radar)
+            if n == 1 or dir_date == date:
+                return directory
         
         try:
             directories = []
@@ -1276,21 +1275,17 @@ class DataSource_General():
                 else:
                     directories += [bg.get_last_directory(j,radar,self.get_filenames_directory) if find_last_dir else
                                     bg.get_nearest_directory(j,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)]
-            dir_dates = [bg.get_date_and_time_from_dir(directories[j],dir_string_list[j],radar)[0] for j in range(n)]
+            dir_dates = [bg.get_date_and_time_from_dir(d, dir_string_list[i], radar)[0] if d else '19000101' for i,d in enumerate(directories)]
                 
             datediffs = np.array([np.abs(ft.datetimediff_s(j+'0000',date+'0000')) for j in dir_dates],dtype = 'int64')
             index = np.argmin(datediffs)
-            selected_date = dir_dates[index]
-            if selected_date == dir_date:
-                return directory
+            # The current directory string might have changed, so update the corresponding index.
+            self.gui.radardata_dirs_indices[radar_dataset] = index
+            return directories[index]  
         except Exception as e:
             print(e,'self.dsg.get_nearest_directory')
             return directory
         
-        #The current directory string has changed, such that the corresponding index must be updated.
-        self.gui.radardata_dirs_indices[radar_dataset] = index
-        return directories[index]  
-
             
     def get_next_directory(self,radar,dataset,date,time,direction,desired_newdate = None,desired_newtime = None): 
         """Returns the absolute path of the next directory for which data is available. If desired_newdate and desired_newtime are given,
