@@ -444,8 +444,8 @@ class GUI(QWidget):
         
         self.reset_volume_attributes = reset_volume_attributes
         
-        self.current_case_list_name = current_case_list_name
-        self.current_case_list = cases_lists[current_case_list_name] if not current_case_list_name is None else None
+        self.current_case_list = cases_lists.get(current_case_list_name, None)
+        self.current_case_list_name = current_case_list_name if self.current_case_list else None
         self.current_case = current_case if not self.current_case_list is None and str(current_case) in self.get_cases_as_strings() else None
         self.previous_case_list_name = None
         self.previous_case = None
@@ -1909,27 +1909,28 @@ class GUI(QWidget):
                 index = cases.index(str(case_dict))
                 self.current_case_list[index] = info
                 
-                if hasattr(self, 'modify_case_listw'):
+                if hasattr(self, 'modify_case_listw') and self.modify_case_listw.isVisible():
                     descr, url_full, url_short = self.get_case_text(case_dict)
                     old_key = descr+']---['+url_full+']---['+url_short
                     descr, url_full, url_short = self.get_case_text(info)
                     new_key = descr+']---['+url_full+']---['+url_short
                     self.list_cases_labels[new_key] = self.list_cases_labels[old_key]
-                    if not new_key == old_key:
+                    if new_key != old_key:
                         del self.list_cases_labels[old_key]
                     
                     if self.list_cases.dragEnabled():
                         self.list_cases_labels[new_key].setText(descr+url_short)
                     else:
                         self.list_cases_labels[new_key].setText(descr+url_full)
-                if hasattr(self, 'set_case_label'):
-                    # This is always done when this widget is open, even when updating only the case and not the label. Reason is that a change
-                    # in case_dict means that line self.case_button.clicked.connect(lambda: self.add_case_to_list(list_name, case_dict)) in
-                    # self.set_label_for_case now refers to an old version of case_dict, which doesn't exist anymore. And this would lead to errors
-                    # in this function. 
-                    self.set_case_label.close()
             else:
                 self.add_new_case_to_list(info, list_name)
+                
+            if hasattr(self, 'set_case_label'):
+                # This is always done when this widget is open, even when updating only the case and not the label. Reason is that a change
+                # in case_dict means that line self.case_button.clicked.connect(lambda: self.add_case_to_list(list_name, case_dict)) in
+                # self.set_label_for_case now refers to an old version of case_dict, which doesn't exist anymore. And this would lead to errors
+                # in this function. 
+                self.set_case_label.close()
             
             with open(cases_lists_filename,'wb') as f:
                 pickle.dump(self.cases_lists,f)
