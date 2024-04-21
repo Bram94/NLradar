@@ -1868,7 +1868,6 @@ class GUI(QWidget):
             for i in self.case_URLs:
                 if not self.case_URLs[i].text() == '':
                     urls.append(self.case_URLs[i].text())
-            self.set_case_label.close()
         else:
             label, urls = case_dict['label'], case_dict['urls']
         
@@ -1910,7 +1909,7 @@ class GUI(QWidget):
                 index = cases.index(str(case_dict))
                 self.current_case_list[index] = info
                 
-                if update_label and hasattr(self, 'modify_case_listw'):
+                if hasattr(self, 'modify_case_listw'):
                     descr, url_full, url_short = self.get_case_text(case_dict)
                     old_key = descr+']---['+url_full+']---['+url_short
                     descr, url_full, url_short = self.get_case_text(info)
@@ -1923,6 +1922,12 @@ class GUI(QWidget):
                         self.list_cases_labels[new_key].setText(descr+url_short)
                     else:
                         self.list_cases_labels[new_key].setText(descr+url_full)
+                if hasattr(self, 'set_case_label'):
+                    # This is always done when this widget is open, even when updating only the case and not the label. Reason is that a change
+                    # in case_dict means that line self.case_button.clicked.connect(lambda: self.add_case_to_list(list_name, case_dict)) in
+                    # self.set_label_for_case now refers to an old version of case_dict, which doesn't exist anymore. And this would lead to errors
+                    # in this function. 
+                    self.set_case_label.close()
             else:
                 self.add_new_case_to_list(info, list_name)
             
