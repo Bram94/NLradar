@@ -446,7 +446,7 @@ class GUI(QWidget):
         
         self.current_case_list = cases_lists.get(current_case_list_name, None)
         self.current_case_list_name = current_case_list_name if self.current_case_list else None
-        self.current_case = current_case if not self.current_case_list is None and str(current_case) in self.get_cases_as_strings() else None
+        self.current_case = current_case if self.get_case_index(self.current_case_list, current_case) != None else None
         self.previous_case_list_name = None
         self.previous_case = None
         self.cases_lists = cases_lists
@@ -1087,9 +1087,7 @@ class GUI(QWidget):
             action = cases_menu.addAction(self.current_case_list_name+f' ({len(self.current_case_list)} cases)')
             action.setEnabled(False)
             
-            cases = self.get_cases_as_strings()
-            current_case = str(self.current_case)
-            i_current_case = cases.index(current_case) if not self.current_case is None else None
+            i_current_case = self.get_case_index()
             action_before = None
             for i, case_dict in enumerate(self.current_case_list):
                 if i % max_length == 0:
@@ -1104,7 +1102,7 @@ class GUI(QWidget):
                 action = menu.addAction(self.get_descriptor_for_case(case_dict))
                 if menu == cases_menu and action_before is None:
                     action_before = action
-                if cases[i] == current_case:
+                if i == i_current_case:
                     menu.setDefaultAction(action)
                 action.triggered.connect(
                             lambda state, list_name=self.current_case_list_name, case_dict=case_dict: self.switch_to_case(list_name, case_dict))
@@ -1178,7 +1176,7 @@ class GUI(QWidget):
         self.cases_loop_subset = self.cases_loop_subsetw.checkState() == 2
         # Updating loop_start_case_index here allows for repeatedly switching between using/not using a subset, while varying the subset 
         # of cases to loop over
-        self.ani.loop_start_case_index = self.get_current_case_index()
+        self.ani.loop_start_case_index = self.get_case_index()
     def change_cases_loop_subset_ncases(self):
         input_ncases=self.cases_loop_subset_ncasesw.text()
         number=ft.to_number(input_ncases)
@@ -1250,16 +1248,25 @@ class GUI(QWidget):
         self.set_textbar()        
         self.switch_to_case_running = False
                 
-    def get_cases_as_strings(self, case_list=None):
-        if not case_list:
-            case_list = self.current_case_list
-        return [str(j) for j in case_list]
-    def get_current_case_index(self):
-        cases = self.get_cases_as_strings()
-        return cases.index(str(self.current_case))
+    def get_case_index(self, case_list='current', case_dict='current'):
+        case_list = self.current_case_list if case_list == 'current' else case_list
+        case_dict = self.current_case if case_dict == 'current' else case_dict
+        if case_list is None or case_dict is None:
+            return None
+        cases_dts = [j['datetime'] for j in case_list]
+        case = str(case_dict)
+        while True:
+            try:
+                index = cases_dts.index(case_dict['datetime'])
+            except Exception:
+                return None
+            if str(case_list[index]) == case:
+                return index
+            else:
+                cases_dts[index] = '0'
     
     def get_next_case(self, direction=1):
-        current_index = self.get_current_case_index()
+        current_index = self.get_case_index()
         new_index = np.mod(current_index+direction, len(self.current_case_list))
         if 'cases' in self.ani.continue_type and self.cases_loop_subset:
             case2 = self.ani.loop_start_case_index
@@ -1274,9 +1281,9 @@ class GUI(QWidget):
             next_case_dict = self.get_next_case(direction)
             self.switch_to_case(self.current_case_list_name, next_case_dict, time_offset, from_animation)
             self.move_to_next_case_running = False
-        
+            
         if not call_ID is None:
-            self.move_to_next_case_call_ID=call_ID
+            self.move_to_next_case_call_ID = call_ID
             
     def back_to_previous_case(self):
         if self.previous_case:
@@ -1296,6 +1303,28 @@ class GUI(QWidget):
             url_full += " <A href='"+url+"'>"+url_first_part+"</a>"
             url_short += " "+url_first_part
         return descr, url_full, url_short
+    
+    def add_item_to_case_list_widget(self, case_dict):
+        case_item = ListWidgetItem()
+        self.list_cases.addItem(case_item)
+        descr, url_full, url_short = self.get_case_text(case_dict)
+        key = descr+']---['+url_full+']---['+url_short
+        self.list_cases_labels[key] = QLabel(descr+url_full)
+        self.list_cases_labels[key].setOpenExternalLinks(True)
+        # Line below is deactivated, since accessing links by keyboard apparently doesn't go together with QListWidget's item selection feature
+        # self.list_cases_labels[key].setTextInteractionFlags(Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard)
+        self.list_cases_labels[key].linkHovered.connect(self.hover)
+        self.list_cases.setItemWidget(case_item, self.list_cases_labels[key])
+        
+    def modify_item_in_case_list_widget(self, old_case_dict, new_case_dict):
+        descr, url_full, url_short = self.get_case_text(old_case_dict)
+        old_key = descr+']---['+url_full+']---['+url_short
+        descr, url_full, url_short = self.get_case_text(new_case_dict)
+        new_key = descr+']---['+url_full+']---['+url_short
+        self.list_cases_labels[new_key] = self.list_cases_labels[old_key]
+        if new_key != old_key:
+            del self.list_cases_labels[old_key]
+        self.list_cases_labels[new_key].setText(descr+url_short if self.list_cases.dragEnabled() else descr+url_full)
         
     def modify_case_list(self):
         self.modify_case_listw=QWidget()
@@ -1312,22 +1341,11 @@ class GUI(QWidget):
         self.list_cases.setContentsMargins(0, 0, 0, 0)
         self.list_cases.model().rowsMoved.connect(self.adjust_to_case_swap)
         self.list_cases_labels = {}
-        i_current_case = None; current_case = str(self.current_case)
-        for i in range(len(self.current_case_list)):
-            case = self.current_case_list[i]
-            if str(case) == current_case:
-                i_current_case = i
-            case_item = ListWidgetItem()
-            self.list_cases.addItem(case_item)
-            descr, url_full, url_short = self.get_case_text(case)
-            key = descr+']---['+url_full+']---['+url_short
-            self.list_cases_labels[key] = QLabel(descr+url_full)
-            self.list_cases_labels[key].setOpenExternalLinks(True)
-            # Line below is deactivated, since accessing links by keyboard apparently doesn't go together with QListWidget's item selection feature
-            # self.list_cases_labels[key].setTextInteractionFlags(Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard)
-            self.list_cases_labels[key].linkHovered.connect(self.hover)
-            self.list_cases.setItemWidget(case_item, self.list_cases_labels[key])
-        if not self.current_case is None:
+        for case in self.current_case_list:
+            self.add_item_to_case_list_widget(case)
+           
+        i_current_case = self.get_case_index()            
+        if i_current_case != None:
             self.list_cases.setCurrentRow(i_current_case)
         layout.addWidget(self.list_cases)
         
@@ -1395,12 +1413,10 @@ class GUI(QWidget):
             index = self.list_cases.row(case_item)
             self.list_cases.takeItem(index)
             self.current_case_list.pop(index)
-            cases = self.get_cases_as_strings()
-            if not str(self.current_case) in cases:
-                if len(self.current_case_list) > 0:
-                    self.current_case = self.current_case_list[0]
-                else:
-                    self.current_case = None
+            
+        index = self.get_case_index()
+        if index is None:
+            self.current_case = self.current_case_list[0] if self.current_case_list else None
             
         with open(cases_lists_filename,'wb') as f:
             pickle.dump(self.cases_lists,f)
@@ -1903,27 +1919,18 @@ class GUI(QWidget):
         self.current_case = info
         self.set_textbar()
         
-        cases = self.get_cases_as_strings()
-        if not str(info) in cases or not case_dict is None:
-            if not case_dict is None:
-                index = cases.index(str(case_dict))
+        already_present = self.get_case_index(self.current_case_list, info) != None
+        if not already_present or case_dict:
+            if case_dict:
+                index = self.get_case_index(self.current_case_list, case_dict)
                 self.current_case_list[index] = info
                 
                 if hasattr(self, 'modify_case_listw') and self.modify_case_listw.isVisible():
-                    descr, url_full, url_short = self.get_case_text(case_dict)
-                    old_key = descr+']---['+url_full+']---['+url_short
-                    descr, url_full, url_short = self.get_case_text(info)
-                    new_key = descr+']---['+url_full+']---['+url_short
-                    self.list_cases_labels[new_key] = self.list_cases_labels[old_key]
-                    if new_key != old_key:
-                        del self.list_cases_labels[old_key]
-                    
-                    if self.list_cases.dragEnabled():
-                        self.list_cases_labels[new_key].setText(descr+url_short)
-                    else:
-                        self.list_cases_labels[new_key].setText(descr+url_full)
+                    self.modify_item_in_case_list_widget(case_dict, info)
             else:
                 self.add_new_case_to_list(info, list_name)
+                if hasattr(self, 'modify_case_listw') and self.modify_case_listw.isVisible():
+                    self.add_item_to_case_list_widget(info)
                 
             if hasattr(self, 'set_case_label'):
                 # This is always done when this widget is open, even when updating only the case and not the label. Reason is that a change
@@ -2528,7 +2535,7 @@ class GUI(QWidget):
             radar_dataset = self.crd.radar+('_'+self.crd.dataset if self.crd.radar in gv.radars_with_datasets else '')
             s = self.radardata_product_versions[radar_dataset]
             radar_dataset_subdataset = radar_dataset+(' '+s if s else '')
-            case_id = f'{self.get_current_case_index():04d}_' if self.current_case_shown() else ''
+            case_id = f'{self.get_case_index():04d}_' if self.current_case_shown() else ''
             dataspecs = case_id+''.join([self.dsg.get_dataspecs_string_panel(j) for j in self.pb.panellist])
             datetimes = [self.pb.data_attr['scandatetime'][j] for j in self.pb.panellist]
             if self.starting_animation:

@@ -90,7 +90,7 @@ class Animate(QThread):
         if not self.continue_type == 'None':
             if 'cases' in self.continue_type:
                 # loop_start_case_index is used for looping over a subset of cases. Besides here, it also is updated in self.gui.change_cases_loop_subset
-                self.loop_start_case_index = self.gui.get_current_case_index()
+                self.loop_start_case_index = self.gui.get_case_index()
             self.continue_functions[self.continue_type]()
             # self.continue_type has changed at this point, so run again for the new continue_type
             self.run()
