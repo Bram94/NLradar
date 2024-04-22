@@ -3590,8 +3590,8 @@ class GUI(QWidget):
             self.default_dirs_widgets[key].clicked.connect(lambda state, key=key: self.use_default_dir(key))
             self.radardirs_widgets[key].editingFinished.connect(lambda source=datasource, key=key: self.change_radardata_dir(source, key))
         layout.addLayout(grid_layout)
-        
-        layout.addWidget(QLabel('Optional additional directory structures for individual radars'))
+        # The extra spaces are added to force the QTabWidget to have a certain width
+        layout.addWidget(QLabel('Optional additional directory structures for individual radars'+' '*125))
             
         additional = [[i,j] for i,j in self.radardirs_additional.items() if self.dsg.split_radar_dataset(i)[0] in radars]
         
