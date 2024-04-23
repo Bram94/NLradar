@@ -1199,6 +1199,8 @@ class GUI(QWidget):
             if list_name == self.current_case_list_name:
                 self.current_case_list_name = None
                 self.current_case = None
+                if hasattr(self, 'modify_case_listw'):
+                    self.modify_case_listw.close()
         
     def switch_to_case(self, list_name, case_dict, time_offset='default', from_animation=False):
         # Convert to integer in the latter case, because when called from within nlr_animate.py it is given as a string
@@ -1842,7 +1844,7 @@ class GUI(QWidget):
     def set_label_for_case(self, list_name, case_dict = None):
         # Set case_dict if you want to update an existing case
         self.set_case_label=QWidget()
-        self.set_case_label.setWindowTitle('Case info')
+        self.set_case_label.setWindowTitle(list_name)
         
         layout=QVBoxLayout()
         form_layout=QFormLayout()
