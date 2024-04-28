@@ -909,7 +909,7 @@ class KMI_hdf5():
            
 
     def get_scans_information(self,filepath,product='z'):
-        with h5py.File(filepath,'r') as hf: 
+        with h5py.File(filepath,'r') as hf:
             n_datasets=len([0 for j in hf if j.startswith('dataset')])
                                
             for i in (1,2):

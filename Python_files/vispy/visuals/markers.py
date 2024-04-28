@@ -31,6 +31,9 @@ varying vec4 v_bg_color;
 varying float v_edgewidth;
 varying float v_antialias;
 
+varying vec4  v_Vertex;
+varying float v_PointSize;
+
 void main (void) {
     $v_size = a_size * u_px_scale * u_scale;
     v_edgewidth = a_edgewidth * float(u_px_scale);
@@ -40,6 +43,10 @@ void main (void) {
     gl_Position = $transform(vec4(a_position,1.0));
     float edgewidth = max(v_edgewidth, 1.0);
     gl_PointSize = ($v_size) + 4.*(edgewidth + 1.5*v_antialias);
+    
+    // Save vertex shader output -> will be used in fragment shader to calculate gl_PointCoord
+    v_Vertex    = gl_Position;
+    v_PointSize = gl_PointSize;
 }
 """
 
@@ -50,12 +57,28 @@ varying vec4 v_bg_color;
 varying float v_edgewidth;
 varying float v_antialias;
 
+varying vec4  v_Vertex;
+uniform bool  u_SimulatePointCoord;
+varying float v_PointSize;
+uniform vec4  u_viewport;
+
 void main()
 {
     // Discard plotting marker body and edge if zero-size
     if ($v_size <= 0.)
         discard;
-
+        
+    // Calculate gl_PointCoord by hand
+    // Calculate fragment position in normalized space
+    vec2 normalizedCoord = v_Vertex.xy / v_Vertex.w;
+    // Calculate fragment position in screen space
+    vec2 screenCoord = (normalizedCoord*0.5 + 0.5)*u_viewport.zw + u_viewport.xy;
+    // Calculate point coordinate (= gl_PointCoord)
+    vec2 v_PointCoord  = (screenCoord-gl_FragCoord.xy)/(v_PointSize) + 0.5;
+    
+    // Use GLSL (gl_PointCoord) or user (v_PointCoord) point coordinates
+    vec2 pointCoord = u_SimulatePointCoord ? v_PointCoord : gl_PointCoord;
+    
     float edgewidth = max(v_edgewidth, 1.0);
     float edgealphafactor = min(v_edgewidth, 1.0);
 
@@ -63,7 +86,7 @@ void main()
     // factor 6 for acute edge angles that need room as for star marker
 
     // The marker function needs to be linked with this shader
-    float r = $marker(gl_PointCoord, size);
+    float r = $marker(pointCoord, size);
 
     // it takes into account an antialising layer
     // of size v_antialias inside the edge
@@ -608,6 +631,10 @@ class MarkersVisual(Visual):
             view.view_program['u_scale'] = scale
         else:
             view.view_program['u_scale'] = 1
+            
+        from vispy.gloo import gl
+        view.view_program['u_viewport']=gl.glGetParameter(gl.GL_VIEWPORT)
+        view.view_program['u_SimulatePointCoord'] = True
 
     def _compute_bounds(self, axis, view):
         pos = self._data['a_position']
