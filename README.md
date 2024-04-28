@@ -21,7 +21,7 @@ Created by Bram van 't Veen (2016-2024).
 ![image](https://github.com/Bram94/NLradar/assets/24604991/8811126b-f541-4458-9597-34b033f20df2)
 ![image](https://github.com/Bram94/NLradar/assets/24604991/46f2ce9d-47ef-4559-b35d-9a69b1f20fd8)
 ![image](https://github.com/Bram94/NLradar/assets/24604991/1fb53c90-e737-49f2-91ab-2d6d6e226a43)
-![image](https://github.com/Bram94/NLradar/assets/24604991/8ebcff5e-ffd3-4072-8f60-7725aac6fcfd)
+![image](https://github.com/Bram94/NLradar/assets/24604991/d1740c87-952b-4254-af79-077867243a4a)
 ![image](https://github.com/Bram94/NLradar/assets/24604991/d41ec7b1-d1d3-4c36-8b28-5c2702a2a1a2)
 ![image](https://github.com/Bram94/NLradar/assets/24604991/f411f4e9-b02d-4ad2-8213-df727ee9fc44)
 ![image](https://github.com/Bram94/NLradar/assets/24604991/45b7c8dc-5438-4b07-86db-c252aa431bbf)
