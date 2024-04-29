@@ -206,7 +206,7 @@ class Change_RadarData(QObject):
                                 
         radar_changed = self.radar != selected_radar
         # If called from self.process_datetimeinput, then continuation will be handled there
-        if radar_changed and not source == self.process_datetimeinput:
+        if radar_changed and source != self.process_datetimeinput:
             if self.lrstep_beingperformed:
                 # Set date+time back by 1 volume timestep. This is done to prevent that switching radar comes with an unnecessarily large
                 # timestep (which could happen when the closest datetime for the new radar is ahead of the former radar's datetime).
@@ -651,8 +651,8 @@ class Change_RadarData(QObject):
             self.gui.datew.setText(self.date); self.gui.timew.setText(self.time)
             return
         
-        if time != 'c' and self.gui.use_storm_following_view and self.gui.view_nearest_radar and not self.change_radar_running:
-            delta_time = ft.datetimediff_s(self.date+self.time, date+time)
+        if time != 'c' and self.gui.view_nearest_radar and not self.change_radar_running:
+            delta_time = ft.datetimediff_s(self.date+self.time, date+time)*self.gui.use_storm_following_view
             print('switch to nearby')
             self.switch_to_nearby_radar(1, delta_time=delta_time, source=self.process_datetimeinput)
 

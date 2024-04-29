@@ -32,7 +32,7 @@ class Animate(QThread):
     signal_process_datetimeinput=pyqtSignal(int,bool) #int for call ID, bool for set_data
     signal_plot_current=pyqtSignal(str,int,bool) #str for radar, int for call ID, bool for ani_start
     signal_change_radar = pyqtSignal(str,int,bool)
-    signal_move_to_next_case = pyqtSignal(int,int,str,bool)
+    signal_move_to_next_case = pyqtSignal(int,int,str)
     signal_set_panels_sttransforms_manually = pyqtSignal(np.ndarray, np.ndarray, bool, bool)
     def __init__(self, crd_class, parent=None):
         super(Animate, self).__init__(parent) 
@@ -107,8 +107,7 @@ class Animate(QThread):
             else:
                 if not self.gui.move_to_next_case_running and pytime.time()-self.crd.end_time>1./self.gui.cases_looping_speed and self.move_to_next_case_call_ID in (0,self.gui.move_to_next_case_call_ID):
                     self.move_to_next_case_call_ID+=1
-                    # from_animation=False
-                    self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, 1, 'default', False)
+                    self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, 1, 'default')
             pytime.sleep(self.sleep_time)
                     
             
@@ -160,7 +159,6 @@ class Animate(QThread):
         self.update_animation = False
         
         
-        self.time_view = pytime.time()
         self.radar, self.dataset = self.crd.radar, self.crd.dataset
         self.duration = self.gui.animation_duration if self.continue_type == 'ani' else\
                         np.diff(self.animation_window)[0]+np.diff(extra_time_offsets)[0]
@@ -169,32 +167,31 @@ class Animate(QThread):
         self.starting_iteration_action = 'end'
             
         save_datetime = self.crd.selected_date+self.crd.selected_time
-        self.crd.signal_set_datetimewidgets.emit(self.animation_enddate,self.animation_endtime)
-        QApplication.processEvents()
+        self.crd.signal_set_datetimewidgets.emit(self.animation_enddate, self.animation_endtime)
         
-        if self.continue_type == 'ani':
-            if self.animation_enddate == 'c':
-                self.plot_current_call_ID += 1
-                ani_iteration_end = start
-                self.signal_plot_current.emit(self.crd.selected_radar, self.plot_current_call_ID, ani_iteration_end)
-                while self.crd.plot_current_call_ID != self.plot_current_call_ID:
-                    pytime.sleep(0.01)
-                # Update self.animation_end_duplicates in this case
-                self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.plot_current_scannumbers_all.get('z', {}).items()}
-            else:
-                self.process_datetimeinput_call_ID += 1
-                #set_data=False, because it is not desired that data is plotted for the end date and time at this point.
-                self.signal_process_datetimeinput.emit(self.process_datetimeinput_call_ID, False)
-                while self.crd.process_datetimeinput_call_ID != self.process_datetimeinput_call_ID:
-                    pytime.sleep(0.01)
-        else:
+        if self.continue_type == 'ani' and self.animation_enddate == 'c':
+            self.plot_current_call_ID += 1
+            ani_iteration_end = start
+            self.signal_plot_current.emit(self.crd.selected_radar, self.plot_current_call_ID, ani_iteration_end)
+            while self.crd.plot_current_call_ID != self.plot_current_call_ID:
+                pytime.sleep(0.01)
+            # Update self.animation_end_duplicates in this case
+            self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.plot_current_scannumbers_all.get('z', {}).items()}
+        elif 'ani_case' in self.continue_type and not self.gui.view_nearest_radar:
+            # When viewing nearest radar, radar-selection is performed automatically in self.crd.process_datetimeinput. Also, when
+            # calling self.crd.change_radar instead in this situation, the end datetime determined below will be based on datetime
+            # availability for self.case_dict['radar'], which might be different from that for the actual nearest radar.
             self.change_radar_call_ID += 1
-            #set_data=False
+            # set_data=False, because it is not desired that data is plotted for the end date and time at this point.
             self.signal_change_radar.emit(self.case_dict['radar'], self.change_radar_call_ID, False)
             while self.crd.change_radar_call_ID != self.change_radar_call_ID:
                 pytime.sleep(0.01)
-                  
-            
+        else:
+            self.process_datetimeinput_call_ID += 1
+            self.signal_process_datetimeinput.emit(self.process_datetimeinput_call_ID, False) # set_data=False
+            while self.crd.process_datetimeinput_call_ID != self.process_datetimeinput_call_ID:
+                pytime.sleep(0.01)                
+                     
         end_datetime = self.crd.selected_date+self.crd.selected_time
         ref_datetime = end_datetime if self.animation_enddate == 'c' else self.animation_enddate+self.animation_endtime
         start_datetime = ft.next_datetime(ref_datetime, -self.duration)
@@ -218,9 +215,7 @@ class Animate(QThread):
             self.move_to_next_case_call_ID += 1
             direction = 0 if use_current_case else 1
             time_offset = str(ft.datetimediff_m(case_datetime, str(self.datetime)))
-            # from_animation=True
-            self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, direction, time_offset, True)
-            # QApplication.processEvents()
+            self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, direction, time_offset)
             while self.gui.move_to_next_case_call_ID != self.move_to_next_case_call_ID:
                 pytime.sleep(0.01)
                 
@@ -238,8 +233,7 @@ class Animate(QThread):
         
     def check_need_update_animation(self):
         if 'ani_case' in self.continue_type:
-            self.update_animation = str(self.case_dict) != str(self.gui.current_case) or self.animation_window != self.gui.cases_animation_window or\
-                                    self.radar != self.crd.radar or self.dataset != self.crd.dataset
+            self.update_animation = str(self.case_dict) != str(self.gui.current_case) or self.animation_window != self.gui.cases_animation_window
         else:
             self.update_animation = (self.radar != self.crd.radar and not (self.gui.use_storm_following_view and self.gui.view_nearest_radar)) or\
                                      self.dataset != self.crd.dataset or self.duration != self.gui.animation_duration
@@ -280,7 +274,6 @@ class Animate(QThread):
                         self.process_keyboardinput_call_ID+=1
                         # print(pytime.time(), 'emit')
                         self.signal_process_keyboardinput.emit(1,0,0,'0',self.process_keyboardinput_call_ID,False)
-                        # QApplication.processEvents()
                     
                         # Make sure that the iteration is finished before updating self.datetime
                         while not self.process_keyboardinput_call_ID == self.crd.process_keyboardinput_call_ID or\

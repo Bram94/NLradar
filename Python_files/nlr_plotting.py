@@ -697,7 +697,6 @@ class Plotting(QObject,app.Canvas):
         return True
         
     def on_mouse_wheel(self, ev):
-        self.t = pytime.time()
         if not ft.point_inside_rectangle(ev.pos,self.wpos['main'])[0]: return
         
         zoomfactor=(1 + self.zoomfactor_vispy) ** (ev.delta[1] * 30)
@@ -993,10 +992,7 @@ class Plotting(QObject,app.Canvas):
         self.set_ghtextproperties(self.panellist)
         self.set_draw_action('panning_zooming')
         self.update()
-        
-        if self.gui.view_nearest_radar:
-            self.crd.switch_to_nearby_radar(1)
-    
+            
     def remove_gridheightrings(self):
         self.postpone_plotting_gridheightrings=True
         self.gridheightrings_removed=True
@@ -1016,13 +1012,13 @@ class Plotting(QObject,app.Canvas):
         # self.set_ghlineproperties(self.panellist)
         for j in range(self.max_panels):
             if j in self.panels_horizontal_ghtext:
-                self.visuals['text_hor1'][j].visible=True
-                self.visuals['text_hor2'][j].visible=True
+                self.visuals['text_hor1'][j].visible = self.visuals['text_hor2'][j].visible = True
             if j in self.panels_vertical_ghtext:
-                self.visuals['text_vert1'][j].visible=True
-                self.visuals['text_vert2'][j].visible=True 
-                            
+                self.visuals['text_vert1'][j].visible = self.visuals['text_vert2'][j].visible = True       
         self.update_gridheightrings()
+        
+        if self.gui.view_nearest_radar:
+            self.crd.switch_to_nearby_radar(1)
         
     def set_timer_setback_gridheightrings(self):
         if self.timer_setback_gridheightrings_running:

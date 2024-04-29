@@ -21,6 +21,7 @@ from vispy import gloo
 
 import sys
 import numpy as np
+from numpy import array, float32 # For use of eval
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" #I haven't yet seen this doing anything
 opa=os.path.abspath #opa should always be used when specifying a pathname
@@ -1202,7 +1203,7 @@ class GUI(QWidget):
                 if hasattr(self, 'modify_case_listw'):
                     self.modify_case_listw.close()
         
-    def switch_to_case(self, list_name, case_dict, time_offset='default', from_animation=False):
+    def switch_to_case(self, list_name, case_dict, time_offset='default'):
         # Convert to integer in the latter case, because when called from within nlr_animate.py it is given as a string
         time_offset = self.cases_offset_minutes if time_offset == 'default' else int(time_offset)
             
@@ -1217,9 +1218,7 @@ class GUI(QWidget):
         # to not get updated when self.current_case_list is updated by rearranging or deleting cases.
         self.current_case_list = self.cases_lists[list_name]
         self.current_case = case_dict
-        
-        self.switch_to_case_running = True
-        
+                
         date, time = case_dict['datetime'][:8], case_dict['datetime'][-4:]
         date, time = ft.next_date_and_time(date, time, time_offset)
         self.datew.setText(date); self.timew.setText(time)
@@ -1239,7 +1238,15 @@ class GUI(QWidget):
             self.vwp_manual_sfcobs = case_dict['vwp_manual_sfcobs']
         
         self.update_stormmotion(case_dict['stormmotion'] if 'stormmotion' in case_dict else np.array([0, 0]))
+        self.switch_to_case_running = True
         self.crd.change_radar(radar)
+        self.switch_to_case_running = False
+        if self.view_nearest_radar:
+            # The stored radar might not be the nearest radar, especially when combining storm-following view with a time offset.
+            # This new call of self.crd.process_datetimeinput chooses the nearest radar, after the call of self.crd.change_radar
+            # first has set the view that was stored for the saved radar.
+            self.datew.setText(date); self.timew.setText(time)
+            self.crd.process_datetimeinput()
         
         self.pos_markers_latlons = case_dict['pos_markers_latlons'].copy()
         self.update_pos_marker_widgets()
@@ -1248,7 +1255,6 @@ class GUI(QWidget):
         # Changing the panel views now happens in self.pb.set_newdata
         
         self.set_textbar()        
-        self.switch_to_case_running = False
                 
     def get_case_index(self, case_list='current', case_dict='current'):
         case_list = self.current_case_list if case_list == 'current' else case_list
@@ -1277,11 +1283,11 @@ class GUI(QWidget):
                 new_index = case1 if direction == 1 else case2
         return self.current_case_list[new_index]
         
-    def move_to_next_case(self, call_ID=None, direction=1, time_offset='default', from_animation=False):
+    def move_to_next_case(self, call_ID=None, direction=1, time_offset='default'):
         if not self.current_case_list is None and not self.current_case is None:
             self.move_to_next_case_running = True
             next_case_dict = self.get_next_case(direction)
-            self.switch_to_case(self.current_case_list_name, next_case_dict, time_offset, from_animation)
+            self.switch_to_case(self.current_case_list_name, next_case_dict, time_offset)
             self.move_to_next_case_running = False
             
         if not call_ID is None:
@@ -1306,11 +1312,14 @@ class GUI(QWidget):
             url_short += " "+url_first_part
         return descr, url_full, url_short
     
+    def get_case_key(self, case_dict):
+        return str(case_dict)
+    
     def add_item_to_case_list_widget(self, case_dict):
         case_item = ListWidgetItem()
         self.list_cases.addItem(case_item)
         descr, url_full, url_short = self.get_case_text(case_dict)
-        key = descr+']---['+url_full+']---['+url_short
+        key = self.get_case_key(case_dict)
         self.list_cases_labels[key] = QLabel(descr+url_full)
         self.list_cases_labels[key].setOpenExternalLinks(True)
         # Line below is deactivated, since accessing links by keyboard apparently doesn't go together with QListWidget's item selection feature
@@ -1320,9 +1329,9 @@ class GUI(QWidget):
         
     def modify_item_in_case_list_widget(self, old_case_dict, new_case_dict):
         descr, url_full, url_short = self.get_case_text(old_case_dict)
-        old_key = descr+']---['+url_full+']---['+url_short
+        old_key = self.get_case_key(old_case_dict)
         descr, url_full, url_short = self.get_case_text(new_case_dict)
-        new_key = descr+']---['+url_full+']---['+url_short
+        new_key = self.get_case_key(new_case_dict)
         self.list_cases_labels[new_key] = self.list_cases_labels[old_key]
         if new_key != old_key:
             del self.list_cases_labels[old_key]
@@ -1398,13 +1407,9 @@ class GUI(QWidget):
     def enable_or_disable_rearrange_mode(self):
         self.list_cases.setDragEnabled(not self.list_cases.dragEnabled())
         for key in self.list_cases_labels:
-            descr, url_full, url_short = key.split(']---[')
-            if self.list_cases.dragEnabled():
-                self.list_cases_labels[key].setText(descr+url_short)
-                self.button_rearrange.setText('URL mode on')
-            else:
-                self.list_cases_labels[key].setText(descr+url_full)
-                self.button_rearrange.setText('Rearrange mode on')
+            descr, url_full, url_short = self.get_case_text(eval(key))
+            self.list_cases_labels[key].setText(descr+(url_short if self.list_cases.dragEnabled() else url_full))
+        self.button_rearrange.setText('URL mode on' if self.list_cases.dragEnabled() else 'Rearrange mode on')
         
     def delete_case_from_list(self):
         selected_items = self.list_cases.selectedItems()
@@ -1414,6 +1419,9 @@ class GUI(QWidget):
         for case_item in selected_items:
             index = self.list_cases.row(case_item)
             self.list_cases.takeItem(index)
+            case_dict = self.current_case_list[index]
+            key = self.get_case_key(case_dict)
+            del self.list_cases_labels[key]
             self.current_case_list.pop(index)
             
         index = self.get_case_index()
@@ -1617,7 +1625,7 @@ class GUI(QWidget):
         
         datetime = self.crd.date+self.crd.time
         case_dts = [self.current_case['datetime']]+list(self.current_case.get('extra_datetimes', {}))
-        max_datetimediff_s = max([7200, 60*np.abs(self.cases_animation_window).max()])
+        max_datetimediff_s = max([6*3600, 60*np.abs(self.cases_animation_window).max()])
         if mode == 'strict':
             return datetime == self.current_case['datetime']
         elif mode == 'loose':
@@ -2541,19 +2549,15 @@ class GUI(QWidget):
             dataspecs = case_id+''.join([self.dsg.get_dataspecs_string_panel(j) for j in self.pb.panellist])
             datetimes = [self.pb.data_attr['scandatetime'][j] for j in self.pb.panellist]
             if self.starting_animation:
-                self.ani_frame_number = 1
-                self.ani_frames_specs = [dataspecs]
-                self.ani_frames_datetimes = [datetimes]
-                self.ani_frames_datasets = [case_id+radar_dataset_subdataset]
+                self.ani_frame_number = 0
+                self.ani_frames_specs, self.ani_frames_datetimes, self.ani_frames_datasets = [], [], []
                 self.starting_animation = False
-            else:
-                if dataspecs in self.ani_frames_specs:
-                    return
-                else:
-                    self.ani_frame_number += 1
-                    self.ani_frames_specs += [dataspecs]
-                    self.ani_frames_datetimes += [datetimes]
-                    self.ani_frames_datasets += [case_id+radar_dataset_subdataset]
+            if dataspecs in self.ani_frames_specs:
+                return
+            self.ani_frame_number += 1
+            self.ani_frames_specs += [dataspecs]
+            self.ani_frames_datetimes += [datetimes]
+            self.ani_frames_datasets += [case_id if case_id else radar_dataset_subdataset]
                 
             filepath = opa(gv.animation_frames_directory+f'/frame{self.ani_frame_number}.gif')
         else:
