@@ -475,7 +475,7 @@ class SfcObsMETAR():
         obs['dist'] = distances[argmin_dist]
         
         previous_date, next_date = ft.next_date(date, -1), ft.next_date(date, 1)        
-        limit_datetime = ''.join(ft.get_ymdhm(pytime.time()-3600))
+        limit_datetime = ''.join(ft.get_ymdhm(pytime.time()-24*3600))
         request_datetime = ft.round_datetime(ft.next_datetime(date+time, 720), 60)
         if int(request_datetime) < int(limit_datetime):
             if 200 <= int(time) <= 2200:
