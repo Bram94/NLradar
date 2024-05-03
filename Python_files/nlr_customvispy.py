@@ -4,6 +4,9 @@
 import numpy as np
 from vispy.visuals.transforms import BaseTransform
 
+import nlr_functions as ft
+import nlr_globalvars as gv
+
 
 
 class To_Mercator(BaseTransform):
@@ -112,38 +115,45 @@ class LatLon_to_Azimuthal_Equidistant_Transform(BaseTransform):
     NonScaling = False
     Isometric = False
     
-    def __init__(self, latlon_0):
+    def __init__(self, radar=None, latlon_0=None):
+        # Either radar or latlon_0 should be specified
         super(LatLon_to_Azimuthal_Equidistant_Transform, self).__init__()
-        self.latlon_0 = latlon_0
+        if radar:
+            self.radar = radar
+        else:
+            self.latlon_0 = latlon_0
         
         
+    @property
+    def radar(self):
+        return self._radar
+
+    @radar.setter
+    def radar(self, radar):
+        self._radar = radar
+        self.latlon_0 = gv.radarcoords[radar]
+
     @property
     def latlon_0(self):
         return self._latlon_0
 
     @latlon_0.setter
     def latlon_0(self, latlon_0):
-        self._latlon_0 = np.array(latlon_0)*np.pi/180. #Convert to radians
+        self._latlon_0 = np.array(latlon_0)
         self._update_shaders()
                 
-    def map(self, coords):
-        Re=6371; ke=4./3.
-        sr=coords[0]; theta=coords[1]*np.pi/180.
-        h1 = np.sqrt(np.power(sr,2)+np.power(Re*ke,2)+2*Re*ke*sr*np.sin(theta))
-        gr = ke*Re*np.arcsin(sr*np.cos(theta)/h1)
-        return gr
+    def map(self, latlon):
+        return ft.aeqd(self.latlon_0, latlon)
 
-    def imap(self, coords):
-        Re=6371; ke=4./3.
-        gr=coords[0]; theta=coords[1]*np.pi/180.
-        sr=Re*ke/np.cos(gr/(Re*ke)+theta)*np.sin(gr/(Re*ke))
-        return sr
+    def imap(self, xy):
+        return ft.aeqd(self.latlon_0, xy, inverse=True)
     
     def _update_shaders(self):
-        self._shader_map['lat_0'] = self.latlon_0[0]
-        self._shader_map['lon_0'] = self.latlon_0[1]
-        self._shader_imap['lat_0'] = self.latlon_0[0]
-        self._shader_imap['lon_0'] = self.latlon_0[1]
+        # Convert to radians
+        self._shader_map['lat_0'] = self.latlon_0[0]*np.pi/180.
+        self._shader_map['lon_0'] = self.latlon_0[1]*np.pi/180.
+        self._shader_imap['lat_0'] = self.latlon_0[0]*np.pi/180.
+        self._shader_imap['lon_0'] = self.latlon_0[1]*np.pi/180.
 
 
         

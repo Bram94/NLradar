@@ -219,7 +219,7 @@ class Plotting(QObject,app.Canvas):
         
         (scale_x, scale_y), (t_x, t_y) = self.get_map_sttransform_parameters()
         self.map_transforms['st'] = STTransform(scale=(scale_x,scale_y), translate=(t_x, t_y))
-        self.map_transforms['aeqd'] = cv.LatLon_to_Azimuthal_Equidistant_Transform(gv.radarcoords[self.crd.radar])
+        self.map_transforms['aeqd'] = cv.LatLon_to_Azimuthal_Equidistant_Transform(self.crd.radar)
         for j in range(self.max_panels):
             if j==0:
                 self.visuals['map'][j]=visuals.ImageVisual(self.map_data,interpolation='bilinear',method='impostor')
@@ -1105,46 +1105,24 @@ class Plotting(QObject,app.Canvas):
             #self.crd.scans can already have been updated, so use self.scans_before here.
             self.dsg.scans_radars[radar_dataset]={'time':pytime.time(),'panellist':self.panellist,'scans':self.scans_before.copy(),
                                                   'scanangles_all':self.dsg.scanangles_all_m.copy(),'corners':self.corners.copy()}
-            
+        
+        radar_changed = self.crd.radar != self.crd.selected_radar
+        dataset_changed = self.crd.dataset != self.crd.selected_dataset
+        # for set_data=False, self.crd.radar and self.crd.dataset are restored after checking the presence of data.
+        save_radar, save_dataset = self.crd.radar, self.crd.dataset
+        self.crd.radar, self.crd.dataset = self.crd.selected_radar, self.crd.selected_dataset
         if set_data:
-            radar_changed = self.crd.radar != self.crd.selected_radar
-            dataset_changed = self.crd.dataset != self.crd.selected_dataset
-            
-            if radar_changed:
-                old_radar=self.crd.radar; self.crd.radar=self.crd.selected_radar #self.crd.radar must be updated before calling self.change_map_center,
-                #because there self.update_combined_lineproperties is called, which requires self.crd.radar to be updated.
-                self.change_map_center(old_radar,self.crd.radar)
-                self.set_radarmarkers_data()
-                if self.gui.stormmotion[1] != 0.:
-                    self.gui.update_stormmotion_change_radar()
-            self.crd.dataset=self.crd.selected_dataset
-            
-            if self.gui.switch_to_case_running:
-                panel_center = self.gui.current_case['panel_center']
-                center_shift = self.panel_centers[0] - panel_center
-                scale = self.gui.current_case['scale']
-                trans = self.gui.current_case['translate'][:2]+center_shift
-                if not self.gui.cases_use_case_zoom:
-                    # In this case the original zoom level should be maintained (not the one saved with the case). This is achieved by first 
-                    # changing view to that saved with the case, and then zooming back to the original zoom level using the zoom technique from 
-                    # https://github.com/vispy/vispy/blob/main/vispy/visuals/transforms/linear.py
-                    zoom = self.panels_sttransforms[0].scale[0]/scale[0]
-                    scale = scale*zoom # Don't multiply in-place, since that would change self.gui.current_case['scale']
-                    trans = self.panel_centers[0] - (self.panel_centers[0] - trans[:2]) * zoom
-                self.set_panels_sttransforms_manually(scale, trans, panzoom_action=False)
-                            
+            if self.map_transforms['aeqd'].radar != self.crd.selected_radar:
+                # Use a different condition than radar_changed, since this function might already have been called in self.gui.switch_to_case
+                self.change_map_center()
+                                        
             self.changed_colortables=self.set_cmaps([self.crd.products[j] for j in self.panellist])
             #Updates colormaps if the corresponding color tables have been changed.
             
             if radar_changed or dataset_changed or self.crd.changing_subdataset or change_datetime:
                 #Update the 'before' variables
-                self.update_before_variables(radar_changed,self.crd.changing_subdataset,dataset_changed)
-        else: 
-            radar_changed=False; dataset_changed=False
-            save_radar=self.crd.radar; save_dataset=self.crd.dataset
-            #self.crd.radar and self.crd.dataset are restored after checking the presence of data.
-            self.crd.radar=self.crd.selected_radar; self.crd.dataset=self.crd.selected_dataset
-            
+                self.update_before_variables(radar_changed,self.crd.changing_subdataset,dataset_changed)            
+        
         
         self.data_empty_before = self.data_empty.copy()
         self.data_attr_before = copy.deepcopy(self.data_attr)
@@ -1156,7 +1134,7 @@ class Plotting(QObject,app.Canvas):
             self.data_empty={j:True for j in range(self.max_panels)}
             self.data_isold={j:True for j in range(self.max_panels)}
             self.data_attr = {j:{} for j in self.data_attr}
-            
+                        
         t=pytime.time()
         try:
             # print('getting data', self.crd.lrstep_beingperformed, 0 in self.data_attr_before['scandatetime'])
@@ -1397,7 +1375,9 @@ class Plotting(QObject,app.Canvas):
             self.crd.before_variables=copy.deepcopy(self.crd.current_variables)
             
             
-    def change_map_center(self,old_radar,new_radar):
+    def change_map_center(self):
+        old_radar = self.map_transforms['aeqd'].radar
+        new_radar = self.crd.selected_radar
         center_screencoords=self.panel_centers[0]
         center_xycoord_before=self.screencoord_to_xy(center_screencoords)
         center_latlon=np.array(ft.aeqd(gv.radarcoords[old_radar],center_xycoord_before,inverse=True))
@@ -1409,12 +1389,15 @@ class Plotting(QObject,app.Canvas):
         (scale_x, scale_y), (t_x, t_y) = self.get_map_sttransform_parameters()
         self.map_transforms['st'].scale = (scale_x, scale_y)
         self.map_transforms['st'].translate = (t_x, t_y)
-        self.map_transforms['aeqd'].latlon_0 = gv.radarcoords[new_radar]
-        self.update_combined_lineproperties(range(self.max_panels),changing_radar=True)
+        self.map_transforms['aeqd'].radar = new_radar
         
-        self.radarcoords_xy = np.array(ft.aeqd(gv.radarcoords[self.crd.radar], np.array([gv.radarcoords[j] for j in gv.radars_all])))
+        self.radarcoords_xy = np.array(ft.aeqd(gv.radarcoords[new_radar], np.array([gv.radarcoords[j] for j in gv.radars_all])))
         if self.gui.sm_marker_present or len(self.gui.pos_markers_positions): 
-            self.set_sm_pos_markers() 
+            self.set_sm_pos_markers()
+            
+        self.set_radarmarkers_data()
+        if self.gui.stormmotion[1] != 0.:
+            self.gui.update_stormmotion_change_radar()
         
     def get_map_sttransform_parameters(self):
         if self.map_initial_bounds is None: 

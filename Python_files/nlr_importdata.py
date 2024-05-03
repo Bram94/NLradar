@@ -599,6 +599,10 @@ class KNMI_hdf5():
         
     
     
+    def process_attr(self, attr):
+        attr = ft.from_list_or_nolist(attr)
+        return attr.decode('utf-8') if type(attr) in (bytes, np.bytes_) else attr
+    
     def get_scans_information(self,filepath):
         with h5py.File(filepath,'r') as hf:
             n_datasets=len([0 for j in hf if j.startswith('scan')])
@@ -635,15 +639,15 @@ class KNMI_hdf5():
                     try:
                         attrs=hf['scan'+str(j)].attrs
                     except Exception: continue
-                    self.dsg.scanangles_all['z'][j]=float(ft.from_list_or_nolist(eval(str(attrs['scan_elevation']))))
-                    self.dsg.radial_res_all['z'][j]=float(ft.from_list_or_nolist(eval(str(attrs['scan_range_bin']))))
-                    self.dsg.radial_bins_all['z'][j]=int(ft.r1dec(int(ft.from_list_or_nolist(eval(str(attrs['scan_number_range']))))))
+                    self.dsg.scanangles_all['z'][j]=float(self.process_attr(attrs['scan_elevation']))
+                    self.dsg.radial_res_all['z'][j]=float(self.process_attr(attrs['scan_range_bin']))
+                    self.dsg.radial_bins_all['z'][j]=int(ft.r1dec(int(self.process_attr(attrs['scan_number_range']))))
                     if i==2:
                         #These parameters are not used to determine whether the parameters must be updated, because no change in them has been
                         #found during the period for which data is available from the KNMI, except for the transition to the new radars, which
                         #is also apparent in changes in other parameters.
                         calibrationgroup=hf['scan'+str(j)]['calibration']
-                        calibration_formula=ft.from_list_or_nolist(eval(str(calibrationgroup.attrs['calibration_'+'v'.upper()+'_formulas']))).decode('utf-8')
+                        calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_V_formulas'])
                         self.dsg.nyquist_velocities_all_mps[j]=float(ft.r1dec(abs(float(calibration_formula[calibration_formula.index('+')+1:]))))
                         
                         prf_l = attrs['scan_low_PRF'][0]
@@ -692,8 +696,14 @@ class KNMI_hdf5():
         then it tries various other combinations of filtering and polarization:
         """
         success=False
-        productname=('u' if productunfiltered else '')+gv.productnames_KNMI[product]+('v' if polarization == 'V' else '')
-        dataset='scan_'+productname+'_data'
+        u_prefix = 'u'*productunfiltered
+        if product == 'd' and not 'scan_ZDR_data' in scangroup:
+            polarization = 'H' # Prevent using_verticalpolarization from becoming True
+            productname = u_prefix+'Zv'
+        else:
+            productname = u_prefix+gv.productnames_KNMI[product]+'v'*(polarization == 'V')
+        dataset = 'scan_'+productname+'_data'
+
         using_unfilteredproduct=False; using_verticalpolarization=False
         if dataset in scangroup:
             success=True
@@ -729,24 +739,21 @@ class KNMI_hdf5():
                     
             self.dsg.scantimes[j]=self.get_scan_timerange(scangroup)
             calibrationgroup=scangroup['calibration']
-            calibration_formula=ft.from_list_or_nolist(eval(str(calibrationgroup.attrs['calibration_'+productname+'_formulas']))).decode('utf-8')
+            calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_'+productname+'_formulas'])
             gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
             offset=float(calibration_formula[calibration_formula.index('+')+1:])
             
-            if product=='d':
+            if product == 'd' and not 'ZDR' in dataset:
                 data_Zv=np.array(scangroup[dataset],dtype='float32')*gain+offset
-                data_Zh=np.array(scangroup['scan_'+('u' if self.crd.using_unfilteredproduct[j] else '')+'Z_data'],dtype='float32')*gain+offset
-            else:
-                self.dsg.data[j] = np.array(scangroup[dataset],dtype='float32')*gain+offset
-                if product == 'c': self.dsg.data[j] *= 100.
+                data_Zh=np.array(scangroup['scan_'+'u'*self.crd.using_unfilteredproduct[j]+'Z_data'],dtype='float32')*gain+offset
                 
-                
-            if product=='d':
                 data_maskvalue=data_Zh.min()
                 data_mask = (data_Zh == data_maskvalue) | (data_Zv == data_maskvalue)
                 self.dsg.data[j]=dt.calculate_zdr_array(data_Zh,data_Zv)
             else:
-                data_mask = self.dsg.data[j] <= self.dsg.data[j].min()
+                self.dsg.data[j] = np.array(scangroup[dataset],dtype='float32')*gain+offset
+                if product == 'c': self.dsg.data[j] *= 100.
+                data_mask = self.dsg.data[j] == self.dsg.data[j].min()
                         
             if i_p == 'v': 
                 if not self.crd.productunfiltered[j] and int(self.crd.date) >= 20200514:
@@ -758,7 +765,7 @@ class KNMI_hdf5():
                         productname = gv.productnames_KNMI['q']
                         scangroup=hf['scan'+str(scan)]
                         calibrationgroup=scangroup['calibration']
-                        calibration_formula=ft.from_list_or_nolist(eval(str(calibrationgroup.attrs['calibration_'+productname+'_formulas']))).decode('utf-8')
+                        calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_'+productname+'_formulas'])
                         gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
                         offset=float(calibration_formula[calibration_formula.index('+')+1:])
                         sqi_array = np.array(scangroup['scan_'+productname+'_data'],dtype='float32')*gain+offset
@@ -802,7 +809,7 @@ class KNMI_hdf5():
             import_scan = self.dsg.scannumbers_all['v'][scan][self.dsg.scannumbers_forduplicates[scan]]
             scangroup=hf['scan'+str(import_scan)]
             calibrationgroup=scangroup['calibration']
-            calibration_formula=ft.from_list_or_nolist(eval(str(calibrationgroup.attrs['calibration_'+productname+'_formulas']))).decode('utf-8')
+            calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_'+productname+'_formulas'])
             gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
             offset=float(calibration_formula[calibration_formula.index('+')+1:])
             s = s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all['v'][scan], 'gr+theta->sr') / self.dsg.radial_res_all['v'][scan]))]
@@ -826,7 +833,7 @@ class KNMI_hdf5():
 
                 
     def get_scan_timerange(self, scangroup):
-        datetimestring=ft.from_list_or_nolist(eval(str(scangroup.attrs.__getitem__('scan_datetime')))).decode('utf-8')
+        datetimestring=self.process_attr(scangroup.attrs['scan_datetime'])
         startdate = ft.format_date(datetimestring[-24:-13], 'DD-MMMl-YYYY->YYYYMMDD')
         starttime = datetimestring[-12:-4]
         antspeed = float(ft.from_list_or_nolist(scangroup.attrs['scan_antenna_velocity']))
@@ -853,12 +860,12 @@ class KNMI_hdf5():
                         self.try_various_combis_of_filter_and_polarization(i_p,scangroup,productunfiltered,polarization)
                                         
                     calibrationgroup=scangroup['calibration']
-                    calibration_formula=ft.from_list_or_nolist(eval(str(calibrationgroup.attrs['calibration_'+i_p.upper()+'_formulas']))).decode('utf-8')
+                    calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_'+i_p.upper()+'_formulas'])
                     gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
                     offset=float(calibration_formula[calibration_formula.index('+')+1:])
                         
                     s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
-                    if product=='d':
+                    if product == 'd' and not 'ZDR' in dataset:
                         data_Zv=np.array(scangroup[dataset][s],dtype='float32')*gain+offset
                         data_Zh=np.array(scangroup['scan_'+productname[:-1]+'_data'][s],dtype='float32')*gain+offset
                         data_maskvalue=data_Zh.min()

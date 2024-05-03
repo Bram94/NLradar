@@ -96,7 +96,7 @@ products_all=('z','a','m','h','r','e','l','v','s','w','p','k','c','x','q','t','y
 #i_p = import_products
 i_p={'z':'z','r':'z','v':'v','s':'v','w':'w','d':'d','p':'p','k':'k','c':'c','x':'x','q':'q','t':'t','y':'y','e':'z','a':'z','m':'z','h':'z','l':'z'}
 #Unfiltered products have the letter 'u' prepended
-productnames_KNMI={'z':'Z','v':'V','w':'W','d':'Zv','p':'PhiDP','k':'KDP','c':'RhoHV','q':'SQI','t':'CCOR','y':'CPA','uz':'uZ','ud':'uZv','up':'uPhiDP'}
+productnames_KNMI={'z':'Z','v':'V','w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','q':'SQI','t':'CCOR','y':'CPA','uz':'uZ','ud':'uZDR','up':'uPhiDP'}
 #There are 3 different name formats for KMI data, and each name format corresponds to a different file extension
 productnames_KMI={'hdf':{'z':'dbzh','v':'vrad','w':'wrad'},'h5':{'z':'dBZ','v':'V','w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','uz':'dBuZ','up':'uPhiDP'},'vol':{'z':['z','Z','dBZ'],'v':['v','V'],'w':['w','W'],'d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','uz':'dBuZ','up':'uPhiDP'}}
 productnames_KMI_possible_mistake={'hdf':{},'h5':{'v':'RhoHV'},'vol':{'v':'RhoHV'}}

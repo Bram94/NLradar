@@ -957,15 +957,22 @@ class Source_MeteoFrance():
                     print(out)
                 if out.get('code', None) in ('900900', '900901', '900902'):
                     return self.cd.show_error_info(self.cd.cd_message_incorrect_apikey)
+            except Exception as e:
+                self.cd.show_error_info(str(e)+', update_downloadlist')
 
-                for j in out.get('links', []):
+            for j in out.get('links', []):
+                try:
                     title = j['title']      
                     if not i in title:
                         continue
-                    self.urls[self.cd.radar][index].append(j['href'])
-                    self.urls_datetimes[self.cd.radar][index].append(ft.format_datetime(title[-20:], 'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM'))
-            except Exception as e:
-                self.cd.show_error_info(str(e)+', update_downloadlist')
+                    # Determine url and datetime not in the same line as adding them to self.urls and self.urls_datetimes. If this would be done,
+                    # an error in determining datetime causes self.urls and self.urls_datetimes to have a mismatch in length.
+                    url = j['href']
+                    datetime = ft.format_datetime(title[-20:], 'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM')
+                    self.urls[self.cd.radar][index].append(url)
+                    self.urls_datetimes[self.cd.radar][index].append(datetime)
+                except Exception as e:
+                    self.cd.show_error_info(str(e)+', update_downloadlist')
                   
         # -5 minutes, since end instead of start datetimes are given for files
         datetimes = np.unique([ft.next_datetime(j, -5) for j in self.urls_datetimes[self.cd.radar][index]])

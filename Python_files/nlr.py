@@ -1203,7 +1203,7 @@ class GUI(QWidget):
                 if hasattr(self, 'modify_case_listw'):
                     self.modify_case_listw.close()
         
-    def switch_to_case(self, list_name, case_dict, time_offset='default'):
+    def switch_to_case(self, list_name, case_dict, time_offset='default', set_data=True):
         # Convert to integer in the latter case, because when called from within nlr_animate.py it is given as a string
         time_offset = self.cases_offset_minutes if time_offset == 'default' else int(time_offset)
             
@@ -1237,22 +1237,36 @@ class GUI(QWidget):
             self.vwp.display_manual_sfcobs = case_dict['display_manual_sfcobs']
             self.vwp_manual_sfcobs = case_dict['vwp_manual_sfcobs']
         
+        # self.crd.selected_radar is used in self.update_stormmotion and self.pb.change_map_center
+        self.crd.selected_radar = radar
         self.update_stormmotion(case_dict['stormmotion'] if 'stormmotion' in case_dict else np.array([0, 0]))
+        if self.pb.map_transforms['aeqd'].radar != radar:
+            self.pb.change_map_center()
+            
+        scale = self.current_case['scale']
+        center_shift = self.pb.panel_centers[0] - self.current_case['panel_center']
+        trans = self.current_case['translate'][:2]+center_shift
+        if not self.cases_use_case_zoom:
+            # In this case the original zoom level should be maintained (not the one saved with the case). This is achieved by first 
+            # changing view to that saved with the case, and then zooming back to the original zoom level using the zoom technique from 
+            # https://github.com/vispy/vispy/blob/main/vispy/visuals/transforms/linear.py
+            zoom = self.pb.panels_sttransforms[0].scale[0]/scale[0]
+            scale = scale*zoom # Don't multiply in-place, since that would change self.gui.current_case['scale']
+            trans = self.pb.panel_centers[0] - (self.pb.panel_centers[0] - trans[:2]) * zoom
+        self.pb.set_panels_sttransforms_manually(scale, trans, panzoom_action=False, draw=set_data)
+
         self.switch_to_case_running = True
-        self.crd.change_radar(radar)
-        self.switch_to_case_running = False
-        if self.view_nearest_radar:
+        if self.view_nearest_radar and self.use_storm_following_view:
             # The stored radar might not be the nearest radar, especially when combining storm-following view with a time offset.
-            # This new call of self.crd.process_datetimeinput chooses the nearest radar, after the call of self.crd.change_radar
-            # first has set the view that was stored for the saved radar.
-            self.datew.setText(date); self.timew.setText(time)
-            self.crd.process_datetimeinput()
-        
+            # This call of self.crd.process_datetimeinput chooses the nearest radar.
+            self.crd.process_datetimeinput(set_data=set_data)
+        else:
+            self.crd.change_radar(radar, set_data=set_data)
+        self.switch_to_case_running = False
+                    
         self.pos_markers_latlons = case_dict['pos_markers_latlons'].copy()
         self.update_pos_marker_widgets()
         self.pb.set_sm_pos_markers()
-        
-        # Changing the panel views now happens in self.pb.set_newdata
         
         self.set_textbar()        
                 
@@ -1283,11 +1297,11 @@ class GUI(QWidget):
                 new_index = case1 if direction == 1 else case2
         return self.current_case_list[new_index]
         
-    def move_to_next_case(self, call_ID=None, direction=1, time_offset='default'):
+    def move_to_next_case(self, call_ID=None, direction=1, time_offset='default', set_data=True):
         if not self.current_case_list is None and not self.current_case is None:
             self.move_to_next_case_running = True
             next_case_dict = self.get_next_case(direction)
-            self.switch_to_case(self.current_case_list_name, next_case_dict, time_offset)
+            self.switch_to_case(self.current_case_list_name, next_case_dict, time_offset, set_data)
             self.move_to_next_case_running = False
             
         if not call_ID is None:
@@ -1764,7 +1778,7 @@ class GUI(QWidget):
         sm = self.stormmotion_save['sm']*np.array([np.pi/180, 1])
         # Always use the radar for which the storm motion was set (i.e. self.stormmotion_save['radar']) as reference.
         # Not doing that leads to slightly different SM when reprojecting back and forth between radars.
-        old_radar, new_radar = self.stormmotion_save['radar'], self.crd.radar
+        old_radar, new_radar = self.stormmotion_save['radar'], self.crd.selected_radar
         pos1, pos2 = np.zeros(2), np.array([np.sin(sm[0]), np.cos(sm[0])])
         pos1_latlon, pos2_latlon = ft.aeqd(gv.radarcoords[old_radar], np.array([pos1, pos2]), inverse=True)
         pos1, pos2 = ft.aeqd(gv.radarcoords[new_radar], np.array([pos1_latlon, pos2_latlon]))

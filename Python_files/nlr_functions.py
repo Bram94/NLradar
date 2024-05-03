@@ -97,13 +97,13 @@ def dontselect_if_star(string_list):
     return return_list
             
 def from_list_or_nolist(input_, i=0):
-    if isinstance(input_, list):
+    if type(input_) in (list, np.ndarray):
         output = input_[i]
     else: output = input_
     return output
 
 def to_list_or_nolist(input_, index, value, i=0):
-    if isinstance(input_[index], list):
+    if type(input_) in (list, np.ndarray):
         input_[index][i] = value
     else: 
         input_[index] = value
@@ -721,7 +721,7 @@ previous_radar_latlon = None
 proj = None
 def get_proj(radar_latlon):
     global previous_radar_latlon, proj
-    if not previous_radar_latlon or np.any(radar_latlon != previous_radar_latlon):
+    if previous_radar_latlon is None or np.any(radar_latlon != previous_radar_latlon):
         lat, lon = radar_latlon
         proj = pyproj.Proj('+proj=aeqd +lat_0='+str(lat)+' +lon_0='+str(lon)+' +a=6378140 +b=6356750 +x_0=0 y_0=0 +units=km')
         previous_radar_latlon = radar_latlon.copy()

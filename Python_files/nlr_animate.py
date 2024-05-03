@@ -32,7 +32,7 @@ class Animate(QThread):
     signal_process_datetimeinput=pyqtSignal(int,bool) #int for call ID, bool for set_data
     signal_plot_current=pyqtSignal(str,int,bool) #str for radar, int for call ID, bool for ani_start
     signal_change_radar = pyqtSignal(str,int,bool)
-    signal_move_to_next_case = pyqtSignal(int,int,str)
+    signal_move_to_next_case = pyqtSignal(int,int,str,bool)
     signal_set_panels_sttransforms_manually = pyqtSignal(np.ndarray, np.ndarray, bool, bool)
     def __init__(self, crd_class, parent=None):
         super(Animate, self).__init__(parent) 
@@ -88,9 +88,6 @@ class Animate(QThread):
             
     def run(self):
         if not self.continue_type == 'None':
-            if 'cases' in self.continue_type:
-                # loop_start_case_index is used for looping over a subset of cases. Besides here, it also is updated in self.gui.change_cases_loop_subset
-                self.loop_start_case_index = self.gui.get_case_index()
             self.continue_functions[self.continue_type]()
             # self.continue_type has changed at this point, so run again for the new continue_type
             self.run()
@@ -107,7 +104,7 @@ class Animate(QThread):
             else:
                 if not self.gui.move_to_next_case_running and pytime.time()-self.crd.end_time>1./self.gui.cases_looping_speed and self.move_to_next_case_call_ID in (0,self.gui.move_to_next_case_call_ID):
                     self.move_to_next_case_call_ID+=1
-                    self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, 1, 'default')
+                    self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, 1, 'default', True)
             pytime.sleep(self.sleep_time)
                     
             
@@ -122,6 +119,11 @@ class Animate(QThread):
                 input_enddate = 'c' if show_current_animation else self.gui.datew.text().replace(' ','')
                 input_endtime = 'c' if show_current_animation else self.gui.timew.text().replace(' ','')
             else:
+                if start or getattr(self, 'case_list_name', None) != self.gui.current_case_list_name:
+                    # loop_start_case_index is used for looping over a subset of cases. Besides here, it also is updated in self.gui.change_cases_loop_subset
+                    self.loop_start_case_index = self.gui.get_case_index()
+
+                self.case_list_name = self.gui.current_case_list_name
                 self.case_dict = self.gui.current_case if use_current_case else self.gui.get_next_case()
                 case_datetime = self.case_dict['datetime']
                 
@@ -169,32 +171,33 @@ class Animate(QThread):
         save_datetime = self.crd.selected_date+self.crd.selected_time
         self.crd.signal_set_datetimewidgets.emit(self.animation_enddate, self.animation_endtime)
         
-        if self.continue_type == 'ani' and self.animation_enddate == 'c':
-            self.plot_current_call_ID += 1
-            ani_iteration_end = start
-            self.signal_plot_current.emit(self.crd.selected_radar, self.plot_current_call_ID, ani_iteration_end)
-            while self.crd.plot_current_call_ID != self.plot_current_call_ID:
-                pytime.sleep(0.01)
-            # Update self.animation_end_duplicates in this case
-            self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.plot_current_scannumbers_all.get('z', {}).items()}
-        elif 'ani_case' in self.continue_type and not self.gui.view_nearest_radar:
-            # When viewing nearest radar, radar-selection is performed automatically in self.crd.process_datetimeinput. Also, when
-            # calling self.crd.change_radar instead in this situation, the end datetime determined below will be based on datetime
-            # availability for self.case_dict['radar'], which might be different from that for the actual nearest radar.
-            self.change_radar_call_ID += 1
-            # set_data=False, because it is not desired that data is plotted for the end date and time at this point.
-            self.signal_change_radar.emit(self.case_dict['radar'], self.change_radar_call_ID, False)
-            while self.crd.change_radar_call_ID != self.change_radar_call_ID:
-                pytime.sleep(0.01)
+        if self.continue_type == 'ani':
+            if self.animation_enddate == 'c':
+                self.plot_current_call_ID += 1
+                ani_iteration_end = start
+                self.signal_plot_current.emit(self.crd.selected_radar, self.plot_current_call_ID, ani_iteration_end)
+                while self.crd.plot_current_call_ID != self.plot_current_call_ID:
+                    pytime.sleep(0.01)
+                # Update self.animation_end_duplicates in this case
+                self.animation_end_duplicates = {i:len(j)-1 for i,j in self.crd.plot_current_scannumbers_all.get('z', {}).items()}
+            else:
+                self.process_datetimeinput_call_ID += 1
+                #set_data=False, because it is not desired that data is plotted for the end date and time at this point.
+                self.signal_process_datetimeinput.emit(self.process_datetimeinput_call_ID, False)
+                while self.crd.process_datetimeinput_call_ID != self.process_datetimeinput_call_ID:
+                    pytime.sleep(0.01)
         else:
-            self.process_datetimeinput_call_ID += 1
-            self.signal_process_datetimeinput.emit(self.process_datetimeinput_call_ID, False) # set_data=False
-            while self.crd.process_datetimeinput_call_ID != self.process_datetimeinput_call_ID:
-                pytime.sleep(0.01)                
+            self.move_to_next_case_call_ID += 1
+            direction = 0 if use_current_case else 1
+            time_offset = str(ft.datetimediff_m(case_datetime, self.animation_enddate+self.animation_endtime))
+            self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, direction, time_offset, False)
+            while self.gui.move_to_next_case_call_ID != self.move_to_next_case_call_ID:
+                pytime.sleep(0.01)
                      
         end_datetime = self.crd.selected_date+self.crd.selected_time
         ref_datetime = end_datetime if self.animation_enddate == 'c' else self.animation_enddate+self.animation_endtime
         start_datetime = ft.next_datetime(ref_datetime, -self.duration)
+        # print(start_datetime, end_datetime, 'test')
         self.startdatetime, self.enddatetime = int(start_datetime), int(end_datetime)
             
         self.datetime = int(save_datetime) if self.continue_type in ('ani', 'ani_case') else self.startdatetime
@@ -213,15 +216,16 @@ class Animate(QThread):
                 pytime.sleep(0.01)
         else:
             self.move_to_next_case_call_ID += 1
-            direction = 0 if use_current_case else 1
+            direction = 0 # When needed the next case has already been selected above
             time_offset = str(ft.datetimediff_m(case_datetime, str(self.datetime)))
-            self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, direction, time_offset)
+            self.signal_move_to_next_case.emit(self.move_to_next_case_call_ID, direction, time_offset, True)
             while self.gui.move_to_next_case_call_ID != self.move_to_next_case_call_ID:
                 pytime.sleep(0.01)
                 
         if self.datetime == self.startdatetime:
             # Update to the actual start datetime
             self.datetime = self.startdatetime = int(self.crd.date+self.crd.time)
+        # print(self.startdatetime, self.enddatetime, self.datetime, self.animation_end_duplicates)
         
         if start and self.startdatetime == self.enddatetime and self.continue_type in ('ani', 'ani_case'):
             # Not when self.continue_type == 'ani_cases', since then there might be other cases with data available
@@ -233,7 +237,10 @@ class Animate(QThread):
         
     def check_need_update_animation(self):
         if 'ani_case' in self.continue_type:
-            self.update_animation = str(self.case_dict) != str(self.gui.current_case) or self.animation_window != self.gui.cases_animation_window
+            self.update_animation = self.case_list_name != self.gui.current_case_list_name or str(self.case_dict) != str(self.gui.current_case) or\
+                                    self.animation_window != self.gui.cases_animation_window
+            if self.update_animation:
+                print(str(self.case_dict) != str(self.gui.current_case), self.update_animation)
         else:
             self.update_animation = (self.radar != self.crd.radar and not (self.gui.use_storm_following_view and self.gui.view_nearest_radar)) or\
                                      self.dataset != self.crd.dataset or self.duration != self.gui.animation_duration
@@ -267,8 +274,10 @@ class Animate(QThread):
                 
                 self.check_need_update_animation()
 
-                if not self.update_animation and (self.startdatetime <= self.datetime < self.enddatetime or (
-                                                  self.datetime == self.enddatetime and duplicates_condition)):
+                # Allow self.datetime to be a bit before self.startdatetime. This is done since when combining viewing nearest radar with storm-following
+                # view, it can happen that a switch from radar leads to a slightly earlier datetime.
+                timerange_check = ft.datetimediff_m(str(self.startdatetime), str(self.datetime)) > -10 and self.datetime < self.enddatetime
+                if not self.update_animation and (timerange_check or (self.datetime == self.enddatetime and duplicates_condition)):
                     running_condition=not self.crd.process_keyboardinput_running and not self.crd.process_datetimeinput_running and pytime.time()-self.crd.end_time>0.005
                     if running_condition and self.process_keyboardinput_call_ID in (0,self.crd.process_keyboardinput_call_ID):
                         self.process_keyboardinput_call_ID+=1

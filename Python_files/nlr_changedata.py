@@ -152,7 +152,7 @@ class Change_RadarData(QObject):
         if delta_time:
             panel_center_xy += self.pb.translation_dist_km(delta_time)
         
-        panel_center_coords = ft.aeqd(gv.radarcoords[self.radar], panel_center_xy, inverse = True)
+        panel_center_coords = self.pb.map_transforms['aeqd'].imap(panel_center_xy)
         distances = {i:ft.calculate_great_circle_distance_from_latlon(panel_center_coords, gv.radarcoords[i]) for i in radar_keys}
         if self.lrstep_beingperformed and self.radar in radar_keys:
             for i in radar_keys:
@@ -160,12 +160,14 @@ class Change_RadarData(QObject):
                 # This is not desired, therefore in case of very small distance differences the current radar will remain selected. This 
                 # is done by slightly increasing the distance of the slightly closer radar.
                 if i != self.radar and 0 <= distances[self.radar]-distances[i] < 1:
-                    distances[i] += 1                    
+                    distances[i] += 1
+        # print(date, time, panel_center_coords, self.pb.map_transforms['aeqd'].radar, panel_center_xy, delta_time, distances['KUEX'], distances['KOAX'])
         i_sorted_distances = np.argsort(list(distances.values()))
         
         if check_date_availability:
             i = j = 0
-            selected_radar = self.radar
+            # Start with currently selected radar. This means that it will remain selected when no radar meets the criteria below.
+            selected_radar = self.selected_radar
             while j < n and i < len(i_sorted_distances):
                 desired_radar = radar_keys[i_sorted_distances[i]]
                 directory = self.dsg.get_directory(date, time, desired_radar, self.selected_dataset)
@@ -195,7 +197,7 @@ class Change_RadarData(QObject):
                 else:
                     vt = self.determine_volume_timestep_m(datetimes, desired_radar)                       
                     date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
-                                   if desired_radar == self.radar else\
+                                   if desired_radar == self.selected_radar else\
                                    (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
                 if date_present:
                     selected_radar = desired_radar
@@ -651,10 +653,11 @@ class Change_RadarData(QObject):
             self.gui.datew.setText(self.date); self.gui.timew.setText(self.time)
             return
         
-        if time != 'c' and self.gui.view_nearest_radar and not self.change_radar_running:
-            delta_time = ft.datetimediff_s(self.date+self.time, date+time)*self.gui.use_storm_following_view
-            print('switch to nearby')
+        if time != 'c' and self.gui.view_nearest_radar and self.gui.use_storm_following_view and not self.change_radar_running:
+            ref_datetime = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.date+self.time
+            delta_time = ft.datetimediff_s(ref_datetime, date+time)
             self.switch_to_nearby_radar(1, delta_time=delta_time, source=self.process_datetimeinput)
+            print('switch to nearby', self.selected_radar)
 
         files_available=self.determine_list_filedatetimes(date,time)
         #When time=='c', the last file at the disk is always used.
@@ -899,7 +902,7 @@ class Change_RadarData(QObject):
                 radar_changed = False
                 try:
                     use_same_volumetime, estimated_timestep = self.perform_leftrightstep(leftright_step)
-                    if self.gui.use_storm_following_view and self.gui.view_nearest_radar and not self.change_radar_running:
+                    if self.gui.view_nearest_radar and self.gui.use_storm_following_view and not self.change_radar_running:
                         delta_time = estimated_timestep*60
                         radar_changed = self.switch_to_nearby_radar(1, delta_time=delta_time, source=self.process_keyboardinput)
                         use_same_volumetime = False if radar_changed else use_same_volumetime
