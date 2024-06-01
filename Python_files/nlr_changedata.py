@@ -144,6 +144,7 @@ class Change_RadarData(QObject):
         radar_keys = [i for i,j in gv.radar_bands.items() if j in self.gui.radar_bands_view_nearest_radar]
         if self.check_viewing_most_recent_data():
             radar_keys = [j for j in radar_keys if j in self.gui.radars_automatic_download]
+        n_radars = len(radar_keys)
             
         if (check_date_availability and (not ft.correct_datetimeinput(date,time) or date=='c' or time=='c')) or not radar_keys:
             return False
@@ -168,8 +169,11 @@ class Change_RadarData(QObject):
             i = j = 0
             # Start with currently selected radar. This means that it will remain selected when no radar meets the criteria below.
             selected_radar = self.selected_radar
-            while j < n and i < len(i_sorted_distances):
+            while j < n and i < n_radars:
                 desired_radar = radar_keys[i_sorted_distances[i]]
+                if distances[desired_radar] > 500:
+                    break
+                
                 directory = self.dsg.get_directory(date, time, desired_radar, self.selected_dataset)
                 datetimes = self.dsg.get_datetimes_directory(desired_radar, directory) if os.path.exists(directory) else []
                     
@@ -195,7 +199,7 @@ class Change_RadarData(QObject):
                 if not self.lrstep_beingperformed:
                     date_present = any(abs(ft.datetimediff_s(date+time, k)) < 60*20 for k in datetimes)
                 else:
-                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)                       
+                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)             
                     date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
                                    if desired_radar == self.selected_radar else\
                                    (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
@@ -204,7 +208,7 @@ class Change_RadarData(QObject):
                     j += 1
                 i += 1
         else:
-            selected_radar = radar_keys[i_sorted_distances[n-1]]
+            selected_radar = radar_keys[i_sorted_distances[min(n, n_radars)-1]]
                                 
         radar_changed = self.radar != selected_radar
         # If called from self.process_datetimeinput, then continuation will be handled there
@@ -564,56 +568,61 @@ class Change_RadarData(QObject):
         if len(self.filedatetimes[0])==0:
             raise Exception
         
-        if time!='c':
-            timediffs=self.filedatetimes[1]-ft.get_absolutetimes_from_datetimes(date+time)
-            index=np.argmin(np.abs(timediffs))
+        if time != 'c':
+            timediffs = self.filedatetimes[1]-ft.get_absolutetimes_from_datetimes(date+time)
+            index = np.argmin(np.abs(timediffs))
             mintimediff = timediffs[index]
-            if lr_step == 0 and self.ani.starting_iteration_action:
+            if self.ani.continue_type == 'ani' and lr_step == 0:
                 # When determining start and end datetime at the start of an animation iteration, it is not allowed that the end datetime is (much)
-                # later than the inputted value. Similarly, it is not allowed that the start datetime is (much) earlier than the inputted value. 
-                if self.ani.starting_iteration_action == 'start' and mintimediff < -1800:
-                    if index < len(timediffs)-1:
-                        index += 1
+                # later than the inputted value. Similarly, it is not allowed that the start datetime is (much) earlier than the inputted value.
+                # animation_enddate can be 'c', but this situation shouldn't cause problems here. Since when determining animation end datetime, 
+                # input date/time here will be either 'c' (not treated here) or valid for second newest datetime (see function plot_current, in which
+                # case mintimediff will be 0 since it's already been checked that this datetime is present). 
+                sign = 1 if date+time == self.ani.animation_enddate+self.ani.animation_endtime else -1
+                if sign*mintimediff > 1800:
+                    if sign == 1 and index > 0 or sign == -1 and index < len(timediffs)-1:
+                        index -= sign
                     else: 
-                        lr_step = 1
-                elif self.ani.starting_iteration_action == 'end' and mintimediff > 1800:
-                    if index > 0:
-                        index -= 1
-                    else:
-                        lr_step = -1
-            
-            #If this is the case, then the first or last file in self.filedatetimes is reached.
-            if (lr_step<0 and index==0 and mintimediff>0) or (lr_step>0 and index==len(timediffs)-1 and mintimediff<0):
-                if self.ani.starting_iteration_action:
-                    current_date, current_time = date, time
+                        lr_step = -sign
+                        
+                # These variables are used below when calling self.dsg.get_next_directory, but they are already set here since the change in
+                # lr_step that might occur above complicates setting it later.
+                ref_date, ref_time = date, time
+                desired_newdate = desired_newtime = None
+            else:
+                ref_date, ref_time = self.date, self.time
+                desired_newdate, desired_newtime = date, time
+                if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
+                    # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
                     desired_newdate = desired_newtime = None
-                else:
-                    current_date, current_time = self.date, self.time
-                    desired_newdate, desired_newtime = date, time
-                    if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
-                        # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
-                        desired_newdate = desired_newtime = None
-                print(self.filedatetimes[0][0], self.filedatetimes[0][-1], lr_step)
+            
+            update_directory = lr_step < 0 and index == 0 and mintimediff > 0 or lr_step > 0 and index == len(timediffs)-1 and mintimediff < 0
+            # If this is the case, then the first or last file in self.filedatetimes is reached.
+            if update_directory:
                 self.previous_directory = self.directory
-                self.directory = self.dsg.get_next_directory(self.selected_radar,self.selected_dataset,current_date,current_time,int(np.sign(lr_step)),desired_newdate,desired_newtime)
-                print('get_next_dir', current_date, current_time, desired_newdate, desired_newtime, self.directory)
+                self.directory = self.dsg.get_next_directory(self.selected_radar, self.selected_dataset, ref_date, ref_time, int(np.sign(lr_step)),
+                                                             desired_newdate, desired_newtime)
                 self.determine_list_filedatetimes()
 
                 #If not files_available, then the 'old' list with datetimes is still used.
-                timediffs=np.abs(self.filedatetimes[1]-ft.get_absolutetimes_from_datetimes(date+time))
+                timediffs = np.abs(self.filedatetimes[1]-ft.get_absolutetimes_from_datetimes(date+time))
                 #Determine the index of the datetime that is closest to date and time.
-                index=np.argmin(timediffs) 
+                index = np.argmin(timediffs)
                 
             # Check whether the timestep is at least nonzero. If not, then if possible go one volume backward/forward.
             datetime, current_datetime = int(self.filedatetimes[0][index]), int(self.date+self.time)
-            if (lr_step > 0 and datetime <= current_datetime and index+1 < len(self.filedatetimes[0])) or\
-               (lr_step < 0 and datetime >= current_datetime and index > 0):
+            if lr_step > 0 and datetime <= current_datetime and index+1 < len(self.filedatetimes[0]) or\
+               lr_step < 0 and datetime >= current_datetime and index > 0:
                 index += np.sign(lr_step)
+                
             # Check whether the timestep made is smaller than the maximum allowed timestep. If not, then go 1 step backward/forward in time 
-            # and reset directory if needed
-            datetime = self.filedatetimes[0][index]
-            if lr_step != 0 and abs(ft.datetimediff_s(self.date+self.time,datetime)/60) > self.gui.max_timestep_minutes:
-                if self.previous_directory != self.directory:
+            # and reset directory if needed. An exception is made for when running an animation, but in this case it's still required that
+            # the selected datetime is within the animation datetime range.
+            selected_datetime = self.filedatetimes[0][index]
+            datetimediff_m = ft.datetimediff_m(self.date+self.time, selected_datetime)
+            if lr_step and (self.ani.continue_type[:3] != 'ani' and abs(datetimediff_m) > self.gui.max_timestep_minutes or\
+                            self.ani.continue_type[:3] == 'ani' and not self.ani.startdatetime <= int(selected_datetime) <= self.ani.enddatetime):
+                if update_directory:
                     self.reset_dirinfo()
                     index = -1 if lr_step > 0 else 0
                 else:
@@ -662,6 +671,7 @@ class Change_RadarData(QObject):
         files_available=self.determine_list_filedatetimes(date,time)
         #When time=='c', the last file at the disk is always used.
                 
+        retrieved_attrs = {}
         if files_available:
             self.selected_date,self.selected_time=self.get_closestdatetime(date,time)
             self.signal_set_datetimewidgets.emit(self.selected_date,self.selected_time) 
@@ -695,7 +705,7 @@ class Change_RadarData(QObject):
             
         self.process_datetimeinput_call_ID=call_ID
         self.process_datetimeinput_running=False
-        if files_available and not set_data:
+        if not set_data:
             return retrieved_attrs
         
         
@@ -1130,7 +1140,7 @@ class Change_RadarData(QObject):
         A date and time should be given when requesting the second-newest datetime (as is done below when the desired scans are not yet 
         available for the newest datetime).
         """
-        print('update current')
+        print('plot current')
         radar = self.selected_radar if radar is None else radar
         if radar != self.selected_radar:
             #It could be that the radar changes in between emitting the signal in nlr_currentdata.py and actually calling this function.

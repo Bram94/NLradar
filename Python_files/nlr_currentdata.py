@@ -950,6 +950,7 @@ class Source_MeteoFrance():
         station = gv.rplaces_to_ridentifiers[self.cd.radar]
         datetimes = []
         for i in ('PAM', 'PAG'):
+            out = {}
             try:
                 out = eval(requests.get(self.base_url+f'/stations/{station}/observations/{i}', 
                                         params = {'apikey':self.gui.api_keys['Météo-France']['radardata']}).content.decode('utf-8'))

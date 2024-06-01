@@ -62,7 +62,6 @@ class Animate(QThread):
         #is possible to determine the time that it takes to finish the commands that are given after finishing the call of the function
         #self.crd.process_keyboardinput.
         
-        self.starting_iteration_action = ''
         self.starting_animation=False
         self.update_animation=False #Is set to True when the animation parameters like start datetime and end datetime must be updated
         self.sleep_time=0.005
@@ -77,12 +76,15 @@ class Animate(QThread):
                 
     def change_continue_type(self,continue_type,direction): #direction=-1 for left,+1 for right
         if continue_type=='ani': 
-            if not (self.continue_type == 'None' and pytime.time()-0.2<self.last_ani_time):
-                self.continue_type='ani' if self.continue_type == 'None' else 'None'
-                self.last_ani_time=pytime.time()
-            else: return #Prevent that an animation starts when SPACE has been pressed more than once for stopping an animation or continuation to
-            #the left/right.
-        else: self.continue_type=continue_type
+            if not (self.continue_type == 'None' and pytime.time()-0.2 < self.last_ani_time):
+                self.continue_type = 'ani' if self.continue_type == 'None' else 'None'
+                self.last_ani_time = pytime.time()
+            else:
+                # Prevent that an animation starts when SPACE has been pressed more than once for stopping an animation or continuation to
+                # the left/right.
+                return
+        else: 
+            self.continue_type=continue_type
         self.direction=direction
         self.start()
             
@@ -144,29 +146,11 @@ class Animate(QThread):
             else: 
                 self.continue_type='None'; self.starting_animation=False; self.update_animation = False
                 return
-            
-        if start or self.dsg.time_last_panzoom > self.animation_start_view['time']:
-            # When combining a storm-moving view with automatic radar selection, the view will typically shift slightly during each iteration of 
-            # the animation. Therefore the start view is saved and restored at the end of each iteration, which happens below
-            self.animation_start_view = {'translate': self.pb.panels_sttransforms[0].translate, 'scale': self.pb.panels_sttransforms[0].scale, 
-                                         'panel_center':self.pb.panel_centers[0], 'radar':self.crd.radar, 'time':pytime.time()}
-        elif not self.update_animation and self.crd.radar == self.animation_start_view['radar']:
-            print('restore panel view')
-            panel_center = self.animation_start_view['panel_center']
-            center_shift = self.pb.panel_centers[0] - panel_center
-            scale = self.animation_start_view['scale']
-            trans = self.animation_start_view['translate'][:2]+center_shift
-            self.signal_set_panels_sttransforms_manually.emit(scale, trans, False, False)
-                        
-        self.update_animation = False
-        
+                                
         
         self.radar, self.dataset = self.crd.radar, self.crd.dataset
         self.duration = self.gui.animation_duration if self.continue_type == 'ani' else\
                         np.diff(self.animation_window)[0]+np.diff(extra_time_offsets)[0]
-                        
-        # Is used to inform self.crd.get_closestdatetime that the closest datetime can't be outside of the animation window. 
-        self.starting_iteration_action = 'end'
             
         save_datetime = self.crd.selected_date+self.crd.selected_time
         self.crd.signal_set_datetimewidgets.emit(self.animation_enddate, self.animation_endtime)
@@ -200,12 +184,9 @@ class Animate(QThread):
         # print(start_datetime, end_datetime, 'test')
         self.startdatetime, self.enddatetime = int(start_datetime), int(end_datetime)
             
-        self.datetime = int(save_datetime) if self.continue_type in ('ani', 'ani_case') else self.startdatetime
+        self.datetime = int(save_datetime) if (start or self.update_animation) and self.continue_type in ('ani', 'ani_case') else self.startdatetime
         if not self.startdatetime < self.datetime < self.enddatetime:
             self.datetime = self.startdatetime
-            
-        # Is used to inform self.crd.get_closestdatetime that the closest datetime can't be outside of the animation window.
-        self.starting_iteration_action = 'start'
             
         if self.continue_type == 'ani':
             self.crd.signal_set_datetimewidgets.emit(str(self.datetime)[:8], str(self.datetime)[-4:])
@@ -231,8 +212,8 @@ class Animate(QThread):
             # Not when self.continue_type == 'ani_cases', since then there might be other cases with data available
             self.continue_type='None'
             
+        self.update_animation = False
         self.starting_animation = False
-        self.starting_iteration_action = ''
             
         
     def check_need_update_animation(self):
@@ -252,6 +233,7 @@ class Animate(QThread):
             self.update_datetimes_and_perform_firstplot(start=True)
             pytime.sleep(self.sleep_time)
             self.process_keyboardinput_call_ID=0
+            self.previous_request = {'datetime':None, 'scannumbers_forduplicates':None, 'radar':None}
             
             while 'ani' in self.continue_type:
                 if not self.update_animation and self.datetime==self.enddatetime:
@@ -277,15 +259,22 @@ class Animate(QThread):
                 # Allow self.datetime to be a bit before self.startdatetime. This is done since when combining viewing nearest radar with storm-following
                 # view, it can happen that a switch from radar leads to a slightly earlier datetime.
                 timerange_check = ft.datetimediff_m(str(self.startdatetime), str(self.datetime)) > -10 and self.datetime < self.enddatetime
-                if not self.update_animation and (timerange_check or (self.datetime == self.enddatetime and duplicates_condition)):
+                repeat = self.datetime == self.previous_request['datetime'] and\
+                         self.dsg.scannumbers_forduplicates == self.previous_request['scannumbers_forduplicates'] and\
+                         self.crd.radar == self.previous_request['radar']
+                if repeat:
+                    print('repeating frames, restarting animation', self.datetime, self.dsg.scannumbers_forduplicates, 
+                          self.crd.scans, self.crd.radar)
+                if not self.update_animation and not repeat and (timerange_check or (self.datetime == self.enddatetime and duplicates_condition)):
                     running_condition=not self.crd.process_keyboardinput_running and not self.crd.process_datetimeinput_running and pytime.time()-self.crd.end_time>0.005
                     if running_condition and self.process_keyboardinput_call_ID in (0,self.crd.process_keyboardinput_call_ID):
+                        self.previous_request = {'datetime':self.datetime, 'scannumbers_forduplicates':self.dsg.scannumbers_forduplicates.copy(), 'radar':self.crd.radar}
                         self.process_keyboardinput_call_ID+=1
                         # print(pytime.time(), 'emit')
                         self.signal_process_keyboardinput.emit(1,0,0,'0',self.process_keyboardinput_call_ID,False)
                     
                         # Make sure that the iteration is finished before updating self.datetime
-                        while not self.process_keyboardinput_call_ID == self.crd.process_keyboardinput_call_ID or\
+                        while self.process_keyboardinput_call_ID != self.crd.process_keyboardinput_call_ID or\
                         self.crd.process_keyboardinput_running or self.crd.timer_process_keyboardinput.isActive():
                             pytime.sleep(self.sleep_time)
                         self.datetime=int(self.crd.date+self.crd.time)
@@ -305,6 +294,7 @@ class Animate(QThread):
                         pytime.sleep(np.max([5/self.gui.maxspeed_minpsec, requested_sleep_time]))
                     #This prevents the program from always going back to the starting time when stopping an animation at the last frame.
                     if 'ani' in self.continue_type:
+                        self.previous_request = {'datetime':None, 'scannumbers_forduplicates':None, 'radar':None}
                         self.update_datetimes_and_perform_firstplot()
                         
                 pytime.sleep(self.sleep_time)

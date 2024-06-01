@@ -2213,7 +2213,7 @@ class NEXRAD_L2():
         i_scans_z = []
         i_scans_exclude = [0] if gv.radar_bands[self.crd.radar] == 'C' else []
         if gv.radar_bands[self.crd.radar] == 'S':
-            if unambig_ranges[0]/unambig_ranges[1] < 1:
+            if n_scans > 1 and unambig_ranges[0]/unambig_ranges[1] < 1:
                 # In this case the first z-scan/v-scan pair is incomplete, with only velocity available. Remove this v-scan, as in case of duplicates
                 # not doing so leads to showing z-scans and v-scans from different pairs. 
                 i_scans_exclude.append(0)
@@ -2257,32 +2257,36 @@ class NEXRAD_L2():
                 moment = gv.productnames_NEXRAD[p[0]] if gv.productnames_NEXRAD[p[0]] in rc else 'REF'
                 if not moment in rc:
                     continue
-                dr = rc[moment]['gate_spacing']
-                first_gate = (rc[moment]['first_gate']-0.5*dr)/dr
-                self.dsg.radial_bins_all[p][j] = int(first_gate+rc[moment]['ngates'])
-                self.dsg.radial_res_all[p][j] = dr/1e3
-                self.dsg.scanangles_all[p][j] = scanangles[i]
                 
                 if p == 'v':
                     # The Nyquist velocity can in fact change during a volume for a certain scan, meaning that different duplicates 
                     # have different values. Also, its value can even be azimuth-dependent for certain scans. Here I set its value
                     # equal to that of the first azimuth of a scan. And in the case of duplicates, the value for the first duplicate
                     # gets selected (in bg.sort_volume_attributes). Keep this in mind for certain operations!
-                    self.dsg.nyquist_velocities_all_mps[j] = self.file.get_nyquist_vel(scans=[i])[0]
+                    vn = self.file.get_nyquist_vel(scans=[i])[0]
+                    if len(self.dsg.nyquist_velocities_all_mps) and vn < 0.5*min(self.dsg.nyquist_velocities_all_mps.values()):
+                        # It's possible that some z-only scans are missed, despite the attemps to detect them above. This check aims to remove
+                        # those that have been missed.
+                        continue
+                    self.dsg.nyquist_velocities_all_mps[j] = vn
                     if self.dsg.nyquist_velocities_all_mps[j] == 0.:
                         # This is the case for TDWR radars where no Nyquist velocity is given. In this case it is set to 999, to prevent 
                         # issues in VWP creation where scans with low Nyquist velocity are excluded, while indicating that it is not a real
                         # Nyquist velocity.
                         self.dsg.nyquist_velocities_all_mps[j] = 999
                 
+                dr = rc[moment]['gate_spacing']
+                first_gate = (rc[moment]['first_gate']-0.5*dr)/dr
+                self.dsg.radial_bins_all[p][j] = int(first_gate+rc[moment]['ngates'])
+                self.dsg.radial_res_all[p][j] = dr/1e3
+                self.dsg.scanangles_all[p][j] = scanangles[i]
+                                
         for p in products_all:
             extra_attrs = [] if p[0] == 'z' else [self.dsg.nyquist_velocities_all_mps]
             self.dsg.scannumbers_all[p] = bg.sort_volume_attributes(self.dsg.scanangles_all[p], self.dsg.radial_bins_all[p], self.dsg.radial_res_all[p], extra_attrs)
             for i, j in self.dsg.scannumbers_all[p].items():
                 self.dsg.scannumbers_all[p][i] = [scans_startend_pos[k-1] for k in j]
         self.dsg.high_nyquist_velocities_all_mps = self.dsg.low_nyquist_velocities_all_mps = {i:None for i in self.dsg.scannumbers_all['v']}
-        # print(self.dsg.scannumbers_all['z z_scan'], self.dsg.scannumbers_all['v'])
-        # print(self.dsg.scanangles_all['z z_scan'], self.dsg.scanangles_all['v'])
         
         for j in gv.volume_attributes_p:
             for p in ('w',):
@@ -2510,7 +2514,7 @@ class NEXRAD_L3():
                     i_nearest_scanangle = np.abs(scanangles_products[p]-scanangles_j[other_product]).argmin()
                     nearest_scan = list(self.dsg.scanangles_all[p])[i_nearest_scanangle]
                     for attr in gv.volume_attributes_p:
-                        self.dsg.__dict__[attr][p][j] = self.dsg.__dict__[attr][p][nearest_scan]            
+                        self.dsg.__dict__[attr][p][j] = self.dsg.__dict__[attr][p][nearest_scan]
                             
     def read_data(self, filepath, product, scan, panel=None):
         i_p = gv.i_p[product]

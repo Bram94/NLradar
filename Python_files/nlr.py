@@ -342,6 +342,7 @@ class GUI(QWidget):
         self.showMaximized()
         
         self.setWindowTitle('NLradar')
+        self.setWindowIcon(QIcon(gv.programdir+'/NLradar.ico'))
         
         # self.screen_DPI is a function! This is done to let it update automatically when the DPI changes after startup of the program.
         self.screen_DPI = lambda: screen_DPI(self.screen())

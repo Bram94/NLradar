@@ -667,32 +667,46 @@ class Plotting(QObject,app.Canvas):
         return SM*delta_time/1e3
     def move_view_with_storm(self, panellist):
         # print('Move_view_with_storm')
-        delta_times = {}
-        for j in panellist:
-            if self.gui.switch_to_case_running:
-                try:
-                    dt = ft.datetimediff_s(self.gui.current_case['scandatetime'], self.data_attr['scandatetime'][0])
-                except Exception:
-                    dt = ft.datetimediff_s(self.gui.current_case['datetime'], self.crd.date+self.crd.time)
-            else:
-                try:
-                    dt = ft.datetimediff_s(self.data_attr_before['scandatetime'][j], self.data_attr['scandatetime'][j])
-                except Exception: 
-                    dt = 0.
-            delta_times[j] = dt
-
-        max_dt = max(map(abs, delta_times.values()))
-        if max_dt == 0. or (self.ani.continue_type[:3] != 'ani' and max_dt > self.max_delta_time_move_view_with_storm) or (
-        self.ani.continue_type[:3] == 'ani' and max_dt > 60*(self.ani.duration+60)): # Add some margin, since actual duration might differ somewhat
-            # Prevent movement in case of very big timesteps, that e.g. occur when switching to the next day with available data
+        dt = abs(ft.datetimediff_s(self.crd.before_variables['datetime'], self.crd.date+self.crd.time))
+        max_dt = 60*(self.ani.duration+60) if self.ani.continue_type[:3] == 'ani' else self.max_delta_time_move_view_with_storm
+        # Prevent movement in case of very big timesteps, that e.g. occur when switching to the next day with available data
+        if dt > max_dt:
+            # It's necessary to also reset self.ref_vals in this case
+            self.ref_vals = {}
             return False
-            
+        
+        # Use stormmotion_save, as stormmotion changes when changing radar
+        meta = str(self.dsg.time_last_panzoom)+str(self.gui.stormmotion_save)
+        if meta != getattr(self, 'ref_meta', None) or self.gui.switch_to_case_running:
+            self.ref_vals = {}
+            self.ref_meta = meta
+        ref_vals = self.ref_vals.get(self.crd.radar, {})
+        # Use fixed reference values for moving view with storm, in order to prevent that during an animation the view slightly changes 
+        # with each iteration. These reference values are only updated when the user changes the view or storm motion
+        if not ref_vals:
+            try:
+                ref_vals['scandatetime'] = self.gui.current_case.get('scandatetime', self.gui.current_case['datetime']) if\
+                                     self.gui.switch_to_case_running else self.data_attr_before['scandatetime'][0]
+            except Exception:
+                return False
+            ref_vals['translate'] = self.panels_sttransforms[0].translate[:2]
+            ref_vals['panel_center'] = self.panel_centers[0].copy()
+            self.ref_vals[self.crd.radar] = ref_vals
+
         scale = np.array(self.panels_sttransforms[0].scale[:2])
         for j in panellist:
-            distance_move = -self.translation_dist_km(delta_times[j])*np.array([1, -1])*scale
-            self.panels_sttransforms[j].move(distance_move) # Moving needs to occur in opposite direction
+            try:
+                # Time differene is now calculated relative to reference scan datetime of first panel, in contrast to what happened in the past
+                # (relative to reference datetime for panel itself). This leads to more desired behaviour, with scans in each panel shown as 
+                # you would see when moving up/down in first panel.
+                dt = ft.datetimediff_s(ref_vals['scandatetime'], self.data_attr['scandatetime'][j])
+            except Exception: 
+                continue
+            # Moving needs to occur in opposite direction
+            distance_move = -self.translation_dist_km(dt)*np.array([1, -1])*scale
+            center_shift = self.panel_centers[j] - ref_vals['panel_center']
+            self.panels_sttransforms[j].translate = ref_vals['translate'] + center_shift + distance_move
 
-        # self.dsg.time_last_panzoom=pytime.time()
         self.update_map_tiles_ondraw = True
         return True
         

@@ -365,8 +365,8 @@ class NEXRADLevel2File:
         for i,b in enumerate(buf):
             buf_length = len(b)
             if buf_length == 0:
-                # This has been observed in at least one erroneous file. Still add an "empty" record, since otherwise
-                # matching records with self._bzip2_read_indices gets screwed up
+                # This could happen in an erroneous file, see e.g. function _decompress_records_meta. Still add an "empty" record, 
+                # since otherwise matching records with self._bzip2_read_indices gets screwed up.
                 self._records.append({'header':{'type':0}})
                 self._records_start_pos.append(-1)
                 continue
@@ -800,7 +800,12 @@ def _decompress_records_meta(cbuf, bzip2_start_pos, bzip2_read_indices='all', ma
         i2 = bzip2_start_pos[i+1]-4 if i+1 < n else None
         decompressor = bz2.BZ2Decompressor()
         # Always read the first BZ2 block fully, since it contains important metadata like VCP pattern characteristics
-        buf.append(decompressor.decompress(cbuf[i1:i2], max_length if i > 0 else -1))
+        try:
+            buf.append(decompressor.decompress(cbuf[i1:i2], max_length if i > 0 else -1))
+        except Exception as e:
+            print(e, i, '_decompress_records_meta')
+            # In case of an error add an empty string. This can be properly dealt with in the function _read_records
+            buf.append(b'')
     return buf
 
 
@@ -1293,6 +1298,7 @@ if __name__ == "__main__":
     filename = "D:/radar_data_NLradar/NWS/19980624/KUEX/KUEX19980624_002337.gz"
     filename = "D:/radar_data_NLradar/NWS/20240326/MZZU/MZZU20240326_1226"
     filename = "D:/NLradar/Notes/KDYX20240401_2114"
+    filename = "D:/radar_data_NLradar/NWS/20240526/KNQA/KNQA20240526_1127"
     # t = pytime.time()
     # test = NEXRADLevel2File(filename)
     # angles = test.get_elevation_angles()

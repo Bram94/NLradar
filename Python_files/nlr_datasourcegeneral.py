@@ -124,7 +124,7 @@ class DataSource_General():
         self.attributes_version = 16
         # Should be updated when the structure of volume attributes has changed only for particular data sources.
         # Updating it resets only attributes for that particular data source.
-        self.attributes_version_sources = {'Météo-France':2}
+        self.attributes_version_sources = {'Météo-France':2, 'NWS':1}
                     
         self.scanangles = {}
         
@@ -251,7 +251,7 @@ class DataSource_General():
                         if attr in gv.volume_attributes_p:
                             for p in self.__dict__[attr]:
                                 # Sorting only integer keys is done because there might be string keys for derived products in self.scannumbers_all['z']
-                                self.__dict__[attr][p] = dict(sorted((i,j) for i,j in self.__dict__[attr][p].items() if type(i) == int))
+                                self.__dict__[attr][p] = dict(sorted((i,j) for i,j in self.__dict__[attr][p].items() if isinstance(i, (int, np.integer))))
                         else:
                             self.__dict__[attr] = dict(sorted(self.__dict__[attr].items()))
                 
@@ -273,6 +273,10 @@ class DataSource_General():
             if not self.pb.firstplot_performed or (self.crd.scans != self.pb.scans_before and not self.gui.setting_saved_choice):
                 # Initialize self.selected_scanangles for all panels when not self.pb.firstplot_performed
                 self.update_selected_scanangles(update_allpanels=not self.pb.firstplot_performed)
+                if not self.pb.firstplot_performed:
+                    # Not doing this leads to undesired behaviour when setting choice with select nearest height, due to updating
+                    # self.time_last_purposefulscanchanges
+                    self.selected_scanangles_before = self.selected_scanangles.copy()
             
             if self.selected_scanangles != self.selected_scanangles_before:
                 #Is only updated in the case of purposeful scan changes, i.e. changes in scans caused by pressing UP/DOWN or a number key, or by
@@ -317,7 +321,7 @@ class DataSource_General():
         # nlr_derivedproducts.py
         for j in gv.plain_products:
             self.scannumbers_all['z'][j] = [0,1] if len(self.scans_doublevolume)>0 and\
-                j in gv.plain_products_affected_by_double_volume else [0]         
+                j in gv.plain_products_affected_by_double_volume else [0]   
                 
     def scanangle(self, product, scan, duplicate):
         # Helper function for obtaining a scan's scanangle that can handle the presence of a different scanangle per duplicate
@@ -652,7 +656,7 @@ class DataSource_General():
                 return False #In this case the color map has been modified in the mean time, implying that
                 #self.pb.mask_values_int[product] could have been changed. If this is the case then the number of masked elements
                 #will likely change, which requires an update of the data.
-            
+                
             # An empty array has been saved to memory when attempts to import data were unsuccessful. In this case don't update the data
             # array and attributes, but also don't re-import data, which requires that self.import_data[panel] is still set to False.
             if data_dict['data'].size > 1:
@@ -871,12 +875,13 @@ class DataSource_General():
             # data would lead to renewed attempts to import, which were a waste of time.
             if self.gui.max_radardata_in_memory_GBs > 0:
                 self.store_data_in_memory(j)
-
+                
         for j in (i for i in panellist if self.data_changed[i]):
-            if self.crd.products[j] in gv.products_with_tilts_derived:
+            product = self.crd.products[j]            
+            if product in gv.products_with_tilts_derived:
                 self.calculate_derived_with_tilts(j)
             
-            if self.pb.use_interpolation and self.crd.products[j] in gv.products_with_interpolation_and_binfilling:
+            if self.pb.use_interpolation and product in gv.products_with_interpolation_and_binfilling:
                 self.apply_binfilling(j)
                     
         if self.update_volume_attributes:
