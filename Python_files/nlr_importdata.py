@@ -2264,16 +2264,16 @@ class NEXRAD_L2():
                     # equal to that of the first azimuth of a scan. And in the case of duplicates, the value for the first duplicate
                     # gets selected (in bg.sort_volume_attributes). Keep this in mind for certain operations!
                     vn = self.file.get_nyquist_vel(scans=[i])[0]
+                    if vn == 0.:
+                        # This is the case for TDWR radars where no Nyquist velocity is given. In this case it is set to 999, to prevent 
+                        # issues in VWP creation where scans with low Nyquist velocity are excluded, while indicating that it is not a real
+                        # Nyquist velocity.
+                        vn = 999.
                     if len(self.dsg.nyquist_velocities_all_mps) and vn < 0.5*min(self.dsg.nyquist_velocities_all_mps.values()):
                         # It's possible that some z-only scans are missed, despite the attemps to detect them above. This check aims to remove
                         # those that have been missed.
                         continue
                     self.dsg.nyquist_velocities_all_mps[j] = vn
-                    if self.dsg.nyquist_velocities_all_mps[j] == 0.:
-                        # This is the case for TDWR radars where no Nyquist velocity is given. In this case it is set to 999, to prevent 
-                        # issues in VWP creation where scans with low Nyquist velocity are excluded, while indicating that it is not a real
-                        # Nyquist velocity.
-                        self.dsg.nyquist_velocities_all_mps[j] = 999
                 
                 dr = rc[moment]['gate_spacing']
                 first_gate = (rc[moment]['first_gate']-0.5*dr)/dr
