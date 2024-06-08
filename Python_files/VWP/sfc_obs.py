@@ -37,6 +37,8 @@ station_ids = {'De Bilt':'260','Den Helder':'235','Herwijnen':'356'}
 dir_sfcobs = gv.programdir+'/Generated_files/sfc_obs'
 if not os.path.exists(dir_sfcobs):
     os.makedirs(dir_sfcobs)
+    
+session = requests.Session()
 
 
 
@@ -58,7 +60,7 @@ class SfcObsKNMI():
         
     def list_recent_files(self):
         start_datetime = ft.next_datetime(self.date+self.time, -120)
-        output = requests.get(self.url_recent_data, headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']}, 
+        output = session.get(self.url_recent_data, headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']}, 
                               params = {"maxKeys": 24, 'startAfterFilename': f'KMDS__OPER_P___10M_OBS_L2_{start_datetime}'})
         if not output is None and output.reason == 'Unauthorized':
             self.gui.set_textbar(self.message_incorrect_apikey,'red',1)  
@@ -69,7 +71,7 @@ class SfcObsKNMI():
             filepath = self.dir_KNMI+'STD___OPER_P___OBS_____L2.nc'
             if not os.path.exists(filepath):
                 file_name = self.list_recent_files()[0].get('filename')
-                get_file_response = requests.get(self.url_recent_data+'/'+file_name+'/url', headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']})
+                get_file_response = session.get(self.url_recent_data+'/'+file_name+'/url', headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']})
                 if not get_file_response is None and get_file_response.reason == 'Unauthorized':
                     self.gui.set_textbar(self.message_incorrect_apikey,'red',1)            
                 url = get_file_response.json().get("temporaryDownloadUrl")
@@ -232,7 +234,7 @@ class SfcObsKNMI():
         else:                
             datetime = datetimes_download[0]
             filename = 'KMDS__OPER_P___10M_OBS_L2_'+datetime+'.nc'
-            get_file_response = requests.get(self.url_recent_data+'/'+filename+'/url', headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']})
+            get_file_response = session.get(self.url_recent_data+'/'+filename+'/url', headers={"Authorization": self.gui.api_keys['KNMI']['sfcobs']})
             if not get_file_response is None and get_file_response.reason == 'Unauthorized':
                 self.gui.set_textbar(self.message_incorrect_apikey,'red',1)
                 
@@ -387,7 +389,7 @@ class SfcObsKMI():
         
     def get_sfcobs_at_time(self, radar, date, time):    
         params = {'service':'WFS', 'version':'2.0.0', 'request':'GetFeature', 'typenames':'synop:synop_station', 'outputformat':'csv'}
-        meta = requests.get('https://opendata.meteo.be/service/ows', params=params).text
+        meta = session.get('https://opendata.meteo.be/service/ows', params=params).text
         
         stns_list = ft.list_data(meta)[1:]
         stns_coords = [ft.string_to_list(j[2].replace('POINT (', '').replace(')', ''), ' ') for j in stns_list]
@@ -411,7 +413,7 @@ class SfcObsKMI():
         params = {'service':'WFS', 'version':'2.0.0', 'request':'GetFeature', 'typenames':'synop:synop_data', 'outputformat':'csv', 
                   'CQL_FILTER':"((BBOX(the_geom,"+lon+","+lat+","+lon+","+lat+", 'EPSG:4326')) AND (timestamp >= '"+dt_start+":00.000' AND timestamp <= '"+dt_end+":00.000'))",
                   'sortby':'timestamp'}
-        data = requests.get('https://opendata.meteo.be/service/ows', params=params).text
+        data = session.get('https://opendata.meteo.be/service/ows', params=params).text
         
         data = np.array(ft.list_data(data))[1:]
         datetimes = np.array([ft.format_datetime(j[:16]) for j in data[:, 3]])
@@ -503,7 +505,7 @@ class SfcObsMETAR():
                 request_date = _date if _date == 'current' else ft.next_date(_date, 1)                
                 request_hour = _date if _date == 'current' else '00'
                 params = {'TYPE':'metar', 'DATE':request_date, 'HOUR':request_hour, 'UNITS':'M', 'STATION':station}
-                text = requests.get('http://weather.uwyo.edu/cgi-bin/wyowx.fcgi', params=params).text
+                text = session.get('http://weather.uwyo.edu/cgi-bin/wyowx.fcgi', params=params).text
                 i1, i2 = text.index('<PRE>\n')+6, text.index('</PRE>')
                 text = text[i1:i2]
                 
@@ -676,7 +678,7 @@ class SfcObsDWD():
             if dataset == 'historical': 
                 #Obtain the desired URLs for historical data. 
                 dataset_name = 'wind' if j == 'wind' else 'air_temperature'
-                _ = requests.get('https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/'+dataset_name+'/historical/')
+                _ = session.get('https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/'+dataset_name+'/historical/')
                 text = _._content.decode('utf-8')
                 var_name = 'wind' if j == 'wind' else 'TU'
                 s = '<a href="10minutenwerte_'+var_name+'_'+self.station[j]
