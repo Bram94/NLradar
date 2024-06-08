@@ -246,6 +246,8 @@ class CurrentData(QObject):
         
         self.radar=radar
         
+        self.session = requests.Session()
+        
         self.date={}; self.time={}
         self.file_at_disk={}
         self.download_succeeded={}
@@ -452,9 +454,9 @@ class CurrentData(QObject):
                 os.makedirs(save_directory)            
 
             if self.url_kwargs[index] and self.url_kwargs[index][file_index]:
-                response = requests.get(self.urls[index][file_index], stream=True, **self.url_kwargs[index][file_index])
+                response = self.session.get(self.urls[index][file_index], stream=True, **self.url_kwargs[index][file_index])
             else:
-                response = requests.get(self.urls[index][file_index], stream=True)
+                response = self.session.get(self.urls[index][file_index], stream=True)
             
             if response.status_code == 416: 
                 # Requested range not satisfiable, implies that file doesn't extend into requested range. Happens e.g. with
@@ -615,7 +617,7 @@ class Source_KNMI():
         
         output = None
         try:
-            output = requests.get(url, headers={'Authorization': self.gui.api_keys['KNMI']['opendata']}, params = {'maxKeys': 300, 'startAfterFilename': startAfterFilename}, timeout = self.gui.networktimeout)
+            output = self.cd.session.get(url, headers={'Authorization': self.gui.api_keys['KNMI']['opendata']}, params = {'maxKeys': 300, 'startAfterFilename': startAfterFilename}, timeout = self.gui.networktimeout)
             files = output.json().get('files')
             filenames = [file['filename'] for file in files]
             
@@ -644,7 +646,7 @@ class Source_KNMI():
         datetime = self.cd.date[index]+self.cd.time[index]
         url = self.urls[self.cd.radar]+'/RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+datetime+'.h5/url'
         try:
-            get_file_response = requests.get(url, headers={"Authorization": self.gui.api_keys['KNMI']['opendata']})
+            get_file_response = self.cd.session.get(url, headers={"Authorization": self.gui.api_keys['KNMI']['opendata']})
             self.cd.urls[index] += [get_file_response.json().get("temporaryDownloadUrl")]
         except Exception as e:
             print(e)
@@ -683,7 +685,7 @@ class Source_DWD():
         error_received = False
         for j in urls:
             try: 
-                contents = requests.get(j).content.decode('UTF-8')
+                contents = self.cd.session.get(j).content.decode('UTF-8')
             except Exception as error: 
                 self.cd.show_error_info(str(error)+',update_downloadlist')
                 error_received = True
@@ -888,7 +890,7 @@ class Source_DMI():
         
         output = None
         try:
-            output = requests.get(url, params = {'stationId':self.radar_ids[self.cd.radar],'datetime':datetime,'api-key':self.gui.api_keys['DMI']['radardata']}, timeout = self.gui.networktimeout)
+            output = self.cd.session.get(url, params = {'stationId':self.radar_ids[self.cd.radar],'datetime':datetime,'api-key':self.gui.api_keys['DMI']['radardata']}, timeout = self.gui.networktimeout)
             files = output.json()['features']
             if len(files) > 0:
                 datetimes = np.array([ft.format_datetime(j['properties']['datetime'],'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM') for j in files])[::-1]
@@ -952,7 +954,7 @@ class Source_MeteoFrance():
         for i in ('PAM', 'PAG'):
             out = {}
             try:
-                out = eval(requests.get(self.base_url+f'/stations/{station}/observations/{i}', 
+                out = eval(self.cd.session.get(self.base_url+f'/stations/{station}/observations/{i}', 
                                         params = {'apikey':self.gui.api_keys['Météo-France']['radardata']}).content.decode('utf-8'))
                 if out.get('code', None):
                     print(out)
@@ -1039,7 +1041,7 @@ class Source_NWS():
         self.use_realtime_feed = timediff < 24*3600
         if self.use_realtime_feed:
             try:
-                output = requests.get(f'https://mesonet-nexrad.agron.iastate.edu/level2/raw/{self.cd.radar}/dir.list').content
+                output = self.cd.session.get(f'https://mesonet-nexrad.agron.iastate.edu/level2/raw/{self.cd.radar}/dir.list').content
             except Exception as e:
                 self.cd.show_error_info(str(e)+', update_downloadlist')
                 return False
