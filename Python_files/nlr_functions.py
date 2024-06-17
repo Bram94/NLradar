@@ -288,7 +288,7 @@ def get_datetimes_in_range(start_dt, end_dt, timestep_m):
         datetimes += [next_datetime(datetimes[-1], timestep_m)]
     return datetimes
 
-def get_dates_in_range(start_date, end_date, timestep_m):
+def get_dates_in_range(start_date, end_date):
     return [dt[:-4] for dt in get_datetimes_in_range(start_date+'0000', end_date+'0000', 1440)]
 
 def next_datetime(datetime,timestep_m):

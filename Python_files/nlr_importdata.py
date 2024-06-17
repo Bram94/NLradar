@@ -26,7 +26,6 @@ import time as pytime
 import datetime as dtime
 import netCDF4 as nc
 from scipy.interpolate import interp1d
-import warnings
 
 
 """Remark: Always save numpy arrays as type 'float32', because that works a little faster and does not lead to severe errors for this kind of data.
@@ -37,7 +36,7 @@ import product a dictionary that maps a scannumber to the info contained in the 
 If for a particular radar always all products are available for all scans, then all dictionaries in the volume attributes are the same.
 If not, then it is assumed that at least reflectivity is available for all scans. In the case of products that are not available for all scans, 
 the dictionaries for these product keys must still contain the same keys (scannumbers) as for 'z', but they now link to other values.
-This is for example the case for the radar in Zaventem, and the function get_scans_information in the class KMI_hdf5 contains information about how
+This is for example the case for the radar in Zaventem, and the function get_scans_information in the class ODIM_hdf5 contains information about how
 to handle this.
 
 The attribute dictionaries must contain at least keys for all products that are available for a particular source. It is not necessary to
@@ -900,118 +899,91 @@ class KNMI_hdf5():
 
 
 
-class KMI_hdf5():
+class ODIM_hdf5():
     def __init__(self, gui_class, dsg_class, parent = None):  
         self.gui=gui_class
         self.dsg=dsg_class
         self.crd=self.dsg.crd
         self.pb = self.gui.pb
-        
-        self.previous_product = None
-        self.refscans=[1,2,3,4,5] #Scans for which the attributes are checked in order to determine whether the attributes for this radar volume are different
-        #from those of the previous volume.
-        
-        self.product_to_data_n_map = {'DMI': {'z':1,'uz':3,'v':2,'w':4,'d':5,'c':6,'p':7,'x':8}}
-           
-           
-
-    def get_scans_information(self,filepath,product='z'):
-        with h5py.File(filepath,'r') as hf:
-            n_datasets=len([0 for j in hf if j.startswith('dataset')])
-                               
-            for i in (1,2):
-                if i==1 and product == self.previous_product:
-                    #Check whether the attributes for self.refscan are the same as for the previous volume.
-                    #Also check whether the number of datasets that is present in the file has changed.
-                    if self.crd.radar=='Zaventem':
-                        #Check whether scannumbers_all contains scannumbers and filenumbers, or only scannumbers.
-                        #In the first case the attributes should be updated, because self.scannumbers_all should not
-                        #contain filenumbers in this class.
-                        try: 
-                            self.dsg.determined_volume_attributes_radars[self.crd.radar]['scannumbers_all']['z'][1][0][0]
-                            self.dsg.savevalues_refscans_unsorted[self.crd.radar]=[]
-                        except Exception: 
-                            pass
-                    
-                    if self.crd.radar in self.dsg.determined_volume_attributes_radars:
-                        scannumbers_all_before=self.dsg.determined_volume_attributes_radars[self.crd.radar]['scannumbers_all'][product]
-                        n_datasets_before=sum([len(scannumbers_all_before[j]) for j in scannumbers_all_before if not j in gv.plain_products])
-                    else: n_datasets_before=0
-                    
-                    if self.dsg.savevalues_refscans_unsorted[self.crd.radar]==[] or n_datasets!=n_datasets_before: 
-                        continue #Continue with i=2, because attributes for all scans must be obtained.
-                    else: scans=self.refscans
-                elif i == 1: continue
-                else: scans=range(1,20)
                 
-                for j in scans:
-                    try:
-                        dataset=hf['dataset'+str(j)]; attrs=dataset['where'].attrs
-                    except Exception: continue
-                    self.dsg.scanangles_all['z'][j]=ft.rndec(float(attrs['elangle']),2)
-                    self.dsg.radial_bins_all['z'][j]=int(attrs['nbins'])
-                    self.dsg.radial_res_all['z'][j]=float(attrs['rscale']/1000.)
-                    if i==2:
-                        data_n = self.product_to_data_n_map.get(self.dsg.data_source(), {}).get(product, 1)
-                        self.dsg.nyquist_velocities_all_mps[j]=np.abs(float(dataset[f'data{data_n}']['what'].attrs['offset'])) if product=='v' else None
-                        
-                        radar_wavelength = float(hf['how'].attrs['wavelength']) * 1e-2
-                        if not self.crd.radar in ('Jabbeke', 'Wideumont'):
-                            try:
-                                prf_l = float(hf['dataset'+str(j)]['how'].attrs['lowprf'])
-                                prf_h = float(hf['dataset'+str(j)]['how'].attrs['highprf'])
-                            except Exception:
-                                prf_h = float(hf['how'].attrs['prf'])
-                                prf_fac = float(hf['how'].attrs['prffac'])
-                                if prf_fac == 1:
-                                    prf_l = prf_h # In this case the scan is mono-PRF, and setting prf_l = prf_h is used below
-                                else:
-                                    # Seems like the PRF factor provided in file is not correct, so calculate correct one as vn_e/vn_h
-                                    prf_fac = int(round(self.dsg.nyquist_velocities_all_mps[j]/(radar_wavelength*prf_h/4.)))
-                                    prf_l = prf_h*prf_fac/(prf_fac+1)
-                        else:
-                            #The prfs are listed at different locations for Zaventem compared to Jabbeke and Wideumont, but more importantly: The values are wrong!
-                            #They are therefore provided manually. Further, only the low prf is needed.
-                            prf_l = 800 if self.crd.radar == 'Jabbeke' else 960.
-                            prf_h = None
-                        self.dsg.low_nyquist_velocities_all_mps[j] = None if prf_l == prf_h else radar_wavelength*prf_l/4.
-                        """Important: The KMI seems to use two PRFs per radial, seems to correct velocities using the lower Nyquist velocity. Both vn_l and vn_h in apply_dual_prf_dealiasing are therefore set to vn_l.
-                        Further, for Jabbeke the dual PRF errors can be all multiples of the low Nyquist velocity, and not only even multiples. Hence multiplication of vn_l by 0.5.
-                        """
-                        self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] if self.crd.radar in ('Jabbeke', 'Wideumont') else radar_wavelength*prf_h/4.
-                                             
-                if i==1:
-                    values_refscans_now=[[self.dsg.scanangles_all['z'][j],self.dsg.radial_res_all['z'][j],self.dsg.radial_bins_all['z'][j]] for j in self.refscans]
-                    if self.dsg.savevalues_refscans_unsorted[self.crd.radar]==values_refscans_now: 
-                        #Use the saved values
-                        self.dsg.restore_previous_attributes_radar()
-                        return #No further evaluation of this function is required, so return
-               
-        try:
-            self.dsg.savevalues_refscans_unsorted[self.crd.radar]=[[self.dsg.scanangles_all['z'][j],self.dsg.radial_res_all['z'][j],self.dsg.radial_bins_all['z'][j]] for j in self.refscans]
-        except Exception: self.dsg.savevalues_refscans_unsorted[self.crd.radar]=[]
+        # Some data sources provide one file per product, and some provide one file for the full radar volume, which contains all products.
+        # In the latter case each product is put in a different sub-group, with name data{n}, with n an integer value starting at 1.
+        # For these cases it's necessary to specify the map from product to integer below.
+        self.product_to_data_n_map = {'DMI': {'z':1,'uz':3,'v':2,'w':4,'d':5,'c':6,'p':7,'x':8},
+                                      'Holesov':{'z':1},
+                                      'Milešovka':{'z':2,'v':3,'d':4,'k':5,'p':6,'c':7,'w':8,'q':9}
+                                     }
+           
+    
+    def get_data_n(self, product, default=None):
+        data_map = self.product_to_data_n_map.get(self.dsg.data_source(), {})
+        if not data_map:
+            data_map = self.product_to_data_n_map.get(self.crd.radar, {})
+        # Setting default=None means that None is returned and an exception will be raised in the code. This is desired when requesting a
+        # specific product that's unavailable. It's not desired in get_scans_information.
+        return data_map.get(product, default) if data_map else 1
+           
+    def get_scans_information(self,filepath,product='z'):
+        with h5py.File(filepath,'r') as hf: 
+            scans = [int(j[7:]) for j in hf if j.startswith('dataset')]
+            for j in scans:
+                try:
+                    dataset=hf['dataset'+str(j)]; attrs=dataset['where'].attrs
+                except Exception: continue
+                self.dsg.scanangles_all['z'][j]=ft.rndec(float(attrs['elangle']),2)
+                self.dsg.radial_bins_all['z'][j]=int(attrs['nbins'])
+                self.dsg.radial_res_all['z'][j]=float(attrs['rscale']/1000.)
+                
+                data_n = self.get_data_n(product, default=1)
+                self.dsg.nyquist_velocities_all_mps[j] = abs(float(dataset[f'data{data_n}']['what'].attrs['offset'])) if product == 'v' else None
+                
+                try:
+                    radar_wavelength = float(hf['how'].attrs['wavelength']) * 1e-2
+                    if not self.crd.radar in ('Jabbeke', 'Wideumont'):
+                        try:
+                            prf_l = float(hf['dataset'+str(j)]['how'].attrs['lowprf'])
+                            prf_h = float(hf['dataset'+str(j)]['how'].attrs['highprf'])
+                        except Exception:
+                            prf_h = float(hf['how'].attrs['prf'])
+                            prf_fac = float(hf['how'].attrs['prffac'])
+                            if prf_fac == 1:
+                                prf_l = prf_h # In this case the scan is mono-PRF, and setting prf_l = prf_h is used below
+                            else:
+                                # Seems like the PRF factor provided in file is not correct, so calculate correct one as vn_e/vn_h
+                                prf_fac = int(round(self.dsg.nyquist_velocities_all_mps[j]/(radar_wavelength*prf_h/4.)))
+                                prf_l = prf_h*prf_fac/(prf_fac+1)
+                    else:
+                        #The prfs are listed at different locations for Zaventem compared to Jabbeke and Wideumont, but more importantly: The values are wrong!
+                        #They are therefore provided manually. Further, only the low prf is needed.
+                        prf_l = 800 if self.crd.radar == 'Jabbeke' else 960.
+                        prf_h = None
+                    self.dsg.low_nyquist_velocities_all_mps[j] = None if prf_l == prf_h else radar_wavelength*prf_l/4.
+                    """Important: The KMI seems to use two PRFs per radial, seems to correct velocities using the lower Nyquist velocity. Both vn_l and vn_h in apply_dual_prf_dealiasing are therefore set to vn_l.
+                    Further, for Jabbeke the dual PRF errors can be all multiples of the low Nyquist velocity, and not only even multiples. Hence multiplication of vn_l by 0.5.
+                    """
+                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] if self.crd.radar in ('Jabbeke', 'Wideumont') else radar_wavelength*prf_h/4.
+                except Exception:
+                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = None
         
         
-        if self.crd.radar=='Zaventem':
+        if self.crd.radar == 'Zaventem':
             """If the mode 'Hazardous' is used for the scanning strategy, then there are per volume 3 scans with scanangle 0.6, and one with 
             scanangle 0.51, which with respect to time fits in the temporal gap that is present in the sequence of 0.6-degree scans. For this reason
             it is assumed that they all have the same scanangle of 0.5 degrees, which is distinguished from the long-range scan with a scanangle of
             0.5 degrees by setting the scanangle to 0.51 degrees.
             Later in this function when the need to distinguish it by means of scanangle from the long-range scan, the scanangle is set to 0.5 degrees.
             """
-            for j in self.dsg.scanangles_all['z']:
-                if self.dsg.scanangles_all['z'][j]==0.6:
-                    self.dsg.scanangles_all['z'][j]=0.51
+            self.dsg.scanangles_all['z'] = {j:0.51 if a == 0.6 else a for j,a in self.dsg.scanangles_all['z'].items()}
         
         extra_attrs = [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
         self.dsg.scannumbers_all['z'] = bg.sort_volume_attributes(self.dsg.scanangles_all['z'], self.dsg.radial_bins_all['z'], self.dsg.radial_res_all['z'], extra_attrs)
             
-        for i in self.dsg.scannumbers_all:
+        for p in self.dsg.scannumbers_all:
             for j in gv.volume_attributes_p: 
-                self.dsg.__dict__[j][i] = copy.deepcopy(self.dsg.__dict__[j]['z'])
+                self.dsg.__dict__[j][p] = copy.deepcopy(self.dsg.__dict__[j]['z'])
                     
                 
-        if self.crd.radar=='Zaventem':
+        if self.crd.radar == 'Zaventem':                
             """For this radar it is possible that not all scans are available for each product. It is therefore necessary to determine the volume 
             attributes for all products. 
             In creating the dictionaries with volume attributes, it is always assumed that reflectivity is available for all scans. The dictionaries 
@@ -1025,79 +997,58 @@ class KMI_hdf5():
             different. 
             Case 2: If for that scan the z-scanangle is not in the p-scanangles, then the p-scanangle that is closest to the z-scanangle is chosen
             instead, and information for the z-scan corresponding to that p-scanangle is copied (again except for self.dsg.scannumbers_all).
-            
-            scansp_to_scansz gives the map from p-scan to z-scan, which for case 1 is the identity map, and for case 2 points to the z-scan whose 
-            scanangle is equal to the p-scanangle that is chosen. This map is used when copying information for 'z' to other products.
             """
-            products=['v','w']
+            products = ['v','w']
             for p in products:
                 try:
-                    filepath_p=opa(os.path.join(self.crd.directory,str(self.crd.date)+ft.timestring(self.crd.time)+'00.rad.'+gv.rplaces_to_ridentifiers[self.crd.radar]+'.pvol.'+p+'rad.scan_abc.hdf'))
-                    with h5py.File(filepath_p,'r') as hf:
-                        scansp=sorted([int(j[7:]) for j in list(hf.keys()) if j[:7]=='dataset'])
-                        #Sorting is necessary, because otherwise the scans are sorted in order of increasing first digit.
+                    filepath_p = self.crd.directory+'/'+self.crd.date+self.crd.time+'00.rad.'+gv.radar_ids[self.crd.radar]+'.pvol.'+p+'rad.scan_abc.hdf'
+                    with h5py.File(filepath_p, 'r') as hf:
+                        # Sorting is necessary, because otherwise the scans are sorted in order of increasing first digit.                        
+                        scans_p = sorted([int(j[7:]) for j in list(hf) if j[:7]=='dataset'])                        
+                        scanangles_p = {j:ft.rndec(float(hf['dataset'+str(j)]['where'].attrs['elangle']), 2) for j in scans_p}
+                        # For same reason as mentioned above
+                        scanangles_p = {j:0.51 if a == 0.6 else a for j,a in scanangles_p.items()}
                         
-                        scanangles_allp=OrderedDict([(j,ft.rndec(float(hf['dataset'+str(j)]['where'].attrs['elangle']),2)) for j in scansp])
-                        for j in scanangles_allp:
-                            if scanangles_allp[j]==0.6:
-                                #For same reason as mentioned above
-                                scanangles_allp[j]=0.51
-                        
-                        if p=='v':
-                            nyquist_velocities_all_mps={j:np.abs(float(hf['dataset'+str(j)]['data1']['what'].attrs['offset'])) for j in scansp}
-                        scananglesp=np.array(list(scanangles_allp.values()))
-                        scananglesp_inverse={i:[j for j in scanangles_allp if scanangles_allp[j]==i] for i in scananglesp}
-                        #scananglesp_inverse includes possibly duplicates, scananglesz_inverse does not.
-                        scananglesz_inverse={j:i for i,j in self.dsg.scanangles_all['z'].items()}
-                        scansp_to_scansz={}
+                        if p == 'v':
+                            nyquist_velocities_all_mps = {j:abs(float(hf['dataset'+str(j)]['data1']['what'].attrs['offset'])) for j in scans_p}
+                            scansz_low_nyquist_velocities_all_mps = self.dsg.low_nyquist_velocities_all_mps
+                            scansz_high_nyquist_velocities_all_mps = self.dsg.high_nyquist_velocities_all_mps
+                            
+                        scanangles_p_arr = np.array(list(scanangles_p.values()))
+                        scanangles_p_inverse = {i:[j for j in scanangles_p if scanangles_p[j] == i] for i in scanangles_p_arr}
+                        # scanangles_p_inverse includes possibly duplicates, scanangles_z_inverse does not.
+                        scanangles_z_inverse = {j:i for i,j in self.dsg.scanangles_all['z'].items()}
                         for j in self.dsg.scanangles_all['z']:
-                            if self.dsg.scanangles_all['z'][j] in scananglesp:
-                                scansp_to_scansz[j]=j
-                                self.dsg.scannumbers_all[p][j]=scananglesp_inverse[self.dsg.scanangles_all['z'][j]]
-                                if len(self.dsg.scannumbers_all[p][j])<len(self.dsg.scannumbers_all['z'][j]):
-                                    #If in the case of duplicate scans the p-file contains less duplicates than the z-file, then for the duplicates missing
-                                    #in the p-file the last duplicate in the p-file is displayed again instead.
-                                    self.dsg.scannumbers_all[p][j]+=[self.dsg.scannumbers_all[p][j][-1] for i in range(0,len(self.dsg.scannumbers_all['z'][j])-len(self.dsg.scannumbers_all[p][j]))]
-                                elif len(self.dsg.scannumbers_all[p][j])>len(self.dsg.scannumbers_all['z'][j]):
-                                    #It is also possible that the opposite is the case, and then self.dsg.scannumbers_all[p][j] must be shortened.
-                                    self.dsg.scannumbers_all[p][j]=self.dsg.scannumbers_all[p][j][:len(self.dsg.scannumbers_all['z'][j])]
+                            if self.dsg.scanangles_all['z'][j] in scanangles_p_arr:
+                                zscan = j
+                                self.dsg.scannumbers_all[p][j] = scanangles_p_inverse[self.dsg.scanangles_all['z'][j]]
                             else:
-                                #Choose the closest p-scanangle.
-                                closest_scananglep=scananglesp[np.argmin(np.abs(scananglesp-self.dsg.scanangles_all['z'][j]))]
-                                closest_scanz=scananglesz_inverse[closest_scananglep]
-                                scansp_to_scansz[j]=closest_scanz
-                                self.dsg.scannumbers_all[p][j]=scananglesp_inverse[closest_scananglep]
-                                #Make sure that self.dsg.scannumbers_all[p][j] has the same length as self.dsg.scannumbers_all['z'][j], with the same
-                                #method as above.
-                                self.dsg.scannumbers_all[p][j]+=[self.dsg.scannumbers_all[p][j][-1] for i in range(0,len(self.dsg.scannumbers_all['z'][j])-len(self.dsg.scannumbers_all[p][j]))]
-                                #Ensure that self.dsg.scannumbers_all[p][j] is not longer then self.dsg.scannumbers_all['z'][j], which could be the case
-                                #when the nearest scanangle for product p is a scanangle for which duplicates are available.
-                                self.dsg.scannumbers_all[p][j]=self.dsg.scannumbers_all[p][j][:len(self.dsg.scannumbers_all['z'][j])]
+                                # Choose the closest p-scanangle.
+                                closest_scananglep = scanangles_p_arr[np.abs(scanangles_p_arr-self.dsg.scanangles_all['z'][j]).argmin()]
+                                zscan = scanangles_z_inverse[closest_scananglep]
+                                self.dsg.scannumbers_all[p][j] = scanangles_p_inverse[closest_scananglep]
+                            
+                            # If in the case of duplicate scans the p-file contains less duplicates than the z-file, then for the duplicates missing
+                            # in the p-file the last duplicate in the p-file is displayed again instead.
+                            diff = len(self.dsg.scannumbers_all['z'][j])-len(self.dsg.scannumbers_all[p][j])
+                            self.dsg.scannumbers_all[p][j] += [self.dsg.scannumbers_all[p][j][-1] for i in range(diff)]
+                            # It is also possible that the opposite is the case, and then self.dsg.scannumbers_all[p][j] must be shortened.
+                            self.dsg.scannumbers_all[p][j] = self.dsg.scannumbers_all[p][j][:len(self.dsg.scannumbers_all['z'][j])]
         
-                        scansz_low_nyquist_velocities_all_mps = self.dsg.low_nyquist_velocities_all_mps.copy()
-                        scansz_high_nyquist_velocities_all_mps = self.dsg.high_nyquist_velocities_all_mps.copy()
-                        for i in scansp_to_scansz:
-                            scanz=scansp_to_scansz[i]
-                            if i!=scanz:
-                                for k in gv.volume_attributes_p: 
-                                    if k!='scannumbers_all':
-                                        self.dsg.__dict__[k][p][i] = self.dsg.__dict__[k]['z'][scanz]   
-                            if p=='v':
-                                self.dsg.nyquist_velocities_all_mps[i]=nyquist_velocities_all_mps[self.dsg.scannumbers_all['v'][i][0]] 
-                                self.dsg.low_nyquist_velocities_all_mps[i] = scansz_low_nyquist_velocities_all_mps[scanz]
-                                self.dsg.high_nyquist_velocities_all_mps[i] = scansz_high_nyquist_velocities_all_mps[scanz]
+                            for a in (_ for _ in gv.volume_attributes_p if _ != 'scannumbers_all'):
+                                self.dsg.__dict__[a][p][j] = self.dsg.__dict__[a]['z'][zscan]   
+                            if p == 'v':
+                                self.dsg.nyquist_velocities_all_mps[j] = nyquist_velocities_all_mps[self.dsg.scannumbers_all['v'][j][0]]
+                                self.dsg.low_nyquist_velocities_all_mps[j] = scansz_low_nyquist_velocities_all_mps[zscan]
+                                self.dsg.high_nyquist_velocities_all_mps[j] = scansz_high_nyquist_velocities_all_mps[zscan]
                                 
                 except Exception:
-                    #If a product is unavailable, then simply continue with the next one.
+                    # If a product is unavailable, then simply continue with the next one.
                     continue
                             
-            for i in self.dsg.scanangles_all:
-                for j in self.dsg.scanangles_all[i]:
-                    if self.dsg.scanangles_all[i][j]==0.51:
-                        self.dsg.scanangles_all[i][j]=0.5
-                        
-        self.previous_product = product
-                                
+            for p in self.dsg.scanangles_all:
+                self.dsg.scanangles_all[p] = {j:0.5 if a == 0.51 else a for j,a in self.dsg.scanangles_all[p].items()}
+                
            
     def get_data(self,filepath, j): #j is the panel
         with h5py.File(filepath,'r') as hf:
@@ -1109,7 +1060,7 @@ class KMI_hdf5():
             p = i_p
             if i_p == 'z' and self.crd.radar in gv.radars['DMI'] and self.crd.productunfiltered[j]:
                 p = 'uz'
-            data_n = self.product_to_data_n_map.get(self.dsg.data_source(), {}).get(p, 1)
+            data_n = self.get_data_n(p)
             calibrationgroup=scangroup[f'data{data_n}']['what']
             gain=float(calibrationgroup.attrs['gain'])
             offset=float(calibrationgroup.attrs['offset'])
@@ -1188,7 +1139,7 @@ class KMI_hdf5():
                     if i_p == 'z' and self.crd.radar in gv.radars['DMI'] and productunfiltered:
                         meta['using_unfilteredproduct'] = True
                         p = 'uz'
-                    data_n = self.product_to_data_n_map.get(self.dsg.data_source(), {}).get(p, 1)
+                    data_n = self.get_data_n(p)
                     calibrationgroup=scangroup[f'data{data_n}']['what']
                     gain=float(calibrationgroup.attrs['gain'])
                     offset=float(calibrationgroup.attrs['offset'])
@@ -1274,7 +1225,7 @@ class skeyes_hdf5():
                         #doing this, because scans are distributed over 3 files.
                         self.dsg.scanangles_all['z'][key]=ft.rndec(float(dataset['where'].attrs['angle']),2)
                         if self.dsg.scanangles_all['z'][key]==0.6: 
-                            #See reason given in function self.get_scans_information of class KMI_hdf5. 
+                            #See reason given in function self.get_scans_information of class ODIM_hdf5. 
                             self.dsg.scanangles_all['z'][key]=0.51 
                             
                         self.dsg.radial_bins_all['z'][key]=int(attrs['xsize'])
@@ -2014,6 +1965,21 @@ class MeteoFrance_BUFR():
                 # (Z is contained in both PAG and PAM files, with preferential use of high-res PAM file, but in real-time use PAG might come available first).
                 j = filetype_p+','+fileid
                 
+                if p == 'v':
+                    prfs = np.array(data_loops[1]['002125'])
+                    prfs = np.unique(prfs)[::-1]
+                    # if len(prfs) != len(np.unique(prfs)):
+                    #     # It has been observed that 2 PRFs are repeated, which was associated with very weird, erroneous velocities.
+                    #     # Such a scan is therefore excluded. Also, 2 equal PRFs can screw up the calculation of the Nyquist velocity below,
+                    #     # giving a value of infinity.
+                    #     continue
+                    wavelength = 299792458/data_info['002121'][0]
+                    vns = prfs*wavelength/4
+                    ratios = vns[1:]/vns[:-1]
+                    factors = np.round(ratios/(1-ratios))
+                    self.dsg.nyquist_velocities_all_mps[j] = factors[0]*vns[0]
+                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = vns[-1]
+                
                 self.dsg.scanangles_all[p][j] = data_info['007021'][0]
                 if round(self.dsg.scanangles_all[p][j]) == 90.:
                     # Sometimes the value is a bit less than 90., which is changed below, in order to easily check for vertical scans in other code
@@ -2023,34 +1989,25 @@ class MeteoFrance_BUFR():
                 if p == 'sigma' and filetype_p == 'PAM':
                     self.dsg.radial_bins_all[p][j] = 512
                     self.dsg.radial_res_all[p][j] = 1.
-                
-                if p == 'v':
-                    prfs = np.array(data_loops[1]['002125'])
-                    wavelength = 299792458/data_info['002121'][0]
-                    vns = prfs*wavelength/4
-                    ratios = vns[1:]/vns[:-1]
-                    factors = np.round(ratios/(1-ratios))
-                    self.dsg.nyquist_velocities_all_mps[j] = factors[0]*vns[0]
-                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = vns[-1]
-                    
+                                    
         # In the case of duplicate scans (same scanangle) it becomes problematic when some duplicates are taken from PAM and others from PAG files
         # (since the program expects each duplicate to have same azimuthal and radial resolution). So in this case only duplicates from PAM files
         # are retained:
-        for p in (j for j,filetypes in self.product_filetypes.items() if filetypes[0] == 'PAM'):
+        for p in (_p for _p,filetypes in self.product_filetypes.items() if filetypes[0] == 'PAM'):
             scanangles_p = set(self.dsg.scanangles_all[p].values())
-            for j in scanangles_p:
-                max_nrad = max(r for i,r in self.dsg.radial_bins_all[p].items() if self.dsg.scanangles_all[p][i] == j)
-                for i,a in self.dsg.scanangles_all[p].copy().items():
-                    if a == j and self.dsg.radial_bins_all[p][i] != max_nrad:
-                        for attr in gv.volume_attributes_p:
-                            if attr != 'scannumbers_all':
-                                del self.dsg.__dict__[attr][p][i]
+            for a in scanangles_p:
+                scans_angle_a = [j for j,_a in self.dsg.scanangles_all[p].items() if _a == a]
+                max_nrad = max(self.dsg.radial_bins_all[p][j] for j in scans_angle_a)
+                for j in scans_angle_a:
+                    if self.dsg.radial_bins_all[p][j] != max_nrad:
+                        for attr in (_ for _ in gv.volume_attributes_p if _ != 'scannumbers_all'):
+                            del self.dsg.__dict__[attr][p][j]
                         
         for p in self.product_filetypes:
             extra_attrs = [] if p != 'v' else [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
             self.dsg.scannumbers_all[p] = bg.sort_volume_attributes(self.dsg.scanangles_all[p], self.dsg.radial_bins_all[p], self.dsg.radial_res_all[p], extra_attrs)
             # print(p, self.dsg.scanangles_all[p], self.dsg.scannumbers_all[p])
-        
+                    
         
     def read_extra_product(self, product, scan, data_shape):
         filetype, fileid = self.dsg.scannumbers_all[product][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
@@ -2630,7 +2587,7 @@ class CFRadial():
         i_p, product = gv.i_p[self.crd.products[j]], self.crd.products[j]
         scan = self.crd.scans[j]
         with nc.Dataset(filepath, 'r') as f:
-            gv.rplaces_to_ridentifiers[self.crd.radar] = f.getncattr('instrument_name')
+            gv.radar_ids[self.crd.radar] = f.getncattr('instrument_name')
             lat, lon, height = [float(f[i][0]) for i in ('latitude', 'longitude', 'altitude')]
             gv.radarcoords[self.crd.radar] = [lat, lon]
             gv.radar_elevations[self.crd.radar] = int(round(height))
@@ -2714,7 +2671,7 @@ class DORADE():
         times = meta['times']
         azis = meta['azimuths']
         
-        gv.rplaces_to_ridentifiers[self.crd.radar] = file.radar_name
+        gv.radar_ids[self.crd.radar] = file.radar_name
         lon, lat, height = [meta[j] for j in ('lon', 'lat', 'altitude')]
         gv.radarcoords[self.crd.radar] = [lat, lon]
         gv.radar_elevations[self.crd.radar] = int(round(height))

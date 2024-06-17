@@ -20,6 +20,8 @@ import threading
 import nexradaws
 
 
+session = requests.Session()
+
 
 
 
@@ -245,9 +247,7 @@ class CurrentData(QObject):
         self.pb = self.gui.pb #Gets assigned in nlr.py
         
         self.radar=radar
-        
-        self.session = requests.Session()
-        
+                
         self.date={}; self.time={}
         self.file_at_disk={}
         self.download_succeeded={}
@@ -454,9 +454,9 @@ class CurrentData(QObject):
                 os.makedirs(save_directory)            
 
             if self.url_kwargs[index] and self.url_kwargs[index][file_index]:
-                response = self.session.get(self.urls[index][file_index], stream=True, **self.url_kwargs[index][file_index])
+                response = session.get(self.urls[index][file_index], stream=True, **self.url_kwargs[index][file_index])
             else:
-                response = self.session.get(self.urls[index][file_index], stream=True)
+                response = session.get(self.urls[index][file_index], stream=True)
             
             if response.status_code == 416: 
                 # Requested range not satisfiable, implies that file doesn't extend into requested range. Happens e.g. with
@@ -571,10 +571,11 @@ class CurrentData_DatasourceSpecific():
         self.source_DWD=Source_DWD(gui_class=self.gui, cds_class=self)
         self.source_IMGW=Source_IMGW(gui_class=self.gui, cds_class=self)
         self.source_DMI=Source_DMI(gui_class=self.gui, cds_class=self)
+        self.source_CHMI=Source_CHMI(gui_class=self.gui, cds_class=self)
         self.source_MeteoFrance=Source_MeteoFrance(gui_class=self.gui, cds_class=self)
         self.source_NWS=Source_NWS(gui_class=self.gui, cds_class=self)
         self.source_classes={'KNMI':self.source_KNMI,'DWD':self.source_DWD,'IMGW':self.source_IMGW,'DMI':self.source_DMI,
-                             'Météo-France':self.source_MeteoFrance,'NWS':self.source_NWS}
+                             'CHMI':self.source_CHMI,'Météo-France':self.source_MeteoFrance,'NWS':self.source_NWS}
         self.sources_with_partial_last_file = ['NWS']
 
     def source_with_partial_last_file(self, radar):
@@ -613,11 +614,11 @@ class Source_KNMI():
             startdatetime = ft.next_datetime(self.cd.date[index]+self.cd.time[index], -720)
         else:
             startdatetime = ft.next_datetime(self.cd.currentdate+self.cd.currenttime, -1440)
-        startAfterFilename = 'RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+startdatetime+'.h5'
+        startAfterFilename = 'RAD_NL'+gv.radar_ids[self.cd.radar]+'_VOL_NA_'+startdatetime+'.h5'
         
         output = None
         try:
-            output = self.cd.session.get(url, headers={'Authorization': self.gui.api_keys['KNMI']['opendata']}, params = {'maxKeys': 300, 'startAfterFilename': startAfterFilename}, timeout = self.gui.networktimeout)
+            output = session.get(url, headers={'Authorization': self.gui.api_keys['KNMI']['opendata']}, params = {'maxKeys': 300, 'startAfterFilename': startAfterFilename}, timeout = self.gui.networktimeout)
             files = output.json().get('files')
             filenames = [file['filename'] for file in files]
             
@@ -644,9 +645,9 @@ class Source_KNMI():
         will be renamed to the name given in self.cd.savenames[index].
         """
         datetime = self.cd.date[index]+self.cd.time[index]
-        url = self.urls[self.cd.radar]+'/RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+datetime+'.h5/url'
+        url = self.urls[self.cd.radar]+'/RAD_NL'+gv.radar_ids[self.cd.radar]+'_VOL_NA_'+datetime+'.h5/url'
         try:
-            get_file_response = self.cd.session.get(url, headers={"Authorization": self.gui.api_keys['KNMI']['opendata']})
+            get_file_response = session.get(url, headers={"Authorization": self.gui.api_keys['KNMI']['opendata']})
             self.cd.urls[index] += [get_file_response.json().get("temporaryDownloadUrl")]
         except Exception as e:
             print(e)
@@ -655,7 +656,7 @@ class Source_KNMI():
     
         date, time = datetime[:8], datetime[-4:]
         directory=self.dsg.get_directory(date, time,self.cd.radar,None,dir_index = 0)
-        filename='RAD_NL'+gv.rplaces_to_ridentifiers[self.cd.radar]+'_VOL_NA_'+datetime+'.h5'
+        filename='RAD_NL'+gv.radar_ids[self.cd.radar]+'_VOL_NA_'+datetime+'.h5'
         self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
         download_directory=self.dsg.get_download_directory(self.cd.radar,None)
         self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]
@@ -685,7 +686,7 @@ class Source_DWD():
         error_received = False
         for j in urls:
             try: 
-                contents = self.cd.session.get(j).content.decode('UTF-8')
+                contents = session.get(j).content.decode('UTF-8')
             except Exception as error: 
                 self.cd.show_error_info(str(error)+',update_downloadlist')
                 error_received = True
@@ -748,7 +749,7 @@ class Source_DWD():
         basename='https://opendata.dwd.de/weather/radar/sites/'
         for i in ('sweep_pcp_z','sweep_pcp_v','sweep_vol_z','sweep_vol_v'):
             for j in ('filter_polarimetric', 'filter_simple'):
-                urls.append(basename+i+'/'+gv.rplaces_to_ridentifiers[self.cd.radar]+'/hdf5/'+j)
+                urls.append(basename+i+'/'+gv.radar_ids[self.cd.radar]+'/hdf5/'+j)
         return urls 
     
     
@@ -841,7 +842,7 @@ class Source_IMGW():
         
         urls=[]
         basename='https://datavis.daneradarowe.pl/volumes/'
-        for j in [i for i in self.http_dirs if i.startswith(gv.rplaces_to_ridentifiers[self.cd.radar])]:
+        for j in [i for i in self.http_dirs if i.startswith(gv.radar_ids[self.cd.radar])]:
             urls.append(basename+j)
         return urls
     
@@ -890,7 +891,7 @@ class Source_DMI():
         
         output = None
         try:
-            output = self.cd.session.get(url, params = {'stationId':self.radar_ids[self.cd.radar],'datetime':datetime,'api-key':self.gui.api_keys['DMI']['radardata']}, timeout = self.gui.networktimeout)
+            output = session.get(url, params = {'stationId':self.radar_ids[self.cd.radar],'datetime':datetime,'api-key':self.gui.api_keys['DMI']['radardata']}, timeout = self.gui.networktimeout)
             files = output.json()['features']
             if len(files) > 0:
                 datetimes = np.array([ft.format_datetime(j['properties']['datetime'],'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM') for j in files])[::-1]
@@ -921,12 +922,102 @@ class Source_DMI():
         # When the time ends with a 0 a long-range Z scan is performed, and when it ends with a 5 a short-range V scan is performed
         dataset = 'Z' if time[-1] == '0' else 'V'
         directory = self.dsg.get_directory(date, time, self.cd.radar, dataset, dir_index=0)
-        filename = gv.rplaces_to_ridentifiers[self.cd.radar]+'_'+date+time+'.vol.h5'
+        filename = gv.radar_ids[self.cd.radar]+'_'+date+time+'.vol.h5'
         
         self.cd.urls[index] += [base_url+filename+'?api-key='+self.gui.api_keys['DMI']['radardata']]
         self.cd.savenames[index] += [directory+'/'+filename]
         download_directory=self.dsg.get_download_directory(self.cd.radar,'Z' if 'pcp' in filename else 'V')
         self.cd.download_savenames[index] += [download_directory+'/'+filename]
+
+
+
+
+
+class Source_CHMI():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+
+        self.files={j:{} for j in gv.radars['CHMI']}; self.files_datetimes={j:{} for j in gv.radars['CHMI']}
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist, 'Progress_info')
+                
+        urls = self.get_urls_downloadlist(self.cd.date[index])
+
+        self.files[self.cd.radar][index] = []
+        error = None
+        for j in urls:
+            try: 
+                contents = session.get(j).content.decode('utf-8')
+            except Exception as error: 
+                self.cd.show_error_info(str(error)+', update_downloadlist')
+                continue
+        
+            indices = [s.end() for s in re.finditer('<a href="', contents)]
+            for i1 in indices:
+                i2 = i1+contents[i1:i1+100].index('">')
+                if contents[i1:i2] == '../':
+                    continue
+                self.files[self.cd.radar][index].append(j+'/'+contents[i1:i2])
+        self.files[self.cd.radar][index] = np.array(self.files[self.cd.radar][index])
+            
+        #Contains the datetimes for all files
+        self.files_datetimes[self.cd.radar][index] = self.dsg.get_datetimes_from_files(self.cd.radar, self.files[self.cd.radar][index], dtype='int64', return_unique_datetimes=False)
+        dtc = np.unique(self.files_datetimes[self.cd.radar][index]) #Contains the unique datetimes of the files
+        if len(dtc):
+            absolutetimes = ft.get_absolutetimes_from_datetimes(dtc.astype(str))
+            self.cd.datetimes_downloadlist[index] = [dtc, absolutetimes]
+            
+            self.cd.emit_info(None, None) #Remove the message given self.cd.cd_message_updating_downloadlist
+            files_available = True
+        else:
+            if error is None:
+                self.cd.show_error_info(self.cd.cd_message_run_nofilespresent)
+            files_available = False
+            
+        return files_available
+    
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        datetimes = self.files_datetimes[self.cd.radar][index]
+        select = datetimes == int(datetime)
+        urls = list(self.files[self.cd.radar][index][select])
+
+        date, time = datetime[:8], datetime[-4:]
+        for url in urls:
+            self.cd.urls[index] += [url]
+            self.cd.datetimes[index] += [datetime]
+            directory = self.dsg.get_directory(date, time, self.cd.radar, None, dir_index = 0)
+            filename = os.path.basename(url)
+            self.cd.savenames[index] += [opa(os.path.join(directory, filename))]
+            download_directory = self.dsg.get_download_directory(self.cd.radar, None)
+            self.cd.download_savenames[index] += [opa(os.path.join(download_directory, filename))]
+                        
+    def get_urls_downloadlist(self, date):
+        urls = []
+        if self.cd.radar == 'Holesov':
+            base_url = 'https://meteoradar.kr-zlinsky.cz/hdf5/'
+            date = self.cd.currentdate if date == 'c' else date
+            start_date, end_date = ft.next_date(date, -1), ft.next_date(date, 1)
+            for d in ft.get_dates_in_range(start_date, end_date):
+                year, month, day = d[:4], d[4:6], d[-2:]
+                urls.append(base_url+year+'/'+month+'/'+day+'/')
+        else:
+            base_url = f'https://opendata.chmi.cz/meteorology/weather/radar/sites/{gv.radar_ids[self.cd.radar]}/'
+            contents = session.get(base_url).content.decode('utf-8')
+            
+            indices = [s.start()+1 for s in re.finditer('"vol', contents)]
+            for i1 in indices:
+                i2 = i1+contents[i1:].index('/')
+                urls.append(base_url+contents[i1:i2]+'/hdf5/')
+        return urls
             
             
      
@@ -949,12 +1040,12 @@ class Source_MeteoFrance():
         
         self.urls[self.cd.radar][index], self.urls_datetimes[self.cd.radar][index] = [], []
         
-        station = gv.rplaces_to_ridentifiers[self.cd.radar]
+        station = gv.radar_ids[self.cd.radar]
         datetimes = []
         for i in ('PAM', 'PAG'):
             out = {}
             try:
-                out = eval(self.cd.session.get(self.base_url+f'/stations/{station}/observations/{i}', 
+                out = eval(session.get(self.base_url+f'/stations/{station}/observations/{i}', 
                                         params = {'apikey':self.gui.api_keys['Météo-France']['radardata']}).content.decode('utf-8'))
                 if out.get('code', None):
                     print(out)
@@ -986,7 +1077,7 @@ class Source_MeteoFrance():
 
     def get_urls_and_savenames_downloadfile(self, index):
         download_directory = self.dsg.get_download_directory(self.cd.radar)
-        station = gv.rplaces_to_ridentifiers[self.cd.radar]
+        station = gv.radar_ids[self.cd.radar]
         
         url_datetimes = self.urls_datetimes[self.cd.radar][index]
         for i,url_datetime in enumerate(url_datetimes):
@@ -1016,8 +1107,8 @@ class Source_MeteoFrance():
         indices = np.argsort(file_ids)[::-1]
         for attr in ('urls', 'datetimes', 'savenames', 'download_savenames'):
             self.cd.__dict__[attr][index] = [self.cd.__dict__[attr][index][i] for i in indices]
-
-        
+            
+                  
      
             
             
@@ -1041,7 +1132,7 @@ class Source_NWS():
         self.use_realtime_feed = timediff < 24*3600
         if self.use_realtime_feed:
             try:
-                output = self.cd.session.get(f'https://mesonet-nexrad.agron.iastate.edu/level2/raw/{self.cd.radar}/dir.list').content
+                output = session.get(f'https://mesonet-nexrad.agron.iastate.edu/level2/raw/{self.cd.radar}/dir.list').content
             except Exception as e:
                 self.cd.show_error_info(str(e)+', update_downloadlist')
                 return False

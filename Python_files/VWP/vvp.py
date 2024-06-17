@@ -136,7 +136,7 @@ class VVP():
                 slant_range = ft.var1_to_var2(ground_range, self.scanangles[j], 'gr+theta->sr')
                 #Bins are included when at least half of a bin is inside the height range.
                 bins_range = np.round(slant_range/self.radial_res[j]-np.array([0, 1])).astype('int')
-                bins_range[1] = min([bins_range[1], self.radial_bins[j]])
+                bins_range[1] = min([bins_range[1], self.radial_bins[j]-1])
                 if bins_range[0] > bins_range[1]:
                     continue #This can occur when np.round(slant_range/self.radial_res[j]) gives
                     #the same result for both elements in slant_range, such that subtracting 1 of the latter leads to this problem.

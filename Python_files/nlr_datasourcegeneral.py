@@ -35,7 +35,7 @@ class DataSource_General():
         self.Gematronik_vol_rainbow3 = ird.Gematronik_vol_rainbow3(gui_class = self.gui, dsg_class = self)
         self.Gematronik_vol_rainbow5 = ird.Gematronik_vol_rainbow5(gui_class = self.gui, dsg_class = self)
         self.KNMI_hdf5 = ird.KNMI_hdf5(gui_class = self.gui, dsg_class = self)
-        self.KMI_hdf5 = ird.KMI_hdf5(gui_class = self.gui, dsg_class = self)
+        self.ODIM_hdf5 = ird.ODIM_hdf5(gui_class = self.gui, dsg_class = self)
         self.skeyes_hdf5 = ird.skeyes_hdf5(gui_class = self.gui, dsg_class = self)
         self.DWD_odimh5 = ird.DWD_odimh5(gui_class = self.gui, dsg_class = self)
         self.DWD_bufr = ird.DWD_BUFR(gui_class = self.gui, dsg_class = self)
@@ -54,12 +54,13 @@ class DataSource_General():
         self.source_TUDelft = dss.Source_TUDelft(gui_class = self.gui, dsg_class = self)
         self.source_IMGW = dss.Source_IMGW(gui_class = self.gui, dsg_class = self)
         self.source_DMI = dss.Source_DMI(gui_class = self.gui, dsg_class = self)
+        self.source_CHMI = dss.Source_CHMI(gui_class = self.gui, dsg_class = self)
         self.source_NWS = dss.Source_NWS(gui_class = self.gui, dsg_class = self)
         self.source_ARRC = dss.Source_ARRC(gui_class = self.gui, dsg_class = self)
         self.source_MeteoFrance = dss.Source_MeteoFrance(gui_class = self.gui, dsg_class = self)
-        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_IMGW, 'DMI': self.source_DMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance}
+        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_IMGW, 'DMI': self.source_DMI, 'CHMI': self.source_CHMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance}
                 
-        self.classes = [self.source_KNMI,self.source_KMI,self.source_skeyes,self.source_DWD,self.source_TUDelft,self.source_IMGW,self.source_DMI,self.source_NWS,self.source_MeteoFrance,self.Gematronik_vol_rainbow3,self.Gematronik_vol_rainbow5,self.KNMI_hdf5,self.KMI_hdf5,self.skeyes_hdf5,self.DWD_odimh5,self.DWD_bufr,self.TUDelft_nc,self.NEXRAD_L2,self.NEXRAD_L3,self.CFRadial,self.DORADE,self.MeteoFrance_BUFR]
+        self.classes = [self.source_KNMI,self.source_KMI,self.source_skeyes,self.source_DWD,self.source_TUDelft,self.source_IMGW,self.source_DMI,self.source_CHMI,self.source_NWS,self.source_MeteoFrance,self.Gematronik_vol_rainbow3,self.Gematronik_vol_rainbow5,self.KNMI_hdf5,self.ODIM_hdf5,self.skeyes_hdf5,self.DWD_odimh5,self.DWD_bufr,self.TUDelft_nc,self.NEXRAD_L2,self.NEXRAD_L3,self.CFRadial,self.DORADE,self.MeteoFrance_BUFR]
         
         self.radial_res_all = {}; self.radial_bins_all = {}; self.radial_range_all = {}
         # Scanangles might vary among duplicate scans, in which case self.scanangles_all for this scan will contain a dictionary

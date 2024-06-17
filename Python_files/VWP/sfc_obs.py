@@ -514,7 +514,7 @@ class SfcObsMETAR():
             _data = [j for j in _data if j[0] == station]
             data += _data
             date_start, date_end = ft.next_date(previous_date, -1), ft.next_date(next_date, 1)
-            date_map = {j[-2:]:j for j in ft.get_dates_in_range(date_start, date_end, 1)}
+            date_map = {j[-2:]:j for j in ft.get_dates_in_range(date_start, date_end)}
             datetimes += [date_map[j[1][:2]]+j[1][2:6] for j in _data]
 
             if new_request_needed:

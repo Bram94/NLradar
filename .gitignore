@@ -13,6 +13,7 @@ Input_files/Shapefiles/All
 Python_files/testing/French_radars/
 Python_files/testing/unet-vda-main
 Python_files/util/download_nexrad/tmp*
+Python_files/temp*
 __pycache__
 dist
 build

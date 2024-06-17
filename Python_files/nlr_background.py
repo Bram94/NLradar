@@ -607,7 +607,7 @@ def replace_radar_variables(dir_string,radar):
     if '${radarID}' in dir_string:
         #Replace ${radarID} by the radar ID corresponding to the radar
         index=dir_string.index('${radarID}')
-        dir_string=dir_string[:index]+gv.rplaces_to_ridentifiers[radar]+dir_string[index+len('${radarID}'):]
+        dir_string=dir_string[:index]+gv.radar_ids[radar]+dir_string[index+len('${radarID}'):]
     return dir_string
 
 def get_substringsindices_and_abspaths(substrings1,substrings2):
@@ -1199,7 +1199,7 @@ def get_titles(relwidth,fontsizes_main_titles,radar,panels,panellist,panelnumber
         return '','',{}
     date_formatted = ft.format_date(date,'YYYYMMDD->YYYY-MM-DD')
     title_top=radar+'  '+date_formatted
-    title_bottom = gv.data_sources[radar]
+    title_bottom = gv.radars_different_actual_source.get(radar, gv.data_sources[radar])
     
     if (stormmotion[1] != 0. or 's' in products.values()) and not show_vvp:
         #storm motion is always shown when 's' in products, and otherwise only when it is nonzero.

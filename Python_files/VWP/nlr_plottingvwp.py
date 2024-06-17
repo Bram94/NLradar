@@ -37,9 +37,10 @@ class PlottingVWP(QObject):
         self.vvp = VVP(gui_class = self.gui, range_limits = self.gui.vvp_range_limits, height_limits = [0.1, 11.9], v_min = self.gui.vvp_vmin_mps,
                        n_sectors = n_sectors, min_sector_pairs_filled = min_sector_pairs_filled)
         self.sfcobs_classes = {'KNMI': sfc_obs.SfcObsKNMI(gui_class=self.gui), 'KMI': sfc_obs.SfcObsKMI(gui_class=self.gui),
-                               'skeyes': sfc_obs.SfcObsKMI(gui_class=self.gui), 'DWD': sfc_obs.SfcObsDWD(gui_class=self.gui),
-                               'DMI': sfc_obs.SfcObsMETAR(gui_class=self.gui), 'IMGW': sfc_obs.SfcObsMETAR(gui_class=self.gui),
-                               'Météo-France': sfc_obs.SfcObsMETAR(gui_class=self.gui), 'NWS':sfc_obs.SfcObsMETAR(gui_class=self.gui)}
+                               'skeyes': sfc_obs.SfcObsKMI(gui_class=self.gui), 'DWD': sfc_obs.SfcObsDWD(gui_class=self.gui)}
+        for source in ('DMI', 'IMGW', 'CHMI', 'Météo-France', 'NWS'):
+            self.sfcobs_classes[source] = sfc_obs.SfcObsMETAR(gui_class=self.gui)
+
         
         self.dr_circles_unit = {'m/s': 5, 'kts': 10, 'km/h': 20}
         self.circles = {}

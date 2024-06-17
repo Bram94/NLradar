@@ -203,7 +203,7 @@ reset_volume_attributes = True #Gets set to False in nlr_datasourcegeneral.py
 
 
 
-variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','self.max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','cartesian_product_maxrange','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
+variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','cartesian_product_maxrange','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
 variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dealiasing_dualprf_n_it','self.cartesian_product_res','self.cartesian_product_maxrange','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
 
 #Variables that are reset to their default for the next update. Needs to be updated before every new update, 
@@ -2322,7 +2322,11 @@ class GUI(QWidget):
                 if choice == qm.No:
                     self.starting_animation = True
                     if os.path.exists(gv.animation_frames_directory):
-                        shutil.rmtree(gv.animation_frames_directory)
+                        try:
+                            shutil.rmtree(gv.animation_frames_directory)
+                        except Exception as e:
+                            self.set_textbar(str(e), 'red', minimum_display_time=5)
+                            return
                 os.makedirs(gv.animation_frames_directory, exist_ok=True)
             else:
                 self.save_animation()
@@ -2350,7 +2354,9 @@ class GUI(QWidget):
         hbox1 = QHBoxLayout(); hbox1.addWidget(self.ani_delay_framew); hbox1.addWidget(self.ani_delay_minutew)
         self.ani_delayw = QLineEdit(str(self.ani_delay))
         self.ani_delay_endw = QLineEdit(str(self.ani_delay_end))
-        self.ani_create_gifw = QPushButton('GIF')
+        self.ani_start_datetimew = QLineEdit()
+        self.ani_end_datetimew = QLineEdit()
+        hbox2 = QHBoxLayout(); hbox2.addWidget(self.ani_start_datetimew); hbox2.addWidget(self.ani_end_datetimew)
         self.ani_sort_filesw = QCheckBox()
         self.ani_sort_filesw.setTristate(False)
         self.ani_sort_filesw.setCheckState(2 if self.ani_sort_files else 0)
@@ -2358,8 +2364,9 @@ class GUI(QWidget):
         self.ani_group_datasetsw.setTristate(False)
         self.ani_group_datasetsw.setCheckState(2 if self.ani_group_datasets else 0)
         self.ani_qualityw = QLineEdit(str(self.ani_quality))
+        self.ani_create_gifw = QPushButton('GIF')
         self.ani_create_mp4w = QPushButton('MP4')
-        hbox2 = QHBoxLayout(); hbox2.addWidget(self.ani_create_gifw); hbox2.addWidget(self.ani_create_mp4w)
+        hbox3 = QHBoxLayout(); hbox3.addWidget(self.ani_create_gifw); hbox3.addWidget(self.ani_create_mp4w)
         
         self.ani_directoryw.clicked.connect(self.select_ani_directory)
         self.ani_delay_minutew.released.connect(lambda: self.check_delay_ref_sort_files_consistency('delay_ref'))
@@ -2374,19 +2381,19 @@ class GUI(QWidget):
         layout.addRow(QLabel('Delay between frames or minutes (cs)'), self.ani_delayw)
         layout.addRow(QLabel('Delay for final frame (cs)'), self.ani_delay_endw)
         layout.addRow(QLabel('All frames in the directory '+gv.animation_frames_directory))
-        layout.addRow(QLabel('will be added to the animation. If you want to exclude some frames,'))
-        layout.addRow(QLabel('you can delete them from this directory. Below you can also choose'))
-        layout.addRow(QLabel('to sort frames chronologically, and to group frames by dataset'))
-        layout.addRow(QLabel('(i.e. by radar/dataset/subdataset). Frames for different cases'))
-        layout.addRow(QLabel('are always grouped by case.'))
+        layout.addRow(QLabel('will be added to the animation. If you want to exclude some frames you can delete them'))
+        layout.addRow(QLabel('from this directory, or if this suffices you can below specify a start and/or end (date)time'))
+        layout.addRow(QLabel('between which to include frames.'))
+        layout.addRow(QLabel('Start/end, format (YYYYMMDD)HHMM(SS)'), hbox2)
+        layout.addRow(QLabel('Below you can choose to sort frames chronologically, and to group frames by dataset (i.e. by'))
+        layout.addRow(QLabel('radar/dataset/subdataset). Frames for different cases are always grouped by case.'))
         layout.addRow(QLabel('When setting delay per minute, frames will always be sorted chronologically.'))
         layout.addRow(QLabel('Sort frames chronologically'), self.ani_sort_filesw)
         layout.addRow(QLabel('Group frames by dataset'), self.ani_group_datasetsw)
         layout.addRow(QLabel('MP4 video quality (0-10)'), self.ani_qualityw)
-        layout.addRow(QLabel('Create animation'), hbox2)
-        layout.addRow(QLabel('As long as you keep this window open, you can recreate the animation'))
-        layout.addRow(QLabel('with different settings, or press CTRL+SHIFT+S again and start adding'))
-        layout.addRow(QLabel('more frames to the animation.'))
+        layout.addRow(QLabel('Create animation'), hbox3)
+        layout.addRow(QLabel('As long as you keep this window open, you can recreate the animation with different settings,'))
+        layout.addRow(QLabel('or press CTRL+SHIFT+S again and start adding more frames to the animation.'))
          
         self.ani_widget.setLayout(layout)
         self.ani_widget.resize(self.ani_widget.sizeHint())
@@ -2447,6 +2454,22 @@ class GUI(QWidget):
                 # and datetimes should also be removed
                 frames_datetimes = frames_datetimes[frame_numbers-1]
                 frames_datasets = frames_datasets[frame_numbers-1]
+                
+            s1, s2 = self.ani_start_datetimew.text(), self.ani_end_datetimew.text()
+            if s1 or s2:
+                dts_frames = frames_datetimes[:,0]
+                select = np.s_[:]
+                if len(s1) in (0, 12, 14) and len(s2) in (0, 12, 14):
+                    dt_start = None if not s1 or not s1.isdigit() else s1
+                    dt_end = None if not s2 or not s2.isdigit() else s2
+                    select = np.array([(not dt_start or ft.datetimediff_s(dt_start, j) >= 0) and (not dt_end or ft.datetimediff_s(j, dt_end) >= 0)
+                                       for j in dts_frames])
+                elif len(s1) in (0, 4, 6) and len(s2) in (0, 4, 6):
+                    t_start = None if not s1 or not s1.isdigit() else s1
+                    t_end = None if not s2 or not s2.isdigit() else s2
+                    select = np.array([(not t_start or ft.timediff_s(t_start, j[-6:]) >= 0) and (not t_end or ft.timediff_s(j[-6:], t_end) >= 0)
+                                       for j in dts_frames])
+                frames_all, frames_datetimes, frames_datasets = frames_all[select], frames_datetimes[select], frames_datasets[select]
             
             datasets, indices = np.unique(frames_datasets, return_index=True)
             first_digits = [''.join([c for i,c in enumerate(j) if j[:i+1].isdigit()]) for j in datasets]
@@ -2469,36 +2492,30 @@ class GUI(QWidget):
                     indices = [j[-1] for j in datetimes]
                     new_frames = list(frames_all[select][indices])
             
-                    timediffs = []
+                    frames, deltas = [], []
                     for i,dt_i in enumerate(datetimes[:-1]):
                         n = min(len(dt_i), len(datetimes[i+1])) - 1 # -1, since the last column of datetimes contains an index, see above
                         for j in range(n):
                             timediff = ft.datetimediff_s(dt_i[j], datetimes[i+1][j])
                             if timediff > 0:
+                                frames.append(new_frames[i])
+                                deltas.append(timediff/60*self.ani_delay)
                                 break
-                        timediffs.append(timediff)
-                    
-                    i_retain = range(len(timediffs))
-                    if self.ani_delay_ref == 'minute':
-                        mean_timediff = np.mean(timediffs)
-                        i_retain = [i for i,dt in enumerate(timediffs) if dt > mean_timediff/4]
-                    frames += [new_frames[0]]+[new_frames[i+1] for i in i_retain]
-                    deltas += [j/60*self.ani_delay for j in (timediffs[i] for i in i_retain)]+['ani_delay_end']
+                    frames.append(new_frames[-1])
+                    deltas.append('ani_delay_end')
                 else:
                     frames += list(frames_all[select])
                     deltas += [self.ani_delay]*(np.count_nonzero(select)-1)+['ani_delay_end']
             
-            deltas = [(self.ani_delay if self.ani_delay_ref == 'frame' else j) if j != 'ani_delay_end' else self.__dict__[j] for j in deltas]
+            deltas = [(self.ani_delay if self.ani_delay_ref == 'frame' else j) if j != 'ani_delay_end' else self.ani_delay_end for j in deltas]
         
             animation_filename = self.animation_filename+f'.{ext}'
             if ext == 'gif':
                 filenames_string = ' '.join(frames)+f' -o "{animation_filename}"'
-                subprocess.run(f'gifsicle/gifsicle -d{self.ani_delay:.0f} --loop {filenames_string}'+' --optimize'*(self.ani_delay_ref == 'frame'))
-                
-                if self.ani_delay_ref == 'minute':
-                    string = ' '.join([f'-d{j:.0f} "#{i}"' for i,j in enumerate(deltas)])
-                    subprocess.run(f'gifsicle/gifsicle -b "{animation_filename}" {string} --optimize')
-            elif ext == 'mp4':
+                subprocess.run(f'gifsicle/gifsicle -d{self.ani_delay:.0f} --loop {filenames_string}')
+                deltas_string = ' '.join([f'-d{j:.0f} "#{i}"' for i,j in enumerate(deltas)])
+                subprocess.run(f'gifsicle/gifsicle -b "{animation_filename}" {deltas_string} --optimize')
+            elif ext == 'mp4':         
                 container = av.open(animation_filename, mode='w')
                 shape = Image.open(frames[0]).size
                 crf = 1+5*(10-self.ani_quality)
@@ -2519,16 +2536,24 @@ class GUI(QWidget):
                 for packet in stream.encode(): # Flush stream
                     container.mux(packet)
                 container.close()
-            
+                
             self.set_textbar('Animation created', 'green', 1)
         except Exception as e:
-            self.set_textbar(str(e), 'red', 1)
+            self.set_textbar(str(e), 'red', 3)
     
     def change_savefig_include_menubar(self, state):
         self.savefig_include_menubar = state == 2
         
     def savefig(self, select_filename=True):
         #select_filename should be False when self.continue_savefig=True, after initially the directory and filename format have been chosen.
+        
+        if self.creating_animation:
+            case_id = f'{self.get_case_index():04d}_' if self.current_case_shown() else ''
+            dataspecs = case_id+''.join([self.dsg.get_dataspecs_string_panel(j) for j in self.pb.panellist])
+            # Also check whether the file that contains an already saved frame still exists, since frames might have been manually
+            # removed from gv.animation_frames_directory
+            if hasattr(self, 'ani_frames_specs') and dataspecs in self.ani_frames_specs and os.path.exists(self.ani_frames_specs[dataspecs]):
+                return
         
         img_arr1 = gloo.read_pixels(alpha=False)
         width, height = self.plotwidget.width(), self.plotwidget.height()
@@ -2555,26 +2580,24 @@ class GUI(QWidget):
             img_arr[:height, :width] = img_arr1
             
         im = Image.fromarray(img_arr)
-        
+                    
         if self.creating_animation:
             radar_dataset = self.crd.radar+('_'+self.crd.dataset if self.crd.radar in gv.radars_with_datasets else '')
             s = self.radardata_product_versions[radar_dataset]
             radar_dataset_subdataset = radar_dataset+(' '+s if s else '')
-            case_id = f'{self.get_case_index():04d}_' if self.current_case_shown() else ''
-            dataspecs = case_id+''.join([self.dsg.get_dataspecs_string_panel(j) for j in self.pb.panellist])
             datetimes = [self.pb.data_attr['scandatetime'][j] for j in self.pb.panellist]
             if self.starting_animation:
                 self.ani_frame_number = 0
-                self.ani_frames_specs, self.ani_frames_datetimes, self.ani_frames_datasets = [], [], []
+                self.ani_frames_specs = {}
+                self.ani_frames_datetimes, self.ani_frames_datasets = [], []
                 self.starting_animation = False
-            if dataspecs in self.ani_frames_specs:
-                return
+
             self.ani_frame_number += 1
-            self.ani_frames_specs += [dataspecs]
             self.ani_frames_datetimes += [datetimes]
             self.ani_frames_datasets += [case_id if case_id else radar_dataset_subdataset]
                 
             filepath = opa(gv.animation_frames_directory+f'/frame{self.ani_frame_number}.gif')
+            self.ani_frames_specs[dataspecs] = filepath
         else:
             if select_filename:
                 try:
@@ -2584,7 +2607,6 @@ class GUI(QWidget):
                     return
             
             savefig_filename = self.expand_filename()
-                    
             filepath = opa(self.savefig_dirname+'/'+savefig_filename)
         
         try:
@@ -2773,7 +2795,7 @@ class GUI(QWidget):
 
         for i in selected_radars:
             for j in ('Z', 'V'):
-                key = i+(' '+j)*(i in gv.radars_with_datasets)
+                key = i+('_'+j)*(i in gv.radars_with_datasets)
                 for sub in self.dsg.attributes_IDs[key].copy():
                     for date in self.dsg.attributes_IDs[key][sub].copy():
                         if int(startdate) <= int(date) <= int(enddate):
@@ -3604,7 +3626,7 @@ class GUI(QWidget):
             self.default_dirs_widgets[key] = QPushButton('Default', autoDefault=True)
             
             label = QLabel('All radars '+dataset)
-            label.setToolTip(gv.rplaces_to_ridentifiers[radar])
+            label.setToolTip(gv.radar_ids[radar])
             grid_layout.addWidget(label,i,0,1,1) #row, column, rowspan, colspan
             grid_layout.addWidget(self.radardirs_widgets[key],i,1,1,10)
             grid_layout.addWidget(self.default_dirs_widgets[key],i,11,1,1)
@@ -3628,7 +3650,7 @@ class GUI(QWidget):
                 rd_radar = self.dsg.split_radar_dataset(rd)[0]
                 
                 self.additionaldirs_rds_widgets[key].setCurrentText(rd)
-                self.additionaldirs_rds_widgets[key].setToolTip(gv.rplaces_to_ridentifiers[rd_radar])
+                self.additionaldirs_rds_widgets[key].setToolTip(gv.radar_ids[rd_radar])
                 
                 self.additionaldirs_widgets[key].setText(additional_dir_string)
                 tool_tip = self.get_example_dir(self.radardata_dirs[rd], radars)
@@ -3713,7 +3735,7 @@ class GUI(QWidget):
                 
                 tool_tip = self.get_example_dir(self.radardata_dirs[rd], radars)
                 self.additionaldirs_widgets[key].setToolTip(tool_tip)
-                self.additionaldirs_rds_widgets[key].setToolTip(gv.rplaces_to_ridentifiers[rd_radar])
+                self.additionaldirs_rds_widgets[key].setToolTip(gv.radar_ids[rd_radar])
             else:
                 self.additionaldirs_widgets[key].setStyleSheet('QLineEdit {color:'+('red' if not input_correct else 'black')+'}')
                 self.additionaldirs_widgets[key].setToolTip('')

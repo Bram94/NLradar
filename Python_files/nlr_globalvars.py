@@ -18,29 +18,33 @@ sys.path.append(opa(programdir+'/Python_files/vispy'))
 
 radars_all, data_sources_all = [], []
 radars, data_sources = {}, {}
-rplaces_to_ridentifiers, radarcoords, radar_elevations, radar_towerheights, radar_bands = {}, {}, {}, {}, {}
+radars_different_actual_source = {}
+radar_ids, radarcoords, radar_elevations, radar_towerheights, radar_bands = {}, {}, {}, {}, {}
 with open(programdir+'/Input_files/radars_eu.txt', 'r', encoding='utf-8') as f:
     data = ft.list_data(f.read(), '\t')
 with open(programdir+'/Input_files/radars_us.txt', 'r', encoding='utf-8') as f:
     data += ft.list_data(f.read(), '\t')
-for j in data:
-    if len(j) == 1:
-        data_source = j[0]
+
+for i,row in enumerate(data):
+    if len(row) == 1:
+        data_source = row[0]
         data_sources_all.append(data_source)
     else:
-        radar = j[0]
+        radar = row[0]
         radars_all.append(radar)
         ft.init_dict_entries_if_absent(radars, data_source, list)
         radars[data_source].append(radar)
         data_sources[radar] = data_source
-        rplaces_to_ridentifiers[radar] = j[1]*(j[1] != '.')
-        radarcoords[radar] = [float(j[2]), float(j[3])]
-        radar_elevations[radar] = int(j[5])
-        radar_towerheights[radar] = int(j[4])-int(j[5])
-        radar_bands[radar] = j[6]
+        radar_ids[radar] = row[1]*(row[1] != '.')
+        radarcoords[radar] = [float(row[2]), float(row[3])]
+        radar_elevations[radar] = int(row[5])
+        radar_towerheights[radar] = int(row[4])-int(row[5])
+        radar_bands[radar] = row[6]
+        if len(row) == 8:
+            radars_different_actual_source[radar] = row[7]
     
 def replace_characters(string):
-    character_map = {'\u00F6':'oe','\u00FC':'ue','\u0144':'n','\u017c':'z','\u00F3':'o','\u015A':'S','\u0119':'e'}
+    character_map = {'\u00F6':'oe','\u00FC':'ue','\u0144':'n','\u017c':'z','\u00F3':'o','\u015A':'S','\u0119':'e', '\u0161':'s'}
     for character in character_map:
         string = string.replace(character, character_map[character])
     return string
@@ -63,16 +67,16 @@ for source in radars:
         radarsources_dirs_Default[key] = default_basedir+'/'+source.replace(' ','_')+'/'
         if source == 'KNMI':
             radarsources_dirs_Default[key] += 'RAD${radarID}_OPER_O___TARVOL__L2__${date}T000000_${date+}T000000_0001'
-        elif source in ('KMI', 'skeyes', 'IMGW', 'DMI', 'NWS', 'Météo-France'):
+        elif source in ('KMI', 'skeyes', 'IMGW', 'DMI', 'CHMI', 'NWS', 'Météo-France'):
             radarsources_dirs_Default[key] += '${date}/${radar}'+f'_{j}'*len(j)
         elif source == 'DWD':
             radarsources_dirs_Default[key] += '${date}/${radar}_'+j+'/${time60}-${time60+}'
 derivedproducts_dir_Default=programdir+'/Radar_data/Derived_products'
 
-intervals_autodownload={'KNMI':300,'KMI':300,'skeyes':300,'VMM':300,'DWD':300,'TU Delft':300,'IMGW':600,'DMI':300,'NWS':300,'ARRC':300,'Météo-France':300}
-timeoffsets_autodownload={'KNMI':[75,120,180,240],'KMI':[75,120,180,240],'skeyes':[75,120,180,240],'VMM':[75,120,180,240],'DWD':[45,105,165,225,285],'TU Delft': [45,105,165,225,285],'IMGW':[240,300,540,600],'DMI':[135,180,240,300],'NWS':list(range(0, 300, 30)),'ARRC':[0],'Météo-France':list(range(0, 300, 60))}
-multifilevolume_autodownload={'KNMI':False,'KMI':True,'skeyes':True,'VMM':True,'DWD':True,'TU Delft':False,'IMGW':True,'DMI':False,'NWS':False,'ARRC':False,'Météo-France':True}
-fileperscan_autodownload={'KNMI':False,'KMI':False,'skeyes':False,'VMM':False,'DWD':True,'TU Delft':False,'IMGW':False,'DMI':False,'NWS':False,'ARRC':False,'Météo-France':True}
+intervals_autodownload={'KNMI':300,'KMI':300,'skeyes':300,'VMM':300,'DWD':300,'TU Delft':300,'IMGW':600,'DMI':300,'CHMI':300,'NWS':300,'ARRC':300,'Météo-France':300}
+timeoffsets_autodownload={'KNMI':[75,120,180,240],'KMI':[75,120,180,240],'skeyes':[75,120,180,240],'VMM':[75,120,180,240],'DWD':[45,105,165,225,285],'TU Delft': [45,105,165,225,285],'IMGW':[240,300,540,600],'DMI':[135,180,240,300],'CHMI':[0,60,120,180,240],'NWS':list(range(0, 300, 30)),'ARRC':[0],'Météo-France':list(range(0, 300, 60))}
+multifilevolume_autodownload={'KNMI':False,'KMI':True,'skeyes':True,'VMM':True,'DWD':True,'TU Delft':False,'IMGW':True,'DMI':False,'CHMI':False,'NWS':False,'ARRC':False,'Météo-France':True}
+fileperscan_autodownload={'KNMI':False,'KMI':False,'skeyes':False,'VMM':False,'DWD':True,'TU Delft':False,'IMGW':False,'DMI':False,'CHMI':False,'NWS':False,'ARRC':False,'Météo-France':True}
 api_keys = {'KNMI': ['opendata', 'sfcobs'],
             'DMI': ['radardata'],
             'Météo-France': ['radardata']}
@@ -106,6 +110,7 @@ productnames_DWD={'hd5':{'z':'dbzh','v':'vradh'},'buf.bz2':{'z':'z','v':'v'},'bu
 productnames_TUDelft={'z':'equivalent_reflectivity_factor','v':'radial_velocity','w':'spectrum_width','d':'differential_reflectivity','p':'differential_phase','x':'linear_depolarisation_ratio'}
 productnames_IMGW={'z':'dBZ','v':'V','w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','up':'uPhiDP','uk':'uKDP'}
 productnames_DMI={'z':'DBZH','v':'VRAD','w':'WRAD','d':'ZDR','c':'RHOHV','p':'PHIDP','x':'LDR'}
+productnames_CHMI={'z':'PAG','uz':'PAJ','v':'PAH','w':'PAI','d':'PAK','c':'PAL','p':'PAQ'}
 productnames_NEXRAD={'z':'REF','v':'VEL','w':'SW','d':'ZDR','c':'RHO','p':'PHI'}
 productnames_ARRC={'z':'DBZ','v':'VEL','w':'WIDTH','d':'ZDR','c':'RHOHV','p':'PHIDP'}
 

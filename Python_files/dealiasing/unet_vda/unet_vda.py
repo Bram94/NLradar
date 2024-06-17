@@ -171,7 +171,7 @@ class Unet_VDA():
         if remap_data:
             self.data, vn = self.restore_azi_dim(remap_indices, data_shape)
                
-        if extra_dealias:
+        if extra_dealias and vn[0,0] > 10:
             self.data = self.perform_extra_dealiasing(vn, data_shape)
             
         return self.data

@@ -142,7 +142,7 @@ class Change_RadarData(QObject):
         # switch to the nth nearest radar
         date, time = self.gui.datew.text().replace(' ',''), self.gui.timew.text().replace(' ','')
         radar_keys = [i for i,j in gv.radar_bands.items() if j in self.gui.radar_bands_view_nearest_radar]
-        if self.check_viewing_most_recent_data():
+        if self.check_viewing_most_recent_data() and self.gui.radars_automatic_download:
             radar_keys = [j for j in radar_keys if j in self.gui.radars_automatic_download]
         n_radars = len(radar_keys)
             
@@ -869,7 +869,7 @@ class Change_RadarData(QObject):
                     
             if self.gui.continue_savefig:
                 # Always sleep some time, since otherwise it might happen that some plots are skipped, which leads to missing frames in an animation
-                time_to_wait = max([time_to_wait, 0.02])
+                time_to_wait = max([time_to_wait, 0.01])
     
             if not from_timer and time_to_wait>0.:
                 self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False

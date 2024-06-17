@@ -8,6 +8,7 @@ import nlr_functions as ft
 import os
 opa=os.path.abspath
 import numpy as np
+import re
 import time as pytime
 
 
@@ -29,7 +30,7 @@ class Source_KNMI():
         
         
     def filepath(self):
-        filepath=opa(os.path.join(self.crd.directory,'RAD_NL'+str(gv.rplaces_to_ridentifiers[self.crd.radar])+'_VOL_NA_'+self.crd.date+self.crd.time+'.h5'))     
+        filepath=opa(os.path.join(self.crd.directory,'RAD_NL'+str(gv.radar_ids[self.crd.radar])+'_VOL_NA_'+self.crd.date+self.crd.time+'.h5'))     
         return filepath
     
     def get_scans_information(self):
@@ -45,7 +46,7 @@ class Source_KNMI():
         try:
             entries=os.listdir(directory)
         except Exception: entries=[]
-        filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j[:15]=='RAD_NL'+gv.rplaces_to_ridentifiers[radar]+'_VOL_NA']))
+        filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j[:15]=='RAD_NL'+gv.radar_ids[radar]+'_VOL_NA']))
         return filenames
     
     def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
@@ -147,7 +148,7 @@ class Source_KMI():
             vol_type=self.get_volume_type(filepath)
             self.vol_classes[vol_type].get_scans_information(filepath,product)
         else:
-            self.dsg.KMI_hdf5.get_scans_information(filepath,product)
+            self.dsg.ODIM_hdf5.get_scans_information(filepath,product)
             
     def try_product(self,product,try_unfiltered):
         filename=''; try_again=True
@@ -212,7 +213,7 @@ class Source_KMI():
             vol_type=self.get_volume_type(filepath)
             self.vol_classes[vol_type].get_data(filepath, j)
         else:
-            self.dsg.KMI_hdf5.get_data(filepath, j)
+            self.dsg.ODIM_hdf5.get_data(filepath, j)
         
         
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
@@ -231,7 +232,7 @@ class Source_KMI():
                 self.vol_classes[vol_type].get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)            
         else:
             data, scantimes, volume_starttime, volume_endtime, _ =\
-                self.dsg.KMI_hdf5.get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
+                self.dsg.ODIM_hdf5.get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
         
         return data, scantimes, volume_starttime, volume_endtime, meta
                 
@@ -687,30 +688,75 @@ class Source_DMI():
         
         
     def filepath(self):
-        filepath=opa(os.path.join(self.crd.directory,gv.rplaces_to_ridentifiers[self.crd.radar]+'_'+self.crd.date+self.crd.time+'.vol.h5'))
+        filepath=opa(os.path.join(self.crd.directory,gv.radar_ids[self.crd.radar]+'_'+self.crd.date+self.crd.time+'.vol.h5'))
         return filepath
     
     def get_scans_information(self):
-        self.dsg.KMI_hdf5.get_scans_information(self.filepath(),'v')
+        self.dsg.ODIM_hdf5.get_scans_information(self.filepath(),'v')
 
     def get_data(self, j): #j is the panel
-        self.dsg.KMI_hdf5.get_data(self.filepath(),j)
+        self.dsg.ODIM_hdf5.get_data(self.filepath(),j)
         self.crd.using_unfilteredproduct[j] = self.crd.products[j] == 'z' and self.crd.productunfiltered[j]
 
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
-        return self.dsg.KMI_hdf5.get_data_multiple_scans(self.filepath(),product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
+        return self.dsg.ODIM_hdf5.get_data_multiple_scans(self.filepath(),product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
                     
     def get_filenames_directory(self,radar,directory):
         try:
             entries=os.listdir(directory)
         except Exception: entries=[]
-        filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j.startswith(gv.rplaces_to_ridentifiers[radar])]))
+        filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j.startswith(gv.radar_ids[radar])]))
         return filenames
     
     def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[-19:-7] for j in filenames],dtype=dtype)
         return datetimes
+
+
+
+
+
+class Source_CHMI():
+    def __init__(self, gui_class, dsg_class, parent = None):  
+        self.gui=gui_class
+        self.dsg=dsg_class
+        self.crd=self.dsg.crd
+        self.dp=self.dsg.dp
+        self.pb = self.gui.pb
+        
+        
+        
+    def filepath(self, product=None):
+        if self.crd.radar in ('Skalky', 'Brdy-Praha'):
+            filenames = [j for j in self.dsg.files_datetime if gv.productnames_CHMI.get(product, '') in j]
+            return self.crd.directory+'/'+filenames[0] if filenames else None
+        else:
+            return self.crd.directory+'/'+self.dsg.files_datetime[0]
     
+    def get_scans_information(self):
+        self.dsg.ODIM_hdf5.get_scans_information(self.filepath('v'), 'v')
+
+    def get_data(self, j): #j is the panel
+        product = 'uz' if self.crd.products[j] == 'z' and self.crd.productunfiltered[j] else self.crd.products[j]
+        self.dsg.ODIM_hdf5.get_data(self.filepath(product), j)
+        self.crd.using_unfilteredproduct[j] = product == 'uz'
+
+    def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
+        return self.dsg.ODIM_hdf5.get_data_multiple_scans(self.filepath(product),product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
+                    
+    def get_filenames_directory(self,radar,directory):
+        try:
+            entries=os.listdir(directory)
+        except Exception: entries=[]
+        filenames = np.sort(np.array([j for j in entries if '.h' in j[-5:]]))
+        return filenames
+    
+    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+        ext = os.path.splitext(filenames[0])[1]
+        floor_minutes = 5 if self.crd.radar in ('Skalky', 'Brdy-Praha') else 1
+        datetimes = np.array([ft.floor_datetime(re.sub('[T_]', '', j[-len(ext)-15:-len(ext)-2]), floor_minutes) for j in filenames], dtype=dtype)
+        return datetimes
+        
     
     
     
