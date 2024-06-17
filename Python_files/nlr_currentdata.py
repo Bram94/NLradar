@@ -18,6 +18,7 @@ import requests
 import warnings
 import threading
 import nexradaws
+import traceback
 
 
 session = requests.Session()
@@ -292,29 +293,33 @@ class CurrentData(QObject):
         self.isrunning[index] = True
         
         self.set_time_attributes()
-        if self.time[index]=='c':
-            files_available=self.cds.run(self,'update_downloadlist',index)
-
-            if files_available:
-                self.date[index]=str(self.datetimes_downloadlist[index][0][-1])[:-4]
-                self.time[index]=str(self.datetimes_downloadlist[index][0][-1])[-4:]
-        else:
-            if self.date[index]=='c':
-                if int(self.time[index])>=int(self.currenttime):
-                    self.date[index]=self.previousdate
-                else: self.date[index]=self.currentdate
-            trial_datetime=int(self.date[index]+self.time[index])
-
-            if not index in self.datetimes_downloadlist or len(self.datetimes_downloadlist[index][0])==0:
+        # Use a try-except clause when calling update_downloadlist, as calling servers may generate errors.
+        try:
+            if self.time[index]=='c':
                 files_available=self.cds.run(self,'update_downloadlist',index)
+    
+                if files_available:
+                    self.date[index]=str(self.datetimes_downloadlist[index][0][-1])[:-4]
+                    self.time[index]=str(self.datetimes_downloadlist[index][0][-1])[-4:]
             else:
-                # if self.cds.source_with_partial_last_file(self.radar) or trial_datetime>self.datetimes_downloadlist[index][0][-1] or\
-                if trial_datetime>self.datetimes_downloadlist[index][0][-1] or\
-                (trial_datetime < self.datetimes_downloadlist[index][0][0] and self.dsg.data_source(self.radar) != 'DWD'):
-                    # For DWD always the full download file list will be determined, so there's no need to update when going beyond 
-                    # the first datetime in the list
+                if self.date[index]=='c':
+                    if int(self.time[index])>=int(self.currenttime):
+                        self.date[index]=self.previousdate
+                    else: self.date[index]=self.currentdate
+                trial_datetime=int(self.date[index]+self.time[index])
+    
+                if not index in self.datetimes_downloadlist or len(self.datetimes_downloadlist[index][0])==0:
                     files_available=self.cds.run(self,'update_downloadlist',index)
-                else: files_available=True
+                else:
+                    # if self.cds.source_with_partial_last_file(self.radar) or trial_datetime>self.datetimes_downloadlist[index][0][-1] or\
+                    if trial_datetime>self.datetimes_downloadlist[index][0][-1] or\
+                    (trial_datetime < self.datetimes_downloadlist[index][0][0] and self.dsg.data_source(self.radar) != 'DWD'):
+                        # For DWD always the full download file list will be determined, so there's no need to update when going beyond 
+                        # the first datetime in the list
+                        files_available=self.cds.run(self,'update_downloadlist',index)
+                    else: files_available=True
+        except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__)
         
         file_at_disk=False
         if files_available: 
