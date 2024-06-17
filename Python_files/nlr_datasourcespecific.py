@@ -752,7 +752,7 @@ class Source_CHMI():
         return filenames
     
     def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
-        ext = os.path.splitext(filenames[0])[1] if filename else ''
+        ext = os.path.splitext(filenames[0])[1] if filenames else ''
         floor_minutes = 5 if self.crd.radar in ('Skalky', 'Brdy-Praha') else 1
         datetimes = np.array([ft.floor_datetime(re.sub('[T_]', '', j[-len(ext)-15:-len(ext)-2]), floor_minutes) for j in filenames], dtype=dtype)
         return datetimes

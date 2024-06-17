@@ -294,6 +294,7 @@ class CurrentData(QObject):
         
         self.set_time_attributes()
         # Use a try-except clause when calling update_downloadlist, as calling servers may generate errors.
+        files_available = False
         try:
             if self.time[index]=='c':
                 files_available=self.cds.run(self,'update_downloadlist',index)
