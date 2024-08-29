@@ -1,7 +1,7 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import cv2
+import imageio
 import numpy as np
 import os
 opa = os.path.abspath
@@ -106,7 +106,7 @@ class MapTiles(QThread):
             self.filenames_grid[i] = np.array(self.filenames_grid[i])
             
             #Get the size of the images that represent the tiles
-            self.tile_sizes[i] = cv2.imread(opa(directory+'/'+self.filenames_grid[i][0,0])).shape
+            self.tile_sizes[i] = imageio.imread(opa(directory+'/'+self.filenames_grid[i][0,0])).shape
     
     def get_filenames_tilegrid(self):
         npixels_main_layers = {}
@@ -187,7 +187,7 @@ class MapTiles(QThread):
                     ib_list.append(ib); jb_list.append(jb)
                 else:
                     self.map[(ni-(i+1))*tile_size[0]:(ni-i)*tile_size[0], j*tile_size[1]:(j+1)*tile_size[1]] = \
-                    cv2.imread(opa(self.basedir+'/Layer_'+str(self.layer)+'/'+self.filenames_tilegrid[i,j]))[:,:,::-1] #Convert from BGR to RGB
+                    imageio.imread(opa(self.basedir+'/Layer_'+str(self.layer)+'/'+self.filenames_tilegrid[i,j]))[:,:,::-1] #Convert from BGR to RGB
         if len(i_list) > 0:
             i_min, i_max = min(i_list), max(i_list)
             j_min, j_max = min(j_list), max(j_list)
