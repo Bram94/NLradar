@@ -12,7 +12,6 @@ import time as pytime
 try:
     from pyshp import shapefile
 except ImportError: import shapefile
-import cv2
 from PIL import ImageFont
 
 import warnings
