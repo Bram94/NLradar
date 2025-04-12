@@ -1,14 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-from derived.nlr_derived_plain import DerivedPlain
-from derived import nlr_derived_tilts as dt
-import nlr_datasourcespecific as dss
-import nlr_importdata as ird
-import nlr_background as bg
-import nlr_functions as ft
-import nlr_globalvars as gv
-
 import sys
 import os
 opa = os.path.abspath
@@ -18,10 +10,30 @@ import pickle
 import copy
 import traceback
 
+from derived.nlr_derived_plain import DerivedPlain
+from derived import nlr_derived_tilts as dt
+import nlr_datasourcespecific as dss
+import nlr_importdata as ird
+import nlr_background as bg
+import nlr_functions as ft
+import nlr_globalvars as gv
+
+# Load Unet_VDA in a separate thread, as it takes ~10 seconds to load
+VDA = None
+def init_VDA():
+    global VDA
+    from dealiasing.unet_vda.unet_vda import Unet_VDA
+    vda = Unet_VDA()
+    vda(np.zeros((360, 100)), 30, np.arange(0, 360, 1), 1)
+    VDA = vda
+    print('Unet VDA imported')
+import threading
+threading.Thread(target=init_VDA).start()
+
 
 
 """DataSource_General contains functions that are related to the import of data, and contains functions that can in general be used for
-different data sources (by calling the appropriate functions in the classes in nlr_datasourcespecific.py).
+different data sources (by forwarding calls to functions in the classes in nlr_datasourcespecific.py).
 """
 
 class DataSource_General():
@@ -32,8 +44,8 @@ class DataSource_General():
         self.dp = DerivedPlain(dsg_class = self)
         self.pb = self.gui.pb
                         
-        self.Gematronik_vol_rainbow3 = ird.Gematronik_vol_rainbow3(gui_class = self.gui, dsg_class = self)
-        self.Gematronik_vol_rainbow5 = ird.Gematronik_vol_rainbow5(gui_class = self.gui, dsg_class = self)
+        self.Leonardo_vol_rainbow3 = ird.Leonardo_vol_rainbow3(gui_class = self.gui, dsg_class = self)
+        self.Leonardo_vol_rainbow5 = ird.Leonardo_vol_rainbow5(gui_class = self.gui, dsg_class = self)
         self.KNMI_hdf5 = ird.KNMI_hdf5(gui_class = self.gui, dsg_class = self)
         self.ODIM_hdf5 = ird.ODIM_hdf5(gui_class = self.gui, dsg_class = self)
         self.skeyes_hdf5 = ird.skeyes_hdf5(gui_class = self.gui, dsg_class = self)
@@ -45,6 +57,8 @@ class DataSource_General():
         self.CFRadial = ird.CFRadial(gui_class = self.gui, dsg_class = self)
         self.DORADE = ird.DORADE(gui_class = self.gui, dsg_class = self)
         self.MeteoFrance_BUFR = ird.MeteoFrance_BUFR(gui_class = self.gui, dsg_class = self)
+        self.MeteoFrance_NetCDF = ird.MeteoFrance_NetCDF(gui_class = self.gui, dsg_class = self)
+        self.UKMO_polar = ird.UKMO_Polar(gui_class = self.gui, dsg_class = self)
         
         self.source_KNMI = dss.Source_KNMI(gui_class = self.gui, dsg_class = self)
         self.source_KMI = dss.Source_KMI(gui_class = self.gui, dsg_class = self)
@@ -52,15 +66,16 @@ class DataSource_General():
         self.source_VMM = self.source_KMI # VMM data can be completely handled by the self.source_KMI class
         self.source_DWD = dss.Source_DWD(gui_class = self.gui, dsg_class = self)
         self.source_TUDelft = dss.Source_TUDelft(gui_class = self.gui, dsg_class = self)
-        self.source_IMGW = dss.Source_IMGW(gui_class = self.gui, dsg_class = self)
+        self.source_Leonardo = dss.Source_Leonardo(gui_class = self.gui, dsg_class = self)
         self.source_DMI = dss.Source_DMI(gui_class = self.gui, dsg_class = self)
+        self.source_AustroControl = dss.Source_AustroControl(gui_class = self.gui, dsg_class = self)
         self.source_CHMI = dss.Source_CHMI(gui_class = self.gui, dsg_class = self)
         self.source_NWS = dss.Source_NWS(gui_class = self.gui, dsg_class = self)
         self.source_ARRC = dss.Source_ARRC(gui_class = self.gui, dsg_class = self)
         self.source_MeteoFrance = dss.Source_MeteoFrance(gui_class = self.gui, dsg_class = self)
-        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_IMGW, 'DMI': self.source_DMI, 'CHMI': self.source_CHMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance}
+        self.source_UKMO = dss.Source_UKMO(gui_class = self.gui, dsg_class = self)
+        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_Leonardo, 'DMI': self.source_DMI, 'Austro Control':self.source_AustroControl, 'CHMI': self.source_CHMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance, 'UKMO':self.source_UKMO}
                 
-        self.classes = [self.source_KNMI,self.source_KMI,self.source_skeyes,self.source_DWD,self.source_TUDelft,self.source_IMGW,self.source_DMI,self.source_CHMI,self.source_NWS,self.source_MeteoFrance,self.Gematronik_vol_rainbow3,self.Gematronik_vol_rainbow5,self.KNMI_hdf5,self.ODIM_hdf5,self.skeyes_hdf5,self.DWD_odimh5,self.DWD_bufr,self.TUDelft_nc,self.NEXRAD_L2,self.NEXRAD_L3,self.CFRadial,self.DORADE,self.MeteoFrance_BUFR]
         
         self.radial_res_all = {}; self.radial_bins_all = {}; self.radial_range_all = {}
         # Scanangles might vary among duplicate scans, in which case self.scanangles_all for this scan will contain a dictionary
@@ -107,10 +122,17 @@ class DataSource_General():
         self.selected_scanangles_before = {}
         self.panel_center_heights = {}
         self.time_last_panzoom = 0
-        self.time_last_purposefulscanchanges = 0
+        self.time_last_forcedscanchange = 0
         self.time_last_choosenearestheight = 0
         self.time_last_choosenearestscanangle = 0
         
+        # These objects store results of listing filenames and determines corresponding datetimes, in order to reduce the need
+        # to re-determine them.
+        self.directories_lastupdate_times = {}
+        self.filenames_directory = {}
+        self.nfiles_directory = {}
+        self.datetimes_directory = {}
+
         self.files_datetimesdict = {}
         self.files_datetime = None # Files for the current datetime
         # It could be the case that multiple versions of a product are available for a single radar volume (and that these can't be considered
@@ -125,7 +147,7 @@ class DataSource_General():
         self.attributes_version = 16
         # Should be updated when the structure of volume attributes has changed only for particular data sources.
         # Updating it resets only attributes for that particular data source.
-        self.attributes_version_sources = {'Météo-France':2, 'NWS':1}
+        self.attributes_version_sources = {'Météo-France':2, 'NWS':3}
                     
         self.scanangles = {}
         
@@ -164,7 +186,8 @@ class DataSource_General():
         self.attributes_descriptions['version_sources'] = self.attributes_version_sources
                 
         
-    def get_scans_information(self, set_data):
+    def get_scans_information(self, set_data, delta_time=0):
+        # delta_time is used in self.check_need_scans_change
         """This function should deliver the attributes self.radial_res_all, self.radial_bins_all, scanangles_all, 
         nyquist_velocities_all_mps, low_nyquist_velocities_all_mps, high_nyquist_velocities_all_mps, scannumbers_all, scannumbers_forduplicates.
         
@@ -216,9 +239,12 @@ class DataSource_General():
         # Should only be updated when setting data
         self.attrs_before = {j:self.__dict__[j] for j in gv.volume_attributes_all}
         self.attrs_before['scannumbers_forduplicates'] = self.scannumbers_forduplicates
-        self.scanpair_present_before = self.check_presence_large_range_large_nyquistvelocity_scanpair() if\
+        # Set update_scanpairs_indices=True here, instead of further down in the 2nd call of this function. Since there
+        # the already updated volume attributes would be compared with the old scan choices. 
+        self.scanpair_present_before = self.check_presence_large_range_large_nyquistvelocity_scanpair(update_scanpairs_indices=True) if\
                                        self.attrs_before['scannumbers_all'] else False
-                      
+        # print('scanpbefore', self.scanpair_present_before)
+                  
         attributes_available = self.restore_volume_attributes()            
 
         if not attributes_available:
@@ -269,21 +295,21 @@ class DataSource_General():
         self.get_derived_volume_attributes()
                 
         if set_data:            
-            self.scanpair_present = self.check_presence_large_range_large_nyquistvelocity_scanpair(update_scanpairs_indices=True)
+            self.scanpair_present = self.check_presence_large_range_large_nyquistvelocity_scanpair(update_scanpairs_indices=False)
             
             if not self.pb.firstplot_performed or (self.crd.scans != self.pb.scans_before and not self.gui.setting_saved_choice):
                 # Initialize self.selected_scanangles for all panels when not self.pb.firstplot_performed
                 self.update_selected_scanangles(update_allpanels=not self.pb.firstplot_performed)
                 if not self.pb.firstplot_performed:
                     # Not doing this leads to undesired behaviour when setting choice with select nearest height, due to updating
-                    # self.time_last_purposefulscanchanges
+                    # self.time_last_forcedscanchange
                     self.selected_scanangles_before = self.selected_scanangles.copy()
             
             if self.selected_scanangles != self.selected_scanangles_before:
                 #Is only updated in the case of purposeful scan changes, i.e. changes in scans caused by pressing UP/DOWN or a number key, or by
                 #pressing F1-F12 for a saved panel choice, or when the scans change during a change in panels (see function
                 #self.pb.change_panels).
-                self.time_last_purposefulscanchanges = pytime.time()
+                self.time_last_forcedscanchange = pytime.time()
                 
             #Ensure that the selected scans are available for panellist. This might not be the case after a change of radar/dataset
             panellist = self.pb.panellist if self.pb.firstplot_performed else range(self.pb.max_panels)
@@ -299,9 +325,15 @@ class DataSource_General():
                 #Update self.scannumbers_forduplicates and self.crd.scans if scannumbers_all has changed, because their current values might be invalid
                 #for the new scannumbers_all.
                 self.update_scannumbers_forduplicates()
+            else:
+                try:
+                    if len(self.attrs_before['scannumbers_all']['z']) != len(self.scannumbers_forduplicates):
+                        print('error!!! scannumbers_forduplicates', self.attrs_before['scannumbers_all']['z'])
+                except Exception:
+                    pass
                                                  
             if self.crd.scan_selection_mode != 'scan' or self.gui.setting_saved_choice:
-                self.check_need_scans_change()
+                self.check_need_scans_change(delta_time)
             else:
                 for j in self.pb.panellist:
                     if self.scanpair_present and self.crd.scans[j] == 1:
@@ -331,6 +363,16 @@ class DataSource_General():
             print(i_p, self.scanangles_all, self.scanangles_all_m)
         return self.scanangles_all[i_p][scan].get(duplicate, self.scanangles_all_m[i_p][scan]) if\
                isinstance(self.scanangles_all[i_p][scan], dict) else self.scanangles_all[i_p][scan]
+               
+    def duplicate(self, product, scan):
+        # For NEXRAD L2 combi_scan product version, products other than 'z' have a different number of duplicates (half of that for 'z').
+        # And in order to not have to add fake/duplicate duplicates for these other products, the duplicate index gets halved here.
+        # This function should therefore be called whenever a product-specific duplicate index is needed.
+        duplicate = self.scannumbers_forduplicates[scan]
+        pv = self.gui.radardata_product_versions[self.radar_dataset]
+        if pv == 'combi_scan' and product != 'z': # For NEXRAD L2 combi_scan
+            duplicate //= 2
+        return duplicate
 
 
     def get_subdataset(self, pv=None, product=None): # pv is product version
@@ -553,7 +595,10 @@ class DataSource_General():
         #Include total_files_size, because a change in the number of scans in a volume means that a particular scan can get
         #different volume attributes compared to what was previously the case.
         radar_dataset = self.get_radar_dataset()
-        subdataset = self.get_subdataset(product=product)
+        # Exclude product version (pv) for self.product_versions_in1file=True. This is aimed at the NEXRAD L2 combi_scan pv,
+        # where including the pv would cause the program to re-import when requesting the individual z_scan and v_scan pvs.
+        # This should not cause issues with distinguishing between pvs, given differences in scannumbers_all between pvs.
+        subdataset = self.get_subdataset('' if self.product_versions_in1file else None, product)
         dataspecs_string = radar_dataset+subdataset
                 
         data_selected_startazimuth = self.gui.data_selected_startazimuth if self.crd.radar in gv.radars_with_adjustable_startazimuth else 0
@@ -564,7 +609,7 @@ class DataSource_General():
         # For data sources in self.stored_data_sources_with_scannumbers_as_content_marker it is assumed to be the former.
         scannumbers_all = self.scannumbers_all[gv.i_p[product]]
         scan = self.crd.scans[panel]
-        duplicate = self.scannumbers_forduplicates[product if product in gv.plain_products else scan]
+        duplicate = self.duplicate(product, scan)
         scannumbers = scannumbers_all if product in gv.plain_products else scannumbers_all[scan][duplicate]
         if product in gv.plain_products:
             if product in gv.plain_products_with_parameters:
@@ -727,7 +772,7 @@ class DataSource_General():
         if initial_dtype != 'float32':
             self.data[j] = self.data[j].astype(initial_dtype)
 
-    def get_data(self,panellist,change_radar,change_dataset, set_data):
+    def get_data(self, panellist, delta_time, change_radar, change_dataset, set_data):
         # from cProfile import Profile
         # profiler = Profile()
         # profiler.enable() 
@@ -762,7 +807,7 @@ class DataSource_General():
             if self.crd.before_variables['radar'] in gv.radars_with_datasets:
                 self.radar_dataset_before+= ' '+self.crd.before_variables['dataset'] 
         
-        self.get_scans_information(set_data)
+        self.get_scans_information(set_data, delta_time)
         
         if not set_data:
             retrieved_attrs = {j:self.__dict__[j] for j in gv.volume_attributes_all}
@@ -789,7 +834,9 @@ class DataSource_General():
             self.check_presence_data_in_memory(self.crd.products[j],self.crd.productunfiltered[j],self.crd.polarization[j],self.crd.apply_dealiasing[j],j)
             
             i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
-            duplicate = self.scannumbers_forduplicates[scan]
+            if not scan in self.scannumbers_forduplicates:
+                print(self.scannumbers_forduplicates, self.scannumbers_all)
+            duplicate = self.duplicate(i_p, scan)
             if duplicate >= len(self.scannumbers_all[i_p].get(scan, [])):
                 # In this case the requested duplicate scan is not available for this product
                 self.import_data[j] = False
@@ -797,6 +844,9 @@ class DataSource_General():
         self.update_volume_attributes = False
         
         panellist_import = [j for j in panellist if self.import_data[j]]
+        # dont_store_in_memory is used for products that can for some reason not yet be delivered in there expected final form.
+        # It is e.g. used for dealiased velocity to which Unet VDA could not yet be applied, because it hadn't finished loading yet.
+        self.dont_store_in_memory = {j:False for j in panellist_import}
         if panellist_import:
             panellist_plain = [j for j in panellist_import if self.crd.products[j] in gv.plain_products]
             panellist_notplain = [j for j in panellist_import if not self.crd.products[j] in gv.plain_products]
@@ -874,7 +924,7 @@ class DataSource_General():
             # When self.data_changed[j]=False an empty array (created in self.store_data_in_memory) will be saved to memory, to indicate that no
             # data has been obtained. In the past nothing was saved to memory at all, but this had as disadvantage that new requests of the same
             # data would lead to renewed attempts to import, which were a waste of time.
-            if self.gui.max_radardata_in_memory_GBs > 0:
+            if self.gui.max_radardata_in_memory_GBs > 0 and not self.dont_store_in_memory[j]:
                 self.store_data_in_memory(j)
                 
         for j in (i for i in panellist if self.data_changed[i]):
@@ -898,15 +948,13 @@ class DataSource_General():
         return self.data_changed, self.total_files_size
     
     def perform_mono_prf_dealiasing(self, j, data, vn=None, azis=None, da=None): # j is the panel
-        if not hasattr(self, 'vda'):
-            from dealiasing.unet_vda.unet_vda import Unet_VDA
-            self.vda = Unet_VDA()
+        if VDA is None:
+            self.dont_store_in_memory[j] = True
+            return data
         data[data == self.pb.mask_values['v']] = np.nan
-        t = pytime.time()
         vn = self.nyquist_velocities_all_mps[self.crd.scans[j]] if vn is None else vn
-        data = self.vda(data, vn, azis, da, extra_dealias='extra' in self.gui.dealiasing_setting)
+        data = VDA(data, vn, azis, da, extra_dealias='extra' in self.gui.dealiasing_setting)
         self.mono_prf_dealiasing_performed = True
-        print(pytime.time()-t, 't unet vda')
         return data
     
     def calculate_derived_with_tilts(self, j): # j is the panel
@@ -939,31 +987,35 @@ class DataSource_General():
         #All attributes are now the same as for the last succesfull trial for self.crd.radar
     
     
-    def data_source(self,radar = None):
+    def data_source(self, radar = None):
         """Gives the data source for a given input radar, or if not given, the data source for the current radar; self.crd.radar.
         """
-        datasource_radar = radar if radar!= None else self.crd.radar
-        return gv.data_sources[datasource_radar]
+        radar = radar if radar else self.crd.radar
+        return gv.data_readsources[radar]
     
     def update_scannumbers_forduplicates(self):
         """When going back to the previous plot, the previous values for scannumbers_forduplicates are restored in the function 
         self.crd.back_to_previous_plot.
         """
-        if not self.crd.going_back_to_previous_plot:
-            self.scannumbers_forduplicates = {i:j for i,j in self.scannumbers_forduplicates.items() if i in self.scannumbers_all['z']}
-            for i,j in self.scannumbers_all['z'].items():
-                if self.crd.lrstep_beingperformed:
-                    if self.scannumbers_forduplicates.get(i, 0)+1 > len(j):
-                        self.scannumbers_forduplicates[i] = len(j)-1
-                    elif not i in self.scannumbers_forduplicates or self.crd.desired_timestep_minutes() < self.crd.volume_timestep_m:
-                        self.scannumbers_forduplicates[i] = 0 if self.crd.lrstep_beingperformed == 1 else len(j)-1
-                elif self.crd.requesting_latest_data:
+        self.scannumbers_forduplicates = {i:j for i,j in self.scannumbers_forduplicates.items() if i in self.scannumbers_all['z']}
+        for i,j in self.scannumbers_all['z'].items():
+            if self.crd.going_back_to_previous_plot:
+                # self.scannumbers_forduplicates has already been set in self.crd.back_to_previous_plot, but it's possible that the saved
+                # values used here were obtained for a smaller number of scans than what's available now. The following line ensures that
+                # these new scans are added when needed.
+                self.scannumbers_forduplicates[i] = self.scannumbers_forduplicates.get(i, 0)
+            elif self.crd.lrstep_beingperformed:
+                if self.scannumbers_forduplicates.get(i, 0)+1 > len(j):
                     self.scannumbers_forduplicates[i] = len(j)-1
-                else:
-                    #Use the last values for scannumbers_forduplicates that were used for this radar, if they are valid.
-                    #self.scannumbers_forduplicates_radars[self.crd.radar] gets updated in self.pb.set_newdata each time that function is called.
-                    previous_val_radar = self.scannumbers_forduplicates_radars.get(self.crd.radar, {self.crd.radar:{}}).get(i, 100)
-                    self.scannumbers_forduplicates[i] = min(len(j)-1, previous_val_radar)  
+                elif not i in self.scannumbers_forduplicates or self.crd.desired_timestep_minutes() < self.crd.volume_timestep_m:
+                    self.scannumbers_forduplicates[i] = 0 if self.crd.lrstep_beingperformed == 1 else len(j)-1
+            elif self.crd.requesting_latest_data:
+                self.scannumbers_forduplicates[i] = len(j)-1
+            else:
+                #Use the last values for scannumbers_forduplicates that were used for this radar, if they are valid.
+                #self.scannumbers_forduplicates_radars[self.crd.radar] gets updated in self.pb.set_newdata each time that function is called.
+                previous_val_radar = self.scannumbers_forduplicates_radars.get(self.crd.radar, {self.crd.radar:{}}).get(i, 100)
+                self.scannumbers_forduplicates[i] = min(len(j)-1, previous_val_radar)  
                   
                     
     def update_selected_scanangles(self, update_allpanels=False):
@@ -1011,7 +1063,7 @@ class DataSource_General():
         # This function is called in self.gui.set_choice, in order to use selected heights from a saved choice.
         self.panel_center_heights = {'time':pytime.time(), 'heights':heights}
                                 
-    def check_need_scans_change(self):
+    def check_need_scans_change(self, delta_time):
         """This function checks whether it is desired to switch from scans. This could be the case when the radar volume changes, e.g. because 
         of a change of radar or dataset. Or it can be because it is desired to keep scan beam height at panel center as constant as possible, 
         which can require a change of scans when switching from radar or when translating view with storm motion.
@@ -1037,15 +1089,23 @@ class DataSource_General():
 
             if choose_nearest_height: 
                 self.pb.get_corners()
-                if move_view_with_storm:
+                if move_view_with_storm and delta_time:
                     # When using storm-centering the translation of the view only takes place after calling this function, so self.pb.corners
                     # doesn't yet take into account this new translation. This translation is approximately performed here (the real
-                    # translation depends on scan time differences, not on volume time differences).
-                    dt_before = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.crd.before_variables['datetime']
-                    delta_time = ft.datetimediff_s(dt_before, self.crd.date+self.crd.time)
+                    # translation depends on scan time differences, which are only available once the new scans are retrieved).
                     if abs(delta_time) <= self.pb.max_delta_time_move_view_with_storm:
+                        # In the lines below the check len(self.scannumbers_all['z'][self.crd.scans[j]]) > 1 is important, but an issue
+                        # is that it is dependent on self.crd.scans[j], which might be become different after finishing this function.
+                        # This is especially the case when the previous radar volume was incomplete. Therefore, an initial iteration of
+                        # this function is performed with delta_time=0, which updates self.crd.scans.
+                        self.check_need_scans_change(0)
                         for j in self.pb.panellist:
-                            self.pb.corners[j] += self.pb.translation_dist_km(delta_time)
+                            dt_before = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.crd.before_variables['datetime']
+                            # delta_time is valid for panel 0. In the case that panel 0 shows duplicates and other panels not, delta_t
+                            # for these panels should be based on the volume time difference.
+                            delta_t = delta_time if len(self.scannumbers_all['z'][self.crd.scans[j]]) > 1 else\
+                                      ft.datetimediff_s(dt_before, self.crd.date+self.crd.time)
+                            self.pb.corners[j] += self.pb.translation_dist_km(delta_t, dt_before)
         
             #scanangles_all contains all scanangles for which data is present in the volume. It is determined in this way, because it is possible that the number
             #of scans differs per product, and therefore also the number of scanangles. If this is the case, then self.scanangles_all_m[product] refers for these 
@@ -1055,116 +1115,93 @@ class DataSource_General():
             #this could lead to displaying a suboptimal scan, which is not desired.
             scanangles_all = self.get_scanangles_allproducts(self.scanangles_all_m)
             scanangles_all_values = np.array(list(scanangles_all.values()))
-            if self.radar_dataset_before in self.scans_radars:
+            scans_radars = self.scans_radars.get(self.radar_dataset_before, {})
+            if scans_radars:
                 try:
-                    scanangles_all_before = self.get_scanangles_allproducts(self.scans_radars[self.radar_dataset_before]['scanangles_all'])
+                    scanangles_all_before = self.get_scanangles_allproducts(scans_radars['scanangles_all'])
                 except Exception as e:
-                    print(e, self.radar_dataset_before, self.scans_radars[self.radar_dataset_before]['scanangles_all'])
+                    print(e, self.radar_dataset_before, scans_radars['scanangles_all'])
                     raise Exception(1/0)
             
-            """In case of a change of radar or dataset (i.e. not when using storm-centered view with self.crd.lrstep_beingperformed):
-            If the scans haven't been changed purposefully (by pressing UP/DOWN, a number key or F1-F12), then the scans that were used 
-            during the last time that data for self.crd.radar was plotted, are used. If choose_nearest_height, then another condition
-            is that the scans have not been changed by choosing the nearest scanangle in the mean time. If choose_nearest_scanangle,
-            then this condition is that the scans have not been changed by choosing the nearest elevation in the mean time.
-            Another condition is that the structure of the volume should be the same as during the last time that data for that 
-            radar was plotted (at least the scanangles should be equal). 
-            If these conditions are satisfied then saved data is used, because otherwise the scanangle doesn't need to go back to
-            its initial value when going back to the previous radar or dataset. Further, it saves computation time.
-            """
-            condition1 = (self.changing_radar or self.changing_dataset) and not self.gui.switch_to_case_running and\
-            self.radar_dataset in self.scans_radars and self.time_last_purposefulscanchanges < self.scans_radars[self.radar_dataset]['time'] and\
-            self.scanangles_all_m == self.scans_radars[self.radar_dataset]['scanangles_all']
-            
-            if condition1 and choose_nearest_height and all([j < self.scans_radars[self.radar_dataset]['time'] for j in (
-            self.crd.time_last_change_scan_selection_mode, self.time_last_choosenearestscanangle, self.time_last_panzoom)]):
-                self.crd.scans = self.scans_radars[self.radar_dataset]['scans'].copy()
-                #Only when choosing the nearest elevation. In other cases the selected scanangle should not change.
-                for j in self.pb.panellist:
-                    self.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
-                self.time_last_choosenearestheight = pytime.time()
-            elif condition1 and choose_nearest_scanangle and all([j < self.scans_radars[self.radar_dataset]['time'] for j in (
-            self.crd.time_last_change_scan_selection_mode, self.time_last_choosenearestheight)]) and not self.gui.setting_saved_choice:
-                self.crd.scans = self.scans_radars[self.radar_dataset]['scans'].copy()
-                self.time_last_choosenearestscanangle = pytime.time()
-            else:
-                scanangles_before = {}
-                for j in self.pb.panellist:
-                    try:
-                        if j in self.scans_radars[self.radar_dataset_before]['panellist']:
-                            scanangles_before[j] = scanangles_all_before[self.scans_radars[self.radar_dataset_before]['scans'][j]]
-                        else:
-                            scanangles_before[j] = scanangles_all[self.crd.scans[j]]
-                    except Exception:
-                        #self.scans_radars is not yet defined in this case, so use the current values of the parameters.
+            scanangles_before = {}
+            for j in self.pb.panellist:
+                try:
+                    if j in scans_radars['panellist']:
+                        scanangles_before[j] = scanangles_all_before[scans_radars['scans'][j]]
+                    else:
                         scanangles_before[j] = scanangles_all[self.crd.scans[j]]
+                except Exception:
+                    #self.scans_radars is not yet defined in this case, so use the current values of the parameters.
+                    scanangles_before[j] = scanangles_all[self.crd.scans[j]]
 
-                if choose_nearest_height:
-                    save_time = self.panel_center_heights.get('time', None)
-                    need_update = not save_time or any(j > save_time for j in (self.time_last_panzoom, self.time_last_purposefulscanchanges, 
-                                  self.time_last_choosenearestscanangle, self.crd.time_last_change_scan_selection_mode))
-                    new_panels = None if need_update else [j for j in self.pb.panellist if not j in self.panel_center_heights['heights']]
-                    if need_update or new_panels:
-                        """These are only updated when zooming or panning has taken place in the mean time, or when the scans have been changed 
-                        purposefully, or when the nearest scanangle is chosen in the mean time. This implies e.g. that when going to multiple radars, 
-                        always the first radar in a sequence is used for determining the center heights, such that the center heights 
-                        do not change in the next part of the sequence.
-                        """
-                        old_corners = self.scans_radars.get(self.radar_dataset_before, {}).get('corners', self.pb.corners)
-                        old_distance_to_radar = {j:np.linalg.norm(old_corners[j].mean(axis=0)) for j in self.pb.panellist}
-                        heights = self.get_panel_center_heights(old_distance_to_radar, scanangles_before, scanangles_all_before,
-                                                                self.scanpair_present_before, panellist=new_panels)
-                        if need_update:
-                            self.panel_center_heights = {'time':pytime.time(), 'heights':heights}
-                        else:
-                            self.panel_center_heights['heights'].update(heights)
+            if choose_nearest_height:
+                save_time = self.panel_center_heights.get('time', None)
+                need_update = not save_time or any(j > save_time for j in (self.time_last_panzoom, self.time_last_forcedscanchange, 
+                              self.time_last_choosenearestscanangle, self.crd.time_last_change_scan_selection_mode))
+                new_panels = None if need_update else [j for j in self.pb.panellist if not j in self.panel_center_heights['heights']]
+                if need_update or new_panels:
+                    """These are only updated when zooming or panning has taken place in the mean time, or when the scans have been changed 
+                    purposefully, or when the nearest scanangle is chosen in the mean time. This implies e.g. that when going to multiple radars, 
+                    always the first radar in a sequence is used for determining the center heights, such that the center heights 
+                    do not change in the next part of the sequence.
+                    """
+                    old_corners = self.scans_radars.get(self.radar_dataset_before, {}).get('corners', self.pb.corners)
+                    old_distance_to_radar = {j:np.linalg.norm(old_corners[j].mean(axis=0)) for j in self.pb.panellist}
+                    heights = self.get_panel_center_heights(old_distance_to_radar, scanangles_before, scanangles_all_before,
+                                                            self.scanpair_present_before, panellist=new_panels)
+                    if need_update:
+                        self.panel_center_heights = {'time':pytime.time(), 'heights':heights}
+                    else:
+                        self.panel_center_heights['heights'].update(heights)
+            
+            for j in self.pb.panellist:
                 
-                for j in self.pb.panellist:
-                    
-                    if choose_nearest_height:
-                        #Find the scanangle for which the beam elevation at the center of the screen is closest to the value it was before,
-                        #for the previous radar.
-                        new_distance_to_radar = np.linalg.norm(self.pb.corners[j].mean(axis=0))
-                        # print(j, scanangles_all_values, new_distance_to_radar, self.panel_center_heights['heights'][j])
-                        new_scanangle = ft.find_scanangle_closest_to_beamelevation(scanangles_all_values,new_distance_to_radar,self.panel_center_heights['heights'][j])
-                    else:
-                        """Find the scanangle that is closest to the selected scanangle. If there are 2 scanangles that are equally close,
-                        then the one is chosen that is closest to the scanangle for which currently data is displayed in panel j.
-                        """
-                        new_scanangle, index = ft.closest_value(scanangles_all_values,self.selected_scanangles[j], return_index=True)
-                        if len(scanangles_all) > 1:
-                            scanangles_all_without_newscanangle = np.delete(scanangles_all_values, index)
-                            next_closest_scanangle = ft.closest_value(scanangles_all_without_newscanangle, self.selected_scanangles[j])
-                            if abs(self.selected_scanangles[j]-new_scanangle) == abs(self.selected_scanangles[j]-next_closest_scanangle) and\
-                            abs(scanangles_before[j]-next_closest_scanangle) < abs(scanangles_before[j]-new_scanangle):
-                                new_scanangle = next_closest_scanangle
-                                          
-                            if self.crd.plot_mode in ('Row', 'Column') or self.gui.setting_saved_choice:
-                                """It might be the case that multiple selected scanangles get mapped onto the same actual new scanangle, in which case 
-                                multiple panels might show the same product-scan combination. That is not desired under these conditions, so in that
-                                case new_scanangle gets changed below.
-                                """
-                                for i in self.pb.panellist[:self.pb.panellist.index(j)]:
-                                    scanangle_i = scanangles_all[self.crd.scans[i]]
-                                    if new_scanangle == scanangle_i and self.crd.products[i] == self.crd.products[j] and (self.gui.setting_saved_choice or 
-                                    (gv.i_p[self.crd.products[i]] != 'v' or self.crd.apply_dealiasing[i] == self.crd.apply_dealiasing[j]) and
-                                    self.crd.productunfiltered[i] == self.crd.productunfiltered[j]) and len(scanangles_all_values)-index > 1:
-                                        new_scanangle = scanangles_all_values[index+1]
-                                        index += 1
-                                                         
-                    if self.scanpair_present and new_scanangle in [scanangles_all[i] for i in (1,2)]:
-                        self.crd.scans[j] = (1,2)[self.range_nyquistvelocity_scanpairs_indices[j]]
-                    else:
-                        self.crd.scans[j] = [i for i,k in scanangles_all.items() if k==new_scanangle][0]
-                    
-                    if choose_nearest_height:
-                        #Only in this case. In other cases the selected scanangle should not change.
-                        self.selected_scanangles[j] = scanangles_all[self.crd.scans[j]]
-                        
                 if choose_nearest_height:
-                    self.time_last_choosenearestheight = pytime.time()
+                    #Find the scanangle for which the beam elevation at the center of the screen is closest to the value it was before,
+                    #for the previous radar.
+                    new_distance_to_radar = np.linalg.norm(self.pb.corners[j].mean(axis=0))
+                    # print(j, scanangles_all_values, new_distance_to_radar, self.panel_center_heights['heights'][j])
+                    new_scanangle = ft.find_scanangle_closest_to_beamelevation(scanangles_all_values,new_distance_to_radar,self.panel_center_heights['heights'][j])
                 else:
-                    self.time_last_choosenearestscanangle = pytime.time()
+                    """Find the scanangle that is closest to the selected scanangle. If there are 2 scanangles that are equally close,
+                    then the one is chosen that is closest to the scanangle for which currently data is displayed in panel j.
+                    """
+                    new_scanangle, index = ft.closest_value(scanangles_all_values,self.selected_scanangles[j], return_index=True)
+                    if len(scanangles_all) > 1:
+                        scanangles_all_without_newscanangle = np.delete(scanangles_all_values, index)
+                        next_closest_scanangle = ft.closest_value(scanangles_all_without_newscanangle, self.selected_scanangles[j])
+                        if abs(self.selected_scanangles[j]-new_scanangle) == abs(self.selected_scanangles[j]-next_closest_scanangle) and\
+                        abs(scanangles_before[j]-next_closest_scanangle) < abs(scanangles_before[j]-new_scanangle):
+                            new_scanangle = next_closest_scanangle
+                                      
+                        if self.crd.plot_mode in ('Row', 'Column') or self.gui.setting_saved_choice:
+                            """It might be the case that multiple selected scanangles get mapped onto the same actual new scanangle, in which case 
+                            multiple panels might show the same product-scan combination. That is not desired under these conditions, so in that
+                            case new_scanangle gets changed below.
+                            """
+                            for i in self.pb.panellist[:self.pb.panellist.index(j)]:
+                                scanangle_i = scanangles_all[self.crd.scans[i]]
+                                if new_scanangle == scanangle_i and self.crd.products[i] == self.crd.products[j] and (self.gui.setting_saved_choice or 
+                                (gv.i_p[self.crd.products[i]] != 'v' or self.crd.apply_dealiasing[i] == self.crd.apply_dealiasing[j]) and
+                                self.crd.productunfiltered[i] == self.crd.productunfiltered[j]) and len(scanangles_all_values)-index > 1:
+                                    new_scanangle = scanangles_all_values[index+1]
+                                    index += 1
+                                                     
+                if self.scanpair_present and new_scanangle in [scanangles_all[i] for i in (1,2)]:
+                    self.crd.scans[j] = (1,2)[self.range_nyquistvelocity_scanpairs_indices[j]]
+                else:
+                    self.crd.scans[j] = [i for i,k in scanangles_all.items() if k==new_scanangle][0]
+                
+            if choose_nearest_height:
+                # Only in this case. In other cases the selected scanangle should not change.
+                self.update_selected_scanangles()
+                # Also update self.selected_scanangles_before, since this change should not lead to updating self.time_last_forcedscanchange
+                self.selected_scanangles_before = self.selected_scanangles.copy()
+                    
+            if choose_nearest_height:
+                self.time_last_choosenearestheight = pytime.time()
+            else:
+                self.time_last_choosenearestscanangle = pytime.time()
                     
     def check_presence_large_range_large_nyquistvelocity_scanpair(self,update_scanpairs_indices = False):
         """A range-nyquist velocity scan pair is a pair of scans of which the first has a large range but low Nyquist velocity, and the second has
@@ -1200,7 +1237,7 @@ class DataSource_General():
                 v_scan1_equals_scan2 = False
             
             if ft.r1dec(np.abs(scanangle1-scanangle2)) <= 0.1 and self.radial_range_all['z'][1]/self.radial_range_all['z'][2] > 1.25 and\
-            not any([self.nyquist_velocities_all_mps[j] is None for j in (1,2)]) and (v_scan1_equals_scan2 or
+            (v_scan1_equals_scan2 or any(self.nyquist_velocities_all_mps[j] is None for j in (1,2)) or 
             np.abs(self.nyquist_velocities_all_mps[2]/self.nyquist_velocities_all_mps[1]) > 1.25):
                 scanpair_present = True
                 
@@ -1230,14 +1267,14 @@ class DataSource_General():
             dir_string = self.get_dir_string(radar,dataset,dir_index)        
         if date=='c':
             #This should only be the case when time is also 'c'.
-            return bg.get_last_directory(dir_string,radar,self.get_filenames_directory)
+            return bg.get_last_directory(dir_string,self.gui.radar_basedir,radar,self.get_filenames_directory)
         else:
-            return opa(bg.convert_dir_string_to_real_dir(dir_string,radar,date,time))
+            return opa(bg.convert_dir_string_to_real_dir(dir_string,self.gui.radar_basedir,radar,date,time))
         
     def get_radar_dataset(self, radar=None, dataset=None, no_special_char=False):
         radar = radar if radar else self.crd.radar
         if no_special_char:
-            radar = gv.radars_nospecialchar_names[radar]
+            radar = gv.radars_ascii_names[radar]
         dataset = dataset if dataset else self.crd.dataset
         return radar+f'_{dataset}'*(radar in gv.radars_with_datasets)
     def split_radar_dataset(self, radar_dataset):
@@ -1266,10 +1303,11 @@ class DataSource_General():
         if find_last_dir:
             date = ''.join(ft.get_ymdhm(pytime.time())[:3])
         
-        directory = bg.get_last_directory(current_dir_string,radar,self.get_filenames_directory) if find_last_dir else\
-                    bg.get_nearest_directory(current_dir_string,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)
+        directory = bg.get_last_directory(current_dir_string,self.gui.radar_basedir,radar,self.get_filenames_directory)\
+                    if find_last_dir else\
+                    bg.get_nearest_directory(current_dir_string,self.gui.radar_basedir,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)
         if directory:
-            dir_date,_ = bg.get_date_and_time_from_dir(directory,current_dir_string,radar)
+            dir_date,_ = bg.get_date_and_time_from_dir(directory,current_dir_string,self.gui.radar_basedir,radar)
             if n == 1 or dir_date == date:
                 return directory
         
@@ -1279,9 +1317,11 @@ class DataSource_General():
                 if j == current_dir_string:
                     directories.append(directory)
                 else:
-                    directories += [bg.get_last_directory(j,radar,self.get_filenames_directory) if find_last_dir else
-                                    bg.get_nearest_directory(j,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)]
-            dir_dates = [bg.get_date_and_time_from_dir(d, dir_string_list[i], radar)[0] if d else '19000101' for i,d in enumerate(directories)]
+                    directories += [bg.get_last_directory(j,self.gui.radar_basedir,radar,self.get_filenames_directory)
+                                    if find_last_dir else
+                                    bg.get_nearest_directory(j,self.gui.radar_basedir,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)]
+            dir_dates = [bg.get_date_and_time_from_dir(d, dir_string_list[i], self.gui.radar_basedir, radar)[0]
+                         if d else '19000101' for i,d in enumerate(directories)]
                 
             datediffs = np.array([np.abs(ft.datetimediff_s(j+'0000',date+'0000')) for j in dir_dates],dtype = 'int64')
             index = np.argmin(datediffs)
@@ -1307,22 +1347,21 @@ class DataSource_General():
         """
         radar_dataset, dir_string_list, current_dir_string, n = self.get_variables(radar,dataset)
         if desired_newdate and desired_newtime:
-            current_dir = self.get_directory(date,time,radar,dir_string = current_dir_string)
             directory = self.get_nearest_directory(radar,dataset,desired_newdate,desired_newtime)
-            if directory != current_dir:
+            if directory != self.crd.directory:
                 return directory
             
         """If no directory is returned, then continue with finding the nearest next directory for which there is data.
         """
         #directory is equal to the current directory if there is no next directory for the current directory string.
-        directory = bg.get_next_directory(current_dir_string,direction,radar,self.get_filenames_directory,date = date,time = time)
-        dir_date,dir_time = bg.get_date_and_time_from_dir(directory,current_dir_string,radar)
+        directory = bg.get_next_directory(direction,current_dir_string,self.gui.radar_basedir,radar,self.get_filenames_directory,current_dir=self.crd.directory)
+        dir_date,dir_time = bg.get_date_and_time_from_dir(directory,current_dir_string,self.gui.radar_basedir,radar)
         #dir_time is None if there is no ${time} variable in current_dir_string.
               
         #An exception occurs for example when there is no ${date} variable in a directory string, in which case comparing dates causes errors.
         #This should normally not occur, as it is unusual that there is no date in a directory string (that would mean that all data is located in the
         #same folder). If it occurs, then simply directory is returned.
-        try:
+        if True:
             """If n>1, first check whether there is a directory for the next date for current_dir_string, and if so, return this one.
             In the case that a ${time} variable is present in current_dir_string, it is also checked whether there is a next directory for the same
             date but for a different time.
@@ -1336,14 +1375,14 @@ class DataSource_General():
                     if j == current_dir_string:
                         directories.append(directory)
                     else:
-                        dir_j = bg.get_nearest_directory(j,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)
-                        dir_date_j, dir_time_j = bg.get_date_and_time_from_dir(dir_j,j,radar)
+                        dir_j = bg.get_nearest_directory(j,self.gui.radar_basedir,radar,date,time,self.get_filenames_directory,self.get_datetimes_from_files)
+                        dir_date_j, dir_time_j = bg.get_date_and_time_from_dir(dir_j,j,self.gui.radar_basedir,radar)
                         #A multiplication by direction is performed to ensure that this comparison gives the desired result also when direction==-1
                         if direction*int(dir_date_j) > direction*int(date):
                             directories.append(dir_j)
                         else:
-                            directories.append(bg.get_next_directory(j,direction,radar,self.get_filenames_directory,date=dir_date_j,time=dir_time_j))
-                dir_dates = [bg.get_date_and_time_from_dir(directories[j],dir_string_list[j],radar)[0] for j in range(n)]
+                            directories.append(bg.get_next_directory(direction,j,self.gui.radar_basedir,radar,self.get_filenames_directory,current_dir=dir_j))
+                dir_dates = [bg.get_date_and_time_from_dir(directories[j],dir_string_list[j],self.gui.radar_basedir,radar)[0] for j in range(n)]
                 
                 orig_dir_string_list = dir_string_list.copy()
                 # Remove entries for directory strings that have no next directory in the desired direction
@@ -1354,7 +1393,7 @@ class DataSource_General():
                         
                 if not dir_string_list:
                     #Return the current directory, because there is no next one
-                    return opa(bg.convert_dir_string_to_real_dir(current_dir_string,radar,date,time))
+                    return opa(bg.convert_dir_string_to_real_dir(current_dir_string,self.gui.radar_basedir,radar,date,time))
                 else:
                     datediffs = np.array([np.abs(ft.datetimediff_s(date+'0000',j+'0000')) for j in dir_dates],dtype = 'int64')
                     #All elements in datediffs are positive
@@ -1369,7 +1408,7 @@ class DataSource_General():
                         new_dir_string = dir_string_list[index]
                         self.gui.radardata_dirs_indices[radar_dataset] = orig_dir_string_list.index(new_dir_string)
                         return directories[index]
-        except Exception as e:
+        else:
             print(e,'self.dsg.get_next_directory')
             return directory
                              
@@ -1380,7 +1419,7 @@ class DataSource_General():
         If multiple dir_strings are provided, then for downloading always the 1st (hence dir_index = 0) is used.
         """
         dir_string = self.get_dir_string(radar,dataset,dir_index = 0) 
-        return bg.get_download_directory(dir_string)
+        return bg.get_download_directory(dir_string, self.gui.radar_basedir)
         
     def get_newest_datetimes_currentdata(self,radar,dataset):
         """Returns the datetimes of the 2 newest (newest first, second-newest second) radar volumes that are available for the radar.
@@ -1389,14 +1428,14 @@ class DataSource_General():
         download was finished), which is used to determine whether it is desired to plot data for the downloaded file.
         """
         dir_string = self.get_dir_string(radar,dataset)        
-        lastdir = bg.get_last_directory(dir_string,radar,self.get_filenames_directory)
+        lastdir = bg.get_last_directory(dir_string,self.gui.radar_basedir,radar,self.get_filenames_directory)
         lastdir_filenames = self.get_filenames_directory(radar,lastdir)
         lastdir_datetimes = self.get_datetimes_from_files(radar,lastdir_filenames,lastdir)
         n1 = len(lastdir_datetimes)
         if n1 > 1:
             return lastdir_datetimes[-2:][::-1]
         else:
-            secondlastdir = bg.get_next_directory(dir_string,-1,radar,self.get_filenames_directory,current_dir = lastdir)
+            secondlastdir = bg.get_next_directory(-1,dir_string,self.gui.radar_basedir,radar,self.get_filenames_directory,current_dir = lastdir)
             secondlastdir_filenames = self.get_filenames_directory(radar,secondlastdir)
             secondlastdir_datetimes = self.get_datetimes_from_files(radar,secondlastdir_filenames,secondlastdir)
             returns = np.append(lastdir_datetimes, secondlastdir_datetimes[-(2-n1):][::-1])
@@ -1422,15 +1461,31 @@ class DataSource_General():
         directory if they are determined (is the case for TU Delft).
         The returned object is either an array of datetimes, 1 for each filename, or it is a dictionary with 
         """
-        return self.source_classes[self.data_source(radar)].get_datetimes_from_files(filenames,directory,dtype,return_unique_datetimes, mode)
+        if directory:
+            dir_string = self.get_variables(radar, self.crd.selected_dataset)[2]
+            # self.get_datetimes_from_files_dirdate is used in self.source_MeteoFrance, because there are filenames that don't contain a date
+            self.get_datetimes_from_files_dirdate = bg.get_date_and_time_from_dir(directory, dir_string, self.gui.radar_basedir, radar)[0]
+
+        function = self.source_classes[self.data_source(radar)].get_datetimes_from_files
+        returns = ([], []) if mode == 'dates' else []
+        if len(filenames):
+            returns = function(filenames,dtype,return_unique_datetimes, mode)
+        return [np.asarray(j, dtype) for j in returns] if type(returns) == tuple else np.asarray(returns, dtype)
+    
+    def update_directories_lastupdate_times(self, directory):
+        # This function gets called from a signal in nlr_currentdata.py
+        self.directories_lastupdate_times[directory] = pytime.time()
     
     def get_datetimes_directory(self,radar,directory,dtype = str,return_unique_datetimes = True):
-        filenames = self.get_filenames_directory(radar,directory)
+        lastupdate_time = self.filenames_directory.get(directory, {}).get('time', 0)
+        if pytime.time() - lastupdate_time < 60 and lastupdate_time > self.directories_lastupdate_times.get(directory, 0):
+            filenames = self.filenames_directory[directory]['fnames']
+        else:
+            filenames = self.get_filenames_directory(radar,directory)
+            self.filenames_directory[directory] = {'time':pytime.time(), 'fnames':filenames}
         # This function gets regularly called from within self.crd.switch_to_nearby_radar, so it's important to cache results.
         # Earlier this was done using the modification time (mtime) of the directory that would also remove the need for always determining filenames.
         # But this method appeared to be not trustworthy, as some filesystems don't update it when the number of files in the directory changes.
-        if not hasattr(self, 'nfiles_directory'):
-            self.nfiles_directory, self.datetimes_directory = {}, {}
         if not directory in self.nfiles_directory or self.nfiles_directory[directory] != len(filenames):
             self.datetimes_directory[directory] = self.get_datetimes_from_files(radar,filenames,directory,dtype,return_unique_datetimes, mode='simple')
             self.nfiles_directory[directory] = len(filenames)
@@ -1450,21 +1505,22 @@ class DataSource_General():
                 self.product_versions_directory = np.unique(np.concatenate(list(self.product_versions_datetimesdict.values())))    
     
     def get_files(self,radar,directory,return_datetimes = False):
-        self.files = self.get_filenames_directory(radar,directory)
+        filenames = self.get_filenames_directory(radar,directory)
+        self.filenames_directory[directory] = {'time':pytime.time(), 'fnames':filenames}
             
         if radar in gv.radars_with_onefileperdate:
             #Here there is one file per date, and therefore multiple radar volumes per file. datetimes contains datetimes of all the radar volumes
             #within all the files, while dates lists just one date for each file.
-            datetimes, self.dates = self.get_datetimes_from_files(radar,self.files,directory,dtype = str,return_unique_datetimes = False, mode='dates')
+            datetimes, self.dates = self.get_datetimes_from_files(radar,filenames,directory,dtype = str,return_unique_datetimes = False, mode='dates')
             #self.dates is used in the function self.get_dates_with_archived_data
             datetimes_unique = np.unique(datetimes)
-            self.files_datetimesdict = {self.dates[j]: self.files[j] for j in range(len(self.dates))}
+            self.files_datetimesdict = {self.dates[j]:[filenames[j]] for j in range(len(self.dates))}
         else:
-            datetimes = self.get_datetimes_from_files(radar,self.files,directory,dtype = str,return_unique_datetimes = False)
+            datetimes = self.get_datetimes_from_files(radar,filenames,directory,dtype = str,return_unique_datetimes = False)
             datetimes_unique = np.unique(datetimes)
-            self.files_datetimesdict = {j:self.files[datetimes==j] for j in datetimes_unique}
+            self.files_datetimesdict = {j:filenames[datetimes==j] for j in datetimes_unique}
             
-        self.get_product_versions(radar, self.files, datetimes)
+        self.get_product_versions(radar, filenames, datetimes)
             
         if return_datetimes:
             return datetimes_unique
@@ -1494,30 +1550,33 @@ class DataSource_General():
         if dir_string is None:
             dir_string = self.get_dir_string(radar,dataset)
             
-        dirs_abspaths = bg.get_abspaths_directories_in_datetime_range(dir_string,radar,startdatetime,enddatetime)[0]
+        dirs_abspaths = bg.get_abspaths_directories_in_datetime_range(dir_string,self.gui.radar_basedir,radar,startdatetime,enddatetime)[0]
         
         completely_selected_directories = []
         requested_filenames = np.array([],dtype = 'int64'); requested_datetimes = np.array([],dtype = 'int64')
         for i in dirs_abspaths:
-            filenames = self.get_filenames_directory(radar,i)
-            if return_abspaths:
-                filenames = np.array([opa(i+'/'+j) for j in filenames])
-            datetimes = self.get_datetimes_from_files(radar,filenames,i,dtype = 'int64',return_unique_datetimes = False)
-        
-            if not startdatetime is None and not enddatetime is None:
-                requested = (datetimes>= int(startdatetime)) & (datetimes<= int(enddatetime))
-            elif not startdatetime is None:
-                requested = datetimes>= int(startdatetime)
-            elif not enddatetime is None:
-                requested = datetimes<= int(enddatetime)
-            else:
-                requested = np.ones(len(datetimes),dtype = 'bool')
-                
-            requested_filenames = np.append(requested_filenames,filenames[requested])
-            requested_datetimes = np.append(requested_datetimes,datetimes[requested])
-        
-            if return_completely_selected_directories and np.count_nonzero(requested)==len(datetimes):
-                completely_selected_directories.append(i)
+            try:
+                filenames = self.get_filenames_directory(radar,i)
+                if return_abspaths:
+                    filenames = np.array([opa(i+'/'+j) for j in filenames])
+                datetimes = self.get_datetimes_from_files(radar,filenames,i,dtype = 'int64',return_unique_datetimes = False)
+            
+                if not startdatetime is None and not enddatetime is None:
+                    requested = (datetimes >= int(startdatetime)) & (datetimes <= int(enddatetime))
+                elif not startdatetime is None:
+                    requested = datetimes>= int(startdatetime)
+                elif not enddatetime is None:
+                    requested = datetimes<= int(enddatetime)
+                else:
+                    requested = np.ones(len(datetimes),dtype = 'bool')
+                    
+                requested_filenames = np.append(requested_filenames,filenames[requested])
+                requested_datetimes = np.append(requested_datetimes,datetimes[requested])
+            
+                if return_completely_selected_directories and np.count_nonzero(requested)==len(datetimes):
+                    completely_selected_directories.append(i)
+            except Exception as e:
+                print(i, e)
             
         if return_completely_selected_directories:
             return completely_selected_directories,requested_filenames,requested_datetimes
@@ -1531,7 +1590,7 @@ class DataSource_General():
             _,dir_string_list = self.get_dir_string(radar,dataset,return_dir_string_list = True)
             dates = np.array([])
             for j in dir_string_list:
-                dates = np.append(dates,bg.get_dates_with_archived_data(j,radar))
+                dates = np.append(dates,bg.get_dates_with_archived_data(j,self.gui.radar_basedir,radar))
             return np.unique(dates)
     
     def get_radars_with_archived_data_for_date(self,date):   
@@ -1550,14 +1609,14 @@ class DataSource_General():
                         for l in range(24):
                             # Check for each hour of the day whether a directory is available. This is a crude way to consider both directory formats
                             # with 1 folder per date and formats with folders for different times (e.g. hours).
-                            directory = bg.convert_dir_string_to_real_dir(k, i, date, format(l, '04d'))
+                            directory = bg.convert_dir_string_to_real_dir(k, self.gui.radar_basedir, i, date, format(l, '04d'))
                             if os.path.exists(directory):
                                 radars_with_data.append(radar_dataset)
                                 break
                             elif not ('${datetime' in k or '${time' in k):
                                 break
                     else:
-                        dirs_abspaths,dates_filtered = bg.get_abspaths_directories_in_datetime_range(k,i,startdatetime,enddatetime)
+                        dirs_abspaths,dates_filtered = bg.get_abspaths_directories_in_datetime_range(k,self.gui.radar_basedir,i,startdatetime,enddatetime)
                         if i in gv.radars_with_onefileperdate:
                             for path in dirs_abspaths:
                                 files = np.sort(self.get_filenames_directory(i, path))

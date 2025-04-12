@@ -2,15 +2,17 @@
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
 import imageio
+import cv2
 import numpy as np
 import os
 opa = os.path.abspath
 import time as pytime
 
+from PyQt5.QtCore import QThread,QObject,pyqtSignal    
+
 import nlr_functions as ft
 import nlr_globalvars as gv
 
-from PyQt5.QtCore import QThread,QObject,pyqtSignal    
 
 
 class MapTiles(QThread):
@@ -106,7 +108,7 @@ class MapTiles(QThread):
             self.filenames_grid[i] = np.array(self.filenames_grid[i])
             
             #Get the size of the images that represent the tiles
-            self.tile_sizes[i] = imageio.imread(opa(directory+'/'+self.filenames_grid[i][0,0])).shape
+            self.tile_sizes[i] = cv2.imread(directory+'/'+self.filenames_grid[i][0,0]).shape
     
     def get_filenames_tilegrid(self):
         npixels_main_layers = {}
@@ -164,6 +166,10 @@ class MapTiles(QThread):
                 tilebounds_gridindices[0]:tilebounds_gridindices[1], tilebounds_gridindices[2]:tilebounds_gridindices[3]]  
         
     def get_map_from_tiles(self):
+        # from cProfile import Profile
+        # profiler = Profile()
+        # profiler.enable()
+        
         if not self.starting and self.filenames_tilegrid.shape==self.filenames_tilegrid_before.shape and \
         np.all(self.filenames_tilegrid==self.filenames_tilegrid_before):
             #self.map does not need to be updated
@@ -187,7 +193,7 @@ class MapTiles(QThread):
                     ib_list.append(ib); jb_list.append(jb)
                 else:
                     self.map[(ni-(i+1))*tile_size[0]:(ni-i)*tile_size[0], j*tile_size[1]:(j+1)*tile_size[1]] = \
-                    imageio.imread(opa(self.basedir+'/Layer_'+str(self.layer)+'/'+self.filenames_tilegrid[i,j]))[:,:,::-1] #Convert from BGR to RGB
+                    imageio.imread(self.basedir+'/Layer_'+str(self.layer)+'/'+self.filenames_tilegrid[i,j])#[:,:,::-1] #Convert from BGR to RGB
         if len(i_list) > 0:
             i_min, i_max = min(i_list), max(i_list)
             j_min, j_max = min(j_list), max(j_list)
@@ -199,4 +205,9 @@ class MapTiles(QThread):
         self.filenames_tilegrid_before = self.filenames_tilegrid
         self.map_before = self.map
         self.starting = False
+        # profiler.disable()
+        # import pstats
+        # stats = pstats.Stats(profiler).sort_stats('cumtime')
+        # stats.print_stats(30)  
+
         return True #tiles_changed = True

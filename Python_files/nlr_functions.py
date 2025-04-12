@@ -21,29 +21,14 @@ def list_to_string(l, separator=','):
         if j!=len(l)-1:
             s += separator
     return s
-
+	
 def string_to_list(s, separator=','):
-    l = []
-    index = s.find(separator)
-    while index!=-1:
-        l.append(s[:index].strip())
-        s = s[index+len(separator):]
-        s = s.strip()
-        index = s.find(separator)
-    l.append(s)
-    return l
+	l = [el.strip() for el in s.split(separator)]
+	return [el for el in l if el != '']
 
 def get_datalines(data):
-    lines = []
-    index = data.find('\n')
-    while index!=-1:
-        lines.append(data[:index])
-        data = data[index:].strip()
-        index = data.find('\n')
-    lines.append(data)
-    if lines[-1]=='': lines.pop()
-    
-    return lines
+    lines = [l.strip() for l in data.split('\n')]
+    return [l for l in lines if l != '']
 
 def list_data(data, separator=','):
     lines = get_datalines(data)
@@ -291,12 +276,15 @@ def get_datetimes_in_range(start_dt, end_dt, timestep_m):
 def get_dates_in_range(start_date, end_date):
     return [dt[:-4] for dt in get_datetimes_in_range(start_date+'0000', end_date+'0000', 1440)]
 
-def next_datetime(datetime,timestep_m):
+def next_datetime(datetime,timestep_m): # datetime should have format YYYYMMDDHHMM
     datetime_str=datetime
     date=datetime_str[:8]; time=datetime_str[-4:]
     nextdate, nexttime=next_date_and_time(date,time,timestep_m)
     next_datetime=nextdate+nexttime
     return next_datetime
+
+def next_datetime_s(datetime, timestep_s): # datetime should have format YYYYMMDDHHMM or YYYYMMDDHHMMSS
+    return get_datetimes_from_absolutetimes(get_absolutetimes_from_datetimes(datetime)+timestep_s, True)
 
 def round_datetime(datetime, n_minutes):
     time_s = get_absolutetimes_from_datetimes(datetime)
@@ -458,6 +446,8 @@ def format_datetime(datetime,conversion='YYYY-MM-DDTHH:MM->YYYYMMDDHHMM'):
         return format_date(datetime[:8], 'YYYYMMDD->YYYY-MM-DD')+'T'+format_time(datetime[-4:], 'HHMM->HH:MM')+':00Z'
     elif conversion == 'YYYYMMDDHHMM->YYYY-MM-DD HH:MM':
         return format_date(datetime[:8], 'YYYYMMDD->YYYY-MM-DD')+' '+format_time(datetime[-4:], 'HHMM->HH:MM')
+    elif conversion == 'YYYYMMDDHHMM->YYYY-MM-DDTHH:MM':
+        return format_date(datetime[:8], 'YYYYMMDD->YYYY-MM-DD')+'T'+format_time(datetime[-4:], 'HHMM->HH:MM')
     
 def beamelevation(slantrange_or_elevation,scanangle,inverse=False): #slantrange in meters,scanangle in degrees
     R_earth=6371.*10**3;k=4./3.;
@@ -744,7 +734,7 @@ def calculate_great_circle_distance_from_latlon(latlon_0, latlon_1): #latlon_0 s
     #and longitude, and latlon_1 can either also be a List/array that contains a single latitude and longitude, 
     #or it can be a list/array of lat, lon pairs.
     lat0, lon0 = latlon_0
-    latlon_1 = np.array(latlon_1)
+    latlon_1 = np.asarray(latlon_1)
     if isinstance(latlon_1[0], np.ndarray):
         lat1, lon1 = latlon_1[:, 0], latlon_1[:, 1]
     else:
@@ -830,6 +820,7 @@ def bytes_to_array(data, datadepth = 8):
     return np.ndarray(shape=(int(len(data) / datawidth),),
                   dtype=datatype, buffer=data)
     
+
 def add_rolled_arr(arr1, arr2, axis, shift):
     """ Add a rolled (shifted, with periodic boundaries) version of arr2 to arr1, in an efficient way.
     arr2 is rolled along the specified axis by the specified shift.
@@ -841,6 +832,15 @@ def add_rolled_arr(arr1, arr2, axis, shift):
     else:
         arr1[:,:shift] += arr2[:,-shift:]
         arr1[:,shift:] += arr2[:,:-shift]
+def get_rolled_arr(arr, axis, shift):
+    out = np.empty_like(arr)
+    if axis==0:
+        out[:shift] = arr[-shift:]
+        out[shift:] = arr[:-shift]
+    else:
+        out[:,:shift] = arr[:,-shift:]
+        out[:,shift:] = arr[:,:-shift]
+    return out
     
 def add_shifted_arr(arr1, arr2, axis, shift): 
     """ Add a shifted version of arr2 to arr1, without use of periodic boundaries, in an efficient way.
@@ -857,6 +857,18 @@ def add_shifted_arr(arr1, arr2, axis, shift):
             arr1[:,-shift:] += arr2[:,:shift]
         else:
             arr1[:,:-shift] += arr2[:,shift:]
+def get_translated_arr(arr, shift): 
+    out = arr.copy()
+    if shift[0]:
+        out[:shift[0]] = out[-shift[0]:]
+        out[shift[0]:] = out[:-shift[0]]
+    if shift[1]:
+        if shift[1] < 0:
+            out[:,-shift[1]:] = out[:,:shift[1]]
+        else:
+            out[:,:-shift[1]] = out[:,shift[1]:]
+    return out
+
             
 def get_moving_avg(arr, n, axis, mask_value=None):
     if mask_value is None:
@@ -883,7 +895,8 @@ def get_window_sum(arr, window = [2, 2, 2, 2, 2]):
     For each radial do 2*x+1 radial bins belong to the window, where x is the element in 'window'. The elements in window thus specify the number of radial bins above and below
     the central radius of the window. 
     """
-    if len(window) % 2 == 0: raise Exception("The length of 'window' should be an odd number")
+    if len(window) % 2 == 0: 
+        raise Exception("The length of 'window' should be an odd number")
     
     window = np.array(window)
     azi_sums = {1:arr.copy()}
@@ -900,6 +913,77 @@ def get_window_sum(arr, window = [2, 2, 2, 2, 2]):
         add_shifted_arr(window_sum, azi_sums[n_azi_j], 1, -j)
     
     return window_sum
+
+def get_window_mean(arr, data_mask, window, copy=False):
+    arr = arr.copy() if copy else arr
+    arr[data_mask] = 0
+    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
+    return get_window_sum(arr, window)/n_unmasked
+
+def get_window_mask_ratio(data_mask, window):
+    # Returns ratio of number of masked elements in window to total elements in window
+    window_size = sum(2*j+1 for j in window)
+    return get_window_sum(data_mask.astype('uint8'), window)/window_size
+
+# def get_window_mean_abs_diff(arr_ref, arr, data_mask, window):
+#     if len(window) % 2 == 0: 
+#         raise Exception("The length of 'window' should be an odd number")
+    
+#     n_azi = int((len(window) - 1)/2)
+#     n_rad = max(window)
+#     window_size = sum(2*j+1 for j in window)
+    
+#     diff = np.zeros_like(arr)
+#     for i in range(-n_azi, n_azi+1):
+#         for j in range(-n_rad, n_rad+1):
+#             if abs(j) > window[n_azi+i]:
+#                 continue
+#             _diff = np.abs(arr_ref - get_translated_arr(arr, (i, j)))
+#             _diff[get_translated_arr(data_mask, (i, j))] = 0.
+#             diff += np.minimum(_diff, 2*np.pi-_diff)
+            
+#     n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
+#     return diff/n_unmasked
+
+def get_window_stdev(arr, data_mask, window, copy=False):
+    arr = arr.copy() if copy else arr
+    arr[data_mask] = 0
+    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
+    c1 = get_window_sum(arr, window)/n_unmasked
+    c2 = get_window_sum(arr*arr, window)/n_unmasked
+    return (c2 - c1*c1)**.5
+
+def calculate_ref_phase(sin_phi, cos_phi, window):
+    sin_phi_sum, cos_phi_sum = get_window_sum(sin_phi, window), get_window_sum(cos_phi, window)
+    return np.arctan2(sin_phi_sum, cos_phi_sum)
+
+def get_window_phase_stdev(phi, data_mask, window):
+    # Calculates stdev in phase space, taking into account the circular nature of the phase
+    if len(window) % 2 == 0: 
+        raise Exception("The length of 'window' should be an odd number")
+        
+    sin_phi = np.sin(phi); sin_phi[data_mask] = 0.
+    cos_phi = np.cos(phi); cos_phi[data_mask] = 0.
+    phi_ref = calculate_ref_phase(sin_phi, cos_phi, window)
+                
+    n_azi = int((len(window) - 1)/2)
+    n_rad = max(window)
+    
+    diff = np.zeros_like(phi)
+    for i in range(-n_azi, n_azi+1):
+        for j in range(-n_rad, n_rad+1):
+            if abs(j) > window[n_azi+i]:
+                continue
+            _diff = np.abs(phi_ref - get_translated_arr(phi, (i, j)))
+            _diff = np.minimum(_diff, 2*np.pi-_diff)
+            _diff[get_translated_arr(data_mask, (i, j))] = 0.
+            diff += _diff**2
+    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
+    return np.sqrt(diff/n_unmasked)
+  
+def get_speckle_mask(data_mask):
+    # Returns True when a non-masked radar bin is completely surrounded by masked radar bins (in all 8 neighbouring bins)
+    return ~data_mask & (get_window_sum((~data_mask).astype('uint8'), [1,1,1]) == 1)
 
 def get_window_indices(i, window, shape, periodic = 'rows'):
     # i should be of integer dtype, not unsigned integer, because of calculations performed below!

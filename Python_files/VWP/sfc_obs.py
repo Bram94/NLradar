@@ -215,12 +215,13 @@ class SfcObsKNMI():
                     s = slice(-200, None)
                     #Obtain data for the last datetime
 
-            data_list = np.array([i for i in ft.list_data(content[s], separator=',') if i[0]==station_ids[self.radar]])
+            data_list = [i for i in ft.list_data(content[s], separator=',') if i[0] == station_ids[self.radar]]
             #important: For hour=='24' does KNMI_hour_to_time return '0000', which is a time of the next day. The date should therefore be updated to the next day, which
             #is done below.
             for j in datetimes_download:
-                data_list_j = np.array([i for i in data_list if i[1]==j])
-                if len(data_list_j)==0: continue
+                data_list_j = np.array([i for i in data_list if i[1] == j])
+                if not len(data_list_j): 
+                    continue
                 dd = data_list_j[:, 3]; dd[dd == '990'] = '' #Don't plot observations when direction = 'veranderlijk'
                 ff = data_list_j[:, 5]
                 select = ff != ''; ff[select] = (ff[select].astype('float')/10).astype('str')
@@ -392,6 +393,7 @@ class SfcObsKMI():
         meta = session.get('https://opendata.meteo.be/service/ows', params=params).text
         
         stns_list = ft.list_data(meta)[1:]
+        print(meta)
         stns_coords = [ft.string_to_list(j[2].replace('POINT (', '').replace(')', ''), ' ') for j in stns_list]
         
         ref_coords = gv.radarcoords[radar]
@@ -477,15 +479,16 @@ class SfcObsMETAR():
         obs['dist'] = distances[argmin_dist]
         
         previous_date, next_date = ft.next_date(date, -1), ft.next_date(date, 1)        
-        limit_datetime = ''.join(ft.get_ymdhm(pytime.time()-24*3600))
-        request_datetime = ft.round_datetime(ft.next_datetime(date+time, 720), 60)
-        if int(request_datetime) < int(limit_datetime):
+        current_datetime = ''.join(ft.get_ymdhm(pytime.time()))
+        current_date, current_time = current_datetime[:8], current_datetime[-4:]
+        if date != current_date and ft.datetimediff_m(date+time, current_datetime) > 720 and int(current_time) > 600:
             if 200 <= int(time) <= 2200:
                 request_dates = [date]
             else:
                 request_dates = [previous_date, date] if int(time) < 200 else [date, next_date]
         else:
             request_dates = ['current']
+        print(request_dates)
         
         data, datetimes = [], []
         for _date in request_dates:
@@ -529,7 +532,7 @@ class SfcObsMETAR():
         indices_keep = [i for i,j in enumerate(data) if any(len(k) > 6 and k[-2:] == 'KT' for k in j)]
         data = [data[i] for i in indices_keep]
         datetimes = [datetimes[i] for i in indices_keep]
-                
+
         index = None
         if datetimes:
             index, datetime = get_closest_datetime(datetimes, date+time)
@@ -682,7 +685,8 @@ class SfcObsDWD():
                 text = _._content.decode('utf-8')
                 var_name = 'wind' if j == 'wind' else 'TU'
                 s = '<a href="10minutenwerte_'+var_name+'_'+self.station[j]
-                i1 = text.index(s); i2 = text.rindex(s); i3 = text[i2:].index('&gt;</a>')+i2
+                print(text)
+                i1 = text.index(s); i2 = text.rindex(s); i3 = text[i2:].index('</a>')+i2
                 t = text[i1:i3]
                 l = ft.string_to_list(t, '\r\n')
                 for line in l:

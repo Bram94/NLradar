@@ -1,11 +1,11 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import nlr_functions as ft
-import nlr_globalvars as gv
-
 import numpy as np
 import time as pytime
+
+import nlr_functions as ft
+import nlr_globalvars as gv
 
 
 

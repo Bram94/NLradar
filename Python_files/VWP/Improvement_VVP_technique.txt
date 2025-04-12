@@ -1,0 +1,21 @@
+Radar volumes to consider for weird results:
+- 201907201400, Herwijnen, wind around 10 km
+
+
+From http://bibliotheek.knmi.nl/knmipubWR/WR2003-02.pdf:
+- For wind field retrieval below the melting layer, Browning and Wexler (1968) suggest
+a maximum elevation of 9 degrees.
+- Beneath a certain height which should be related to the actual melting layer height, only velocity data below a maximum elevation will be used. For simplicity a fixed melting layer height
+of 2.0 km is used in this study
+- Singular value decomposition
+
+
+Suggestions improvement:
+- Consider the terminal hydrometeor fall speed Wf as a function of hydrometeor type (and thereby altitude):
+Holleman (2003) suggests that Wf is less than 1 m/s above the melting layer, such that w could maybe be bounded between -2 and 0 m/s for altitudes above 4 km?
+And below 4 km it could then be bounded between e.g. -6 and 0 m/s (since the maximum terminal velocities will only be reached in small intense precipitation cores, that typically
+occupy only a small portion of the VVP volume. Same holds for intense downdrafts that could otherwise make the total vertical velocity (Wf+w0) deviate substantially from Wf.
+- Maybe exclude higher elevation scans for altitudes below the melting level (say below 4 km), since Wf has a strong effect on velocities for these scans. Removing these scans
+should not reduce data availability greatly, heigths up to 4 km are typically well sampled by the lower scans.
+
+- Try to better distinguish between areas of clutter (with velocity around 0) and non-clutter areas with velocity around 0.

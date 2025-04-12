@@ -3,13 +3,12 @@
 
 import numpy as np
 
-import nlr_globalvars as gv
-import nlr_functions as ft
-
-from PyQt5 import QtCore,QtGui,QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+
+import nlr_globalvars as gv
+import nlr_functions as ft
 
 
 

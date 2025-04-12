@@ -18,10 +18,10 @@ class DualPRFDealiasing():
     
     
     def __call__(self, v_array, data_mask, azimuthal_res, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth = None, window_detection = [2, 2, 2, 2, 2], window_correction = [2, 2, 2, 2, 2], deviation_factor = 1.0, 
-    n_it = 50, c_array = None, mask_all_nearzero_velocities = False, min_gates_correct = 0, plot_velocity_deviations = False):
+    n_it = 50, z_array=None, c_array = None, mask_all_nearzero_velocities = False, min_gates_correct = 0, plot_velocity_deviations = False):
         # t = pytime.time()
         """Parameters:
-        - v_array: Array with velocities that need to be dealiased
+        - v_array: Array with velocities that need to be dealiasd
         - data_mask: Boolean array with shape of v_array that masks empty velocity bins.
         - vn_e: Extended Nyquist velocity
         - vn_l: Low Nyquist velocity
@@ -63,9 +63,13 @@ class DualPRFDealiasing():
             #Mask near-zero velocities within a range of 25 km from the radar.
             data_slantrange = np.tile(1+np.arange(self.data.shape[1]) * radial_res, (self.data.shape[0], 1))
             data_mask = np.logical_or(data_mask, (data_slantrange <= 25.) & (np.abs(v_array) < 1.5))
+            
+        before = data_mask.copy()
+        if not z_array is None:
+            data_mask |= z_array < 10
                 
         self.data_mask = data_mask
-        self.data_nonmask = data_mask == False
+        self.data_nonmask = ~data_mask
         self.azimuthal_res = azimuthal_res
         self.radial_res = radial_res
         self.vn_e, self.vn_l, self.vn_h = vn_e, vn_l, vn_h
@@ -77,17 +81,32 @@ class DualPRFDealiasing():
         self.n_it = n_it
         self.plot_velocity_deviations = plot_velocity_deviations
         
-        self.dealiase()
+        self.dealias()
+        
+        if not z_array is None:
+            self.data_mask = before.copy() | (z_array >= 10)
+            self.data_nonmask = ~self.data_mask
+            step = window_detection[1]-window_detection[0]
+            self.window_detection = [window_detection[0]+step*j for j in range(len(window_detection))]
+            self.window_detection += self.window_detection[:-1][::-1]
+            step = window_correction[1]-window_correction[0]
+            self.window_correction = [window_correction[0]+step*j for j in range(len(window_correction))]
+            self.window_correction += self.window_correction[:-1][::-1]
+
+            # self.window_detection = window_detection[:n]+[max(j*2, 1) for j in window_detection]+window_detection[-n:]
+            # n = (len(window_correction)+1)//2
+            # self.window_correction = window_correction[:n]+[max(j*2, 1) for j in window_correction]+window_correction[-n:]
+            self.dealias()
+            
         # print(self.n+1, pytime.time() - t,'t_dealias')
         return self.data
         
     
-    def dealiase(self):
+    def dealias(self):
         self.n_azi, self.n_rad = self.data.shape
-        
         if self.vn_first_azimuth:
             vn_order = [self.vn_h, self.vn_l] if self.vn_first_azimuth == 'h' else [self.vn_l, self.vn_h]
-            self.vn_radials = np.tile(vn_order, self.n_azi//2).astype(self.data.dtype)
+            self.vn_radials = np.tile(vn_order, (self.n_azi+1)//2)[:self.n_azi].astype(self.data.dtype)
             self.vn_array = np.transpose(np.tile(self.vn_radials, (self.n_rad, 1))).astype(self.data.dtype)
             
         self.n_outliers_before = 1e8; self.n_outliers = 1e6
@@ -120,7 +139,8 @@ class DualPRFDealiasing():
         if self.n == 0:
             self.update = self.data_nonmask
         else:
-            self.update = self.data_nonmask & get_window_sum(self.outliers, self.window_detection) #Keep in mind that the window sum cannot become larger than 1 for a boolean array. But that is not a problem here.
+            # Keep in mind that the window sum cannot become larger than 1 for a boolean array. But that is not a problem here.
+            self.update = self.data_nonmask & get_window_sum(self.outliers, self.window_detection)
         self.n_update = np.count_nonzero(self.update)
         
         phi_ref = self.calculate_reference_phase(self.update, self.n_update, self.window_detection)
@@ -164,6 +184,8 @@ class DualPRFDealiasing():
         phi_ref = self.calculate_reference_phase(self.outliers, self.n_outliers, self.window_correction)
         
         v_diff = (self.phi[self.outliers] - phi_ref)*self.vn_e/np.pi
+        select = np.abs(v_diff) > self.vn_e
+        v_diff[select] -= np.sign(v_diff[select])*2*self.vn_e
         
         vn_outliers = self.vn_array[self.outliers]
         correction_ints = np.round(v_diff/(2*vn_outliers))
@@ -183,7 +205,7 @@ class DualPRFDealiasing():
             cos_phi_sum_update = np.sum(self.cos_phi[rows, cols].reshape((window_size, n_select)), axis = 0)
             return np.arctan2(sin_phi_sum_update, cos_phi_sum_update)
         else:
-            sin_phi_sum_detection, cos_phi_sum_detection = self.calculate_sin_cos_phi_sum(window)   
+            sin_phi_sum_detection, cos_phi_sum_detection = self.calculate_sin_cos_phi_sum(window) 
             return np.arctan2(sin_phi_sum_detection[select], cos_phi_sum_detection[select])
         
     def calculate_sin_cos_phi_sum(self, window):
@@ -197,17 +219,22 @@ class DualPRFDealiasing():
         # Exclude velocity differences close to 0, focus on differences that are twice the low/high Nyquist velocity
         select = v_avg > 1.5*self.vn_l
         self.vn_first_azimuth = 'h' if np.argmax(counts1[select]) > np.argmax(counts2[select]) else 'l'
-        self.vn_radials = np.tile([self.vn_h, self.vn_l] if self.vn_first_azimuth == 'h' else [self.vn_l, self.vn_h], self.n_azi//2)[:self.n_azi]
+        vn_order = [self.vn_h, self.vn_l] if self.vn_first_azimuth == 'h' else [self.vn_l, self.vn_h]
+        self.vn_radials = np.tile(vn_order, (self.n_azi+1)//2)[:self.n_azi]
         self.vn_array = np.tile(self.vn_radials, (self.n_rad, 1)).T
         
         f = 1.9426
         v_avg *= f
+        # for i, v in enumerate(v_avg):
+        #     if 2/3*self.vn_l*f < v < 3*self.vn_l*f:
+        #         print(int(round(v)), counts1[i], counts2[i])
         if self.plot_velocity_deviations:
             plt.figure()
             plt.plot(v_avg, counts1)
             plt.plot(v_avg, counts2)
             plt.xlim([0, 3*self.vn_l*f])
-            plt.ylim([0, max([counts1[v_avg > self.vn_l*f].max(), counts2[v_avg > self.vn_l*f].max()])])
+            select = v_avg > 2/3*self.vn_l*f
+            plt.ylim([0, max([counts1[select].max(), counts2[select].max()])])
             plt.show()
 
 
@@ -216,7 +243,7 @@ class DualPRFDealiasing():
         
 da = DualPRFDealiasing()
 
-def apply_dual_prf_dealiasing(v_array, data_mask, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth = None, window_detection = None, window_correction = None, deviation_factor = 1.0, n_it = 50, c_array = None, mask_all_nearzero_velocities = False):
+def apply_dual_prf_dealiasing(v_array, data_mask, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth = None, window_detection = None, window_correction = None, deviation_factor = 1.0, n_it = 50, z_array=None, c_array = None, mask_all_nearzero_velocities = False):
     """If window_detection and window_correction are not specified, then they are given below. Those window sizes are based upon the assumption that there can be many outliers,
     such that the window should not be too small. If the number of outliers is always small for a particular radar, then the window size should be smaller, to prevent undesired
     smoothing of the velocity field.
@@ -236,4 +263,4 @@ def apply_dual_prf_dealiasing(v_array, data_mask, radial_res, vn_e, vn_l, vn_h, 
         elif ratio < 5: window_correction = [3,5,3]
         else: window_correction = [4,6,4]
                 
-    return da(v_array, data_mask, azimuthal_res, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth, window_detection, window_correction, deviation_factor, n_it, c_array, mask_all_nearzero_velocities)
+    return da(v_array, data_mask, azimuthal_res, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth, window_detection, window_correction, deviation_factor, n_it, z_array, c_array, mask_all_nearzero_velocities)

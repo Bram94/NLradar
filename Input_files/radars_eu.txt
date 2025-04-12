@@ -55,6 +55,7 @@ Sindal			dksin	57.48876226	10.13511376	109	86	C
 Bornholm		dkbor	55.11283297	14.8874575	171	161	C
 Stevns			dkste	55.32561875	12.44817293	53	33	C
 Virring Skanderborg	dkvir	56.02386909	10.02516884	142	121	C
+Samso			dksam	55.8119		10.5853		48	48	C
 
 Météo-France
 Noyal			36	48.04694	-2.89417	158	140	X
@@ -86,10 +87,54 @@ Cherves			64	46.69861	0.06556		175	160	C
 Blaisy-Haut		65	47.35528	4.77583		605	590	C
 Momuy			66	43.62444	-0.60944	150	130	C
 Montancy		67	47.36861	7.01889		923	910	C
+Maurel			68	44.01278	6.52917		1770	1754	X
 Colombis		69	44.49611	6.22056		1738	1720	X
-
+			
 CHMI
 Skalky			ska	49.5011		16.7885		767	744	C
 Brdy-Praha		brd	49.6583		13.8178		916	869	C
-Holesov			.	49.3147		17.5742		240	224	X	Microstep-MIS
-Milešovka		.	50.55484	13.93128	860	813	X	IAP
+
+FMI:DMI
+Anjalankoski		fianj	60.90387	27.10806	139	101	C
+Ikaalinen		fiika	61.76700	23.08000	154	117	C
+Kankaanpää		fikan	61.81081	22.50203	175	141	C
+Kaunispää		fikau	68.43443	27.44399	489	433	C
+Kesälahti		fikes	61.906992	29.79772	174	138	C
+Korppoo			fikor	60.12847	21.64338	61	38	C
+Kuopio			fikuo	62.8626		27.38147	268	230	C
+Luosto			filuo	67.1391		26.896916	533	512	C
+Nurmes			finur	63.83786	29.44893	323	291	C
+Petäjävesi		fipet	62.30452	25.44009	271	240	C
+Utajärvi		fiuta	64.77493	26.31888	118	81	C
+Vantaa			fivan	60.27062	24.86902	82	52	C
+Vihti Ylimmäinen	fivih	60.55619	24.495592	181	138	C
+Vimpeli			fivim	63.10484	23.82086	200	171	C
+
+UKMO
+Dean Hill		.	51.02972	-1.65306	180	151	C
+Chenies			.	51.68917	-0.52972	153	139	C
+Castor Bay		.	54.50000	-6.33889	41	16	C
+Clee Hill		.	52.39806	-2.59500	529	502	C
+Cobbacombe		.	50.96278	-3.45083	302	284	C
+Crug-y-Gorrllwyn	.	51.97944	-4.44333	337	322	C
+Druim a' Starraig	.	58.21111	-6.17972	98	84	C
+Dudwick			.	57.43083	-2.03472	186	170	C
+Hameldon Hill		.	53.75417	-2.28639	402	383	C
+High Moorsley		.	54.80306	-1.47389	174	158	C
+Holehead		.	56.01833	-4.21694	558	546	C
+Ingham			.	53.33500	-0.55778	86	67	C
+Jersey			.	49.17778	-2.22194	85	66	C
+Munduff Hill		.	56.21444	-3.30917	462	431	C
+Predannack		.	50.00222	-5.22083	103	87	C
+Thurnham		.	51.29417	0.60639		222	197	C
+Wardon Hill		.	50.81833	-2.55472	265	238	C
+
+ESTEA:DMI
+Sürgavere		SUR	58.48231	25.51866	157	130	C
+Harku			HAR	59.39767	24.6021		49	36	C
+
+Microstep-MIS:CHMI
+Holesov			.	49.3147		17.5742		240	224	X
+
+IAP:CHMI
+Milešovka		.	50.55484	13.93128	860	813	X

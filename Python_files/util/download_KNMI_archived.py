@@ -10,7 +10,7 @@ import tarfile
 
 
 
-api_key = ""
+api_key = "5e554e19274a9600012a3eb1aa3f7f24624c4c659cae977d1fbffce6"
 dataset = "https://api.dataplatform.knmi.nl/open-data/datasets/radar_tar_vol_full_herwijnen/versions/1.0/files"
 # dataset = "https://api.dataplatform.knmi.nl/open-data/datasets/radar_tar_volume_denhelder/versions/1.0/files"
 # dataset = "https://api.dataplatform.knmi.nl/open-data/datasets/radar_tar_volume_debilt/versions/1.0/files"
@@ -30,7 +30,7 @@ for file in dataset_files:
     with requests.get(download_url, stream=True) as r:
         r.raise_for_status()
         with open(filepath, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1000000000): 
+            for chunk in r.iter_content(chunk_size=100000000): 
                 # If you have chunk encoded response uncomment if
                 # and set chunk_size parameter to None.
                 #if chunk: 

@@ -1,9 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import nlr_functions as ft
-import nlr_globalvars as gv
-
 import numpy as np
 import os
 opa=os.path.abspath
@@ -16,6 +13,9 @@ from PIL import ImageFont
 
 import warnings
 warnings.simplefilter("ignore", ResourceWarning) #Prevent ResourceWarnings for unclosed files and sockets from showing up
+
+import nlr_functions as ft
+import nlr_globalvars as gv
 
 
 
@@ -356,7 +356,7 @@ def check_correctness_dir_string(dir_string):
         return False
                 
     allowed_minutes=[j for j in range(1,1441) if np.mod(1440/j,1)==0.]
-    allowed_variables=['radarID','radar','date','time']+['time'+str(j) for j in allowed_minutes]+['datetime'+str(j) for j in allowed_minutes]
+    allowed_variables=['basedir','radarID','radar','date','time']+['time'+str(j) for j in allowed_minutes]+['datetime'+str(j) for j in allowed_minutes]
     allowed_variables_plusminus=['date','time']+['time'+str(j) for j in allowed_minutes]+['datetime'+str(j) for j in allowed_minutes]
     
     #Date and time variables are not allowed to appear in more than one substring, i.e. all date variables must be located in the same
@@ -438,12 +438,12 @@ def dirstring_to_dirlist(dir_str):
     dir_list.append((common_part+dir_str.strip()).replace('//','/'))
     return dir_list
 
-def convert_dir_string_to_real_dir(dir_string,radar,date,time):
+def convert_dir_string_to_real_dir(dir_string,basedir,radar,date,time):
     """Converts a directory string with variables (${variable}) in it to a real directory.
     The supported variables are ${date}, ${date+}, ${timeX} ${timeX+}, ${datetimeX} and ${datetimeX+}.
     X denotes the number of minutes to which a time will be floored in order to get the time in the directory (e.g. with X=60 1442 becomes 1400).
     """
-    dir_string = replace_radar_variables(dir_string,radar)
+    dir_string = replace_basedir_and_radar_variables(dir_string, basedir, radar)
     
     real_dir=''
     while True:
@@ -486,13 +486,14 @@ def convert_dir_string_to_real_dir(dir_string,radar,date,time):
             break
     return real_dir
 
-def get_date_and_time_from_dir(real_dir,dir_string,radar = None):
+def get_date_and_time_from_dir(real_dir,dir_string,basedir=None,radar = None):
     """Determine the date and time from real_dir based on dir_string. Returns None if the date and/or time is not present in dir_string.
     """
-    if '${radar}' in dir_string or '${radarID}' in dir_string:
-        if radar is None:
-            raise Exception('radar variables present in dir_string, without radar specified. bg.get_date_and_time_from_dir.')
-        dir_string = replace_radar_variables(dir_string,radar)
+    if '${basedir}' in dir_string or '${radar}' in dir_string or '${radarID}' in dir_string:
+        try:
+            dir_string = replace_basedir_and_radar_variables(dir_string, basedir, radar)
+        except Exception:
+            raise Exception('basedir or radar variables present in dir_string, without being specified. bg.get_date_and_time_from_dir.')            
     
     date=None; time=None
     index_add=0 #Index_add is added to the indices below to compensate for the difference in lengths between the date and time variables, and the 
@@ -556,8 +557,8 @@ def check_correspondence_real_dir_to_dir_string(real_dir,dir_string):
         #apparently no dates/times.
         return False
                         
-    radar=None #Not needed
-    real_dir_string=convert_dir_string_to_real_dir(dir_string,radar,date,time)
+    basedir = radar = None #Not needed
+    real_dir_string=convert_dir_string_to_real_dir(dir_string,basedir,radar,date,time)
     correct=real_dir_string==real_dir
     
     if not dir_string in correctness_direntries_per_substring:
@@ -597,12 +598,16 @@ def get_direntries(abs_path,compare_substring):
         direntries = [j for j in os.listdir(abs_path) if check_correspondence_real_dir_to_dir_string(j, compare_substring)]
     return np.sort(direntries)
     
-def replace_radar_variables(dir_string,radar):
+def replace_basedir_and_radar_variables(dir_string, basedir, radar):
+    if '${basedir}' in dir_string:
+        #Replace ${radar} by the radar name without spaces.
+        index=dir_string.index('${basedir}')
+        dir_string=dir_string[:index]+basedir+dir_string[index+len('${basedir}'):]
     if '${radar}' in dir_string:
         #Replace ${radar} by the radar name without spaces.
         index=dir_string.index('${radar}')
-        radar = gv.radars_nospecialchar_names[radar]
-        dir_string=dir_string[:index]+radar.replace(' ','')+dir_string[index+len('${radar}'):]
+        radar = gv.radars_ascii_names[radar].replace(' ','')
+        dir_string=dir_string[:index]+radar+dir_string[index+len('${radar}'):]
     if '${radarID}' in dir_string:
         #Replace ${radarID} by the radar ID corresponding to the radar
         index=dir_string.index('${radarID}')
@@ -625,17 +630,19 @@ def get_substringsindices_and_abspaths(substrings1,substrings2):
             substrings_indices.append(j)
     return substrings_indices, abs_paths
 
-def get_download_directory(dir_string):
+def get_download_directory(dir_string, basedir):
     substrings=get_substrings_in_dir_string(dir_string)
     download_directory=''
-    for j in range(0,len(substrings)):
-        if not '${' in substrings[j]:
-            download_directory+=('/' if j>0 else '')+substrings[j]
+    for j in range(len(substrings)):
+        if '${basedir}' in substrings[j]:
+            download_directory += basedir
+        elif not '${' in substrings[j]:
+            download_directory += ('/' if j>0 else '')+substrings[j]
         else:
             break
     return opa(download_directory+'/Download')
     
-def get_last_directory(dir_string,radar,function_get_filenames_directory,reverse=False):
+def get_last_directory(dir_string,basedir,radar,function_get_filenames_directory,reverse=False):
     """Returns the absolute path of the last directory that contains data. This is done by first determining the last directory in
     the directory tree, and if that one is empty, then get_next_directory is called to obtain the nearest (in date and time) non-empty
     directory.
@@ -645,7 +652,7 @@ def get_last_directory(dir_string,radar,function_get_filenames_directory,reverse
     
     This function can handle empty directories, and skips them.
     """   
-    dir_string=replace_radar_variables(dir_string,radar)
+    dir_string=replace_basedir_and_radar_variables(dir_string, basedir, radar)
         
     if not '${' in dir_string:
         #In this case there are no date and/or time variables present in dir_string
@@ -687,12 +694,12 @@ def get_last_directory(dir_string,radar,function_get_filenames_directory,reverse
             if not check_dir_empty_radar(radar,opa(trial_last_directory_abspath),function_get_filenames_directory): #Skip empty directories
                 return opa(trial_last_directory_abspath)
             else:
-                return get_next_directory(dir_string,direction,radar,function_get_filenames_directory,current_dir=trial_last_directory_abspath)
+                return get_next_directory(direction,dir_string,basedir,radar,function_get_filenames_directory,current_dir=trial_last_directory_abspath)
     except Exception:
         #Can e.g. occur when there are no directories that satisfy the format.
         return None
     
-def get_next_possible_dir_for_dir_string(dir_string, radar, date, time, direction):
+def get_next_possible_dir_for_dir_string(dir_string, basedir, radar, date, time, direction):
     i1 = [i.end() for i in re.finditer('\$\{', dir_string)]
     i2 = [i.start() for i in re.finditer('\}', dir_string)]
     variables = [dir_string[i1[j]:i2[j]] for j in range(len(i1))]
@@ -705,9 +712,9 @@ def get_next_possible_dir_for_dir_string(dir_string, radar, date, time, directio
         elif 'date' in var:
             date = ft.next_date(date, direction*1)
             break
-    return convert_dir_string_to_real_dir(dir_string, radar, date, time)
+    return convert_dir_string_to_real_dir(dir_string, basedir, radar, date, time)
     
-def get_next_directory(dir_string,direction,radar,function_get_filenames_directory,current_dir=None,date=None,time=None):   
+def get_next_directory(direction,dir_string,basedir,radar,function_get_filenames_directory,current_dir=None,date=None,time=None):   
     """Given a particular dir_string, date and time, this function first determines the corresponding directory in which the program
     currently searches for files. The goal is then to determine the next directory in the direction given by direction (+-1), i.e. the 
     directory for the next combination of date and time for which files are available. 
@@ -731,20 +738,20 @@ def get_next_directory(dir_string,direction,radar,function_get_filenames_directo
     
     This function can handle empty directories, and skips them.
     """        
-    dir_string=replace_radar_variables(dir_string,radar)
+    dir_string=replace_basedir_and_radar_variables(dir_string, basedir, radar)
         
     if not '${' in dir_string:
         #In this case there are no date and/or time variables present in dir_string
         return opa(dir_string)
                 
     if date:
-        next_possible_dir = get_next_possible_dir_for_dir_string(dir_string, radar, date, time, direction)
+        next_possible_dir = get_next_possible_dir_for_dir_string(dir_string, basedir, radar, date, time, direction)
         if os.path.exists(next_possible_dir) and not check_dir_empty_radar(radar,next_possible_dir,function_get_filenames_directory):
             return opa(next_possible_dir)
     
     try:
         if current_dir is None:
-            current_dir=convert_dir_string_to_real_dir(dir_string,radar,date,time)
+            current_dir=convert_dir_string_to_real_dir(dir_string,basedir,radar,date,time)
         else:
             current_dir=current_dir.replace('\\','/') #Ensure that '/' is used as the path separator.
                                          
@@ -845,7 +852,7 @@ def determine_nearest_dir(radar,trial_dir1,trial_dir2,desired_datetime,function_
         nearest_dir=trial_dir2
     return nearest_dir
     
-def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_directory,function_get_datetimes_from_files):
+def get_nearest_directory(dir_string,basedir,radar,date,time,function_get_filenames_directory,function_get_datetimes_from_files):
     """
     For a particular combination of radar, date and time, this function finds the directory that contains the file whose date and time are closest
     to the input date and time.
@@ -864,7 +871,7 @@ def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_dire
     This function does not necessarily skip empty directories, because of the difficulty of implementing methods to do this!!! It does include some
     effort to skip them however.
     """
-    dir_string=replace_radar_variables(dir_string,radar)
+    dir_string=replace_basedir_and_radar_variables(dir_string, basedir, radar)
         
     if not '${' in dir_string:
         #In this case there are no date and/or time variables present in dir_string
@@ -872,7 +879,7 @@ def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_dire
     
     try:
         desired_datetime=date+time
-        desired_dir=convert_dir_string_to_real_dir(dir_string,radar,date,time)
+        desired_dir=convert_dir_string_to_real_dir(dir_string,basedir,radar,date,time)
         
         if os.path.exists(desired_dir) and not check_dir_empty_radar(radar,desired_dir,function_get_filenames_directory):
             return opa(desired_dir)
@@ -991,16 +998,16 @@ def get_nearest_directory(dir_string,radar,date,time,function_get_filenames_dire
                     index=np.where(direntries1_plus_desired_dir==desired_dir_substring1)[0][0]
                 
         if check_dir_empty_radar(radar,nearest_dir,function_get_filenames_directory):
-            previous_dir=get_next_directory(dir_string,-1,radar,function_get_filenames_directory,current_dir=nearest_dir)
-            next_dir=get_next_directory(dir_string,1,radar,function_get_filenames_directory,current_dir=nearest_dir)
+            previous_dir=get_next_directory(-1,dir_string,basedir,radar,function_get_filenames_directory,current_dir=nearest_dir)
+            next_dir=get_next_directory(1,dir_string,basedir,radar,function_get_filenames_directory,current_dir=nearest_dir)
             nearest_dir=determine_nearest_dir(radar,previous_dir,next_dir,desired_datetime,function_get_filenames_directory,function_get_datetimes_from_files)
         return opa(nearest_dir)
     except Exception as e:
-        print(e,'get_nearest_directory')
+        print(e, dir_string, 'get_nearest_directory')
         #Can e.g. occur when there are no directories that satisfy the format.
         return None
     
-def get_abspaths_directories_in_datetime_range(dir_string,radar,startdatetime=None,enddatetime=None):
+def get_abspaths_directories_in_datetime_range(dir_string,basedir,radar,startdatetime=None,enddatetime=None):
     """Determines which directories contain files for datetimes between startdatetime and enddatetime. When startdatetime=None, then
     there is no lower bound for the datetime, and when enddatetime=None, then there is no upper bound for the datetime.
     Returns the absolute paths of these directories, and returns the bool dirs_filtered, which is True when it was possible to filter dates
@@ -1012,7 +1019,7 @@ def get_abspaths_directories_in_datetime_range(dir_string,radar,startdatetime=No
     if not enddatetime is None:
         enddate=int(enddatetime[:8]); endtime=int(enddatetime[-4:]); enddatetime=int(enddatetime)
     
-    dir_string=replace_radar_variables(dir_string,radar)
+    dir_string=replace_basedir_and_radar_variables(dir_string, basedir, radar)
         
     if not '${' in dir_string:
         #In this case there are no date and/or time variables present in dir_string
@@ -1091,14 +1098,14 @@ def get_abspaths_directories_in_datetime_range(dir_string,radar,startdatetime=No
     except Exception:
         return [], False
             
-def get_dates_with_archived_data(dir_string,radar):
+def get_dates_with_archived_data(dir_string,basedir,radar):
     """Determines for which dates there is archived data present for the input radar, based on directory names. It does not use filenames, because
     listing large directories can be very slow. 
     Because this function uses directory names, it can be unable to determine the correct list with dates with archived data when there are empty
     directories, or when files for multiple radars are put in the same directory. It is also unable to determine the correct list when files for
     all dates are put in the same directory, but it seems very unlikely that such a case will be encountered.
     """
-    dir_string=replace_radar_variables(dir_string,radar)
+    dir_string=replace_basedir_and_radar_variables(dir_string, basedir, radar)
         
     if not '${date' in dir_string:
         #In this case there are no dates in the directory name, and because this function does not use filenames to determine for which files
@@ -1198,7 +1205,7 @@ def get_titles(relwidth,fontsizes_main_titles,radar,panels,panellist,panelnumber
         return '','',{}
     date_formatted = ft.format_date(date,'YYYYMMDD->YYYY-MM-DD')
     title_top=radar+'  '+date_formatted
-    title_bottom = gv.radars_different_actual_source.get(radar, gv.data_sources[radar])
+    title_bottom = gv.data_sources[radar]
     
     if (stormmotion[1] != 0. or 's' in products.values()) and not show_vvp:
         #storm motion is always shown when 's' in products, and otherwise only when it is nonzero.
@@ -1427,7 +1434,7 @@ def determine_heightrings(rel_xdim,corners,ncolumns,panellist,scanangles,use_pre
             heights[p] = hranges[p] = np.array([])
             continue
                 
-        N_min = 2 if h_max_text-h_min_text < 4 else 3
+        N_min = 2 if h_max_text-h_min_text < 2 else 3
         N = min([6, max([N_min, int(round((r_max_text-r_min_text)/dr_desired))+int(min_r > 0.)])])
         r_text = np.linspace(r_max_text, r_min_text, N, endpoint=min_r > 0.)[::-1]
         dr = min([dr_desired, r_text[1]-r_text[0]])

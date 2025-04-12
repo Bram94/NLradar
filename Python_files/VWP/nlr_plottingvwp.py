@@ -5,12 +5,6 @@ import numpy as np
 import time as pytime
 import traceback
 
-import nlr_globalvars as gv
-import nlr_functions as ft
-from VWP.vvp import VVP
-from VWP import sfc_obs
-from VWP import vwp_functions as f
-
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 
@@ -20,6 +14,12 @@ from vispy import visuals
 from vispy import color
 from vispy.visuals.transforms import STTransform
 from vispy.visuals.filters import Clipper
+
+import nlr_globalvars as gv
+import nlr_functions as ft
+from VWP.vvp import VVP
+from VWP import sfc_obs
+from VWP import vwp_functions as f
 
 
 
@@ -36,9 +36,9 @@ class PlottingVWP(QObject):
         self.vvp_min_frac_sectors_filled = min_sector_pairs_filled/n_sectors
         self.vvp = VVP(gui_class = self.gui, range_limits = self.gui.vvp_range_limits, height_limits = [0.1, 11.9], v_min = self.gui.vvp_vmin_mps,
                        n_sectors = n_sectors, min_sector_pairs_filled = min_sector_pairs_filled)
-        self.sfcobs_classes = {'KNMI': sfc_obs.SfcObsKNMI(gui_class=self.gui), 'KMI': sfc_obs.SfcObsKMI(gui_class=self.gui),
-                               'skeyes': sfc_obs.SfcObsKMI(gui_class=self.gui), 'DWD': sfc_obs.SfcObsDWD(gui_class=self.gui)}
-        for source in ('DMI', 'IMGW', 'CHMI', 'Météo-France', 'NWS'):
+        self.sfcobs_classes = {'KNMI': sfc_obs.SfcObsKNMI(gui_class=self.gui), 'DWD': sfc_obs.SfcObsDWD(gui_class=self.gui)}
+                              #'KMI': sfc_obs.SfcObsKMI(gui_class=self.gui), 'skeyes': sfc_obs.SfcObsKMI(gui_class=self.gui)}
+        for source in (j for j in gv.data_sources_all if not j in self.sfcobs_classes):
             self.sfcobs_classes[source] = sfc_obs.SfcObsMETAR(gui_class=self.gui)
 
         
@@ -181,8 +181,6 @@ class PlottingVWP(QObject):
             self.xmin, self.xmax, self.ymin, self.ymax = self.gui.vwp_manual_axlim        
         elif len(self.V) > 0:
             #if len(self.V) == 0 then these variables are kept the same as for the previous plot
-            do = self.dr_circles/2. #Axes will be extended in such a way that they extend at least a distance of
-            #do beyond the origin in both the negative and positive direction
             try:
                 stormmotions = [getattr(self, j) for j in self.sms_display if not getattr(self, j) is None]
             except Exception: #happens for example when self.V has a length of 1, in which case the storm motions are not defined.
@@ -191,10 +189,16 @@ class PlottingVWP(QObject):
             if len(stormmotions) == 0:
                 stormmotions = self.V[:1] #Is done to prevent that errors occur below
             
+            dr, do = self.dr_circles, self.dr_circles/2. 
+            # Axes will be extended in such a way that they extend at least a distance of
+            # do beyond the origin in both the negative and positive direction
             umin, umax = min(self.V[:,0].min(), stormmotions[:,0].min()), max(self.V[:,0].max(), stormmotions[:,0].max())
-            vmin, vmax = min(self.V[:,1].min(), stormmotions[:,1].min()), max(self.V[:,1].max(), stormmotions[:,1].max())            
-            self.xmin, self.xmax = min([int(np.floor(umin/do)*do)-do, -do]), max([int(np.ceil(umax/do)*do)+do, do])
-            self.ymin, self.ymax = min([int(np.floor(vmin/do)*do)-do, -do]), max([int(np.ceil(vmax/do)*do)+do, do])
+            vmin, vmax = min(self.V[:,1].min(), stormmotions[:,1].min()), max(self.V[:,1].max(), stormmotions[:,1].max())
+            if umin < self.xmin or umax > self.xmax or vmin < self.ymin or vmax > self.ymax or\
+            abs(ft.datetimediff_m(getattr(self, 'hodo_xy_datetime', '195001010000'), self.crd.date+self.crd.time)) > 90:
+                self.xmin, self.xmax = min(int(np.floor(umin/do)*do)-dr, -do), max(int(np.ceil(umax/do)*do)+dr, do)
+                self.ymin, self.ymax = min(int(np.floor(vmin/do)*do)-dr, -do), max(int(np.ceil(vmax/do)*do)+dr, do)
+        self.hodo_xy_datetime = self.crd.date+self.crd.time
             
         xrange = self.xmax-self.xmin; yrange = self.ymax-self.ymin
         if xrange>yrange: 
@@ -669,9 +673,9 @@ class PlottingVWP(QObject):
         self.general_text_right_text = []; self.general_text_right_pos = []
         self.general_text_center_text = []; self.general_text_center_pos = []
          
-        t = pytime.time()
         if self.data_name != self.get_current_data_name():
             self.sfcobs = None
+            t = pytime.time()
             if not self.sfcobs and self.gui.include_sfcobs_vwp:
                 self.import_sfc_obs()
             print(pytime.time()-t, 't_sfc')
@@ -684,6 +688,7 @@ class PlottingVWP(QObject):
                 h0 = 0
                 V0 = None
             
+            t = pytime.time()
             try:
                 self.h_layers_all, self.V_all, self.w_all, self.sigma_all, self.filled_sectors_all, self.volume_starttime, self.volume_endtime = \
                     self.vvp(range_limits=self.gui.vvp_range_limits, height_limits=self.gui.vvp_height_limits, v_min=self.gui.vvp_vmin_mps, h0=h0, V0=V0)
@@ -700,6 +705,7 @@ class PlottingVWP(QObject):
                 else:
                     return # The hodograph is not altered
             print(pytime.time()-t, 't_vvp')
+            
             if not V0 is None:
                 try:
                     if self.h_layers_all[0] != 0.:
@@ -726,7 +732,6 @@ class PlottingVWP(QObject):
         
         if len(self.V) > 1:
             self.calculate_params()
-        print(pytime.time()-t, 't_params')
         
         self.plot_title()        
         
@@ -766,4 +771,3 @@ class PlottingVWP(QObject):
         self.data_name = self.get_current_data_name()
         self.data_radar = self.crd.radar
         self.data_datetime = self.crd.date+self.crd.time
-        print(pytime.time()-t, 't_plot')

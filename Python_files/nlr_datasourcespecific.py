@@ -1,15 +1,15 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import nlr_globalvars as gv
-import nlr_background as bg
-import nlr_functions as ft
-
 import os
 opa=os.path.abspath
 import numpy as np
 import re
 import time as pytime
+
+import nlr_globalvars as gv
+import nlr_background as bg
+import nlr_functions as ft
 
 
 """This module contains the functions that are specific to a particular data source. Each data source has a particular (and of course usually different...) way to store the data,
@@ -30,8 +30,7 @@ class Source_KNMI():
         
         
     def filepath(self):
-        filepath=opa(os.path.join(self.crd.directory,'RAD_NL'+str(gv.radar_ids[self.crd.radar])+'_VOL_NA_'+self.crd.date+self.crd.time+'.h5'))     
-        return filepath
+        return self.crd.directory+'/'+self.dsg.files_datetime[0]
     
     def get_scans_information(self):
         self.dsg.KNMI_hdf5.get_scans_information(self.filepath())
@@ -49,7 +48,7 @@ class Source_KNMI():
         filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j[:15]=='RAD_NL'+gv.radar_ids[radar]+'_VOL_NA']))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[-15:-3] for j in filenames],dtype=dtype)
         return datetimes
 
@@ -67,175 +66,87 @@ class Source_KMI():
         self.crd=self.dsg.crd
         self.dp=self.dsg.dp
         self.pb = self.gui.pb
+                
+                                                                                            
+    def correct_filename(self, filename, product=None):
+        file_extension = os.path.splitext(filename)[1][1:]
+        i_p = gv.i_p.get(product, None)
+        pname = gv.productnames_KMI[file_extension].get(i_p, None)
         
-        self.vol_classes={'rainbow3':self.dsg.Gematronik_vol_rainbow3,'rainbow5':self.dsg.Gematronik_vol_rainbow5}
-        
-                                                                            
-                    
-    def correct_filename(self,filename,product):
-        if product is None:
-            return filename[:12]==self.crd.date+self.crd.time
-        
-        file_extension=os.path.splitext(filename)[1][1:]
-        i_p = gv.i_p[product]
-        pname=gv.productnames_KMI[file_extension][i_p]
-        
-        if file_extension=='hdf':
-            correct_name=True if '.'+pname+'.' in filename and filename[:12]==self.crd.date+self.crd.time else False
-            if self.crd.radar in gv.radars_with_datasets:
+        correct_name = False
+        if file_extension == 'hdf':
+            i1 = filename.index('pvol')
+            i2 = filename.index('scan')
+            correct_name = filename[i1+5:i2-1] == pname
+            if correct_name and self.crd.radar in gv.radars_with_datasets:
                 #Prevent that a file for the wrong dataset is used, in the case that it was put in the wrong directory.
                 #For other file extensions there is no way to check this based on the filename only.
-                dataset_str='scanv' if self.crd.dataset=='V' else 'scanz'
-                correct_name=correct_name if filename[-9:-4]==dataset_str else False
-        elif file_extension=='h5':
-            correct_name=True if pname+'.vol' in filename and filename[:12]==self.crd.date+self.crd.time else False
-        elif file_extension=='vol':
-            if not isinstance(pname,list):
-                correct_name=True if pname+'.vol' in filename and filename[:12]==self.crd.date+self.crd.time else False
-            else:
-                correct_name=any([j+'.vol' in filename and filename[:12]==self.crd.date+self.crd.time for j in pname])
-                
-        if correct_name and i_p in gv.productnames_KMI_possible_mistake[file_extension]:
-            #Make sure that not the wrong product is selected, which could be the case when the productname of one product is contained in productnames
-            #of other products.
-            pname=gv.productnames_KMI_possible_mistake[file_extension][i_p]
-            if not isinstance(pname,list):
-                correct_name=pname+'.vol' not in filename
-            else:
-                correct_name=all([j+'.vol' not in filename for j in pname])
+                dataset_str = 'scanv' if self.crd.dataset == 'V' else 'scanz'
+                correct_name = filename[-9:-4] == dataset_str
+        elif file_extension == 'h5':
+            correct_name = filename[16:-3] == pname+'.vol' if pname else True
             
         return correct_name
 
-    def filepath(self,product,source_function=None):
+    def filepath(self, product=None, productunfiltered=False, polarization='H', source_function=None):
+        if product:
+            product = 'u'+product if productunfiltered else product
         try:
-            #First try to obtain a filename for the correct product, date ànd time
-            filename=[i for i in self.dsg.files_datetime if self.correct_filename(i,product)][0]     
+            #First try to obtain a filename for the correct product
+            filename = [i for i in self.dsg.files_datetime if self.correct_filename(i, product)][0] 
         except Exception:
-            if source_function==self.get_scans_information:
-                try:
-                    #Try to find any file with the correct date and time, and if found, then determine the product contained in it
-                    filename=[i for i in self.dsg.files_datetime if self.correct_filename(i,None)][0]
-                    product='z' #The default product. 'z' does not need to be present, but the only information required for determining whether it is possible to 
-                    #obtain the Nyquist velocities is that the product is not equal to 'v'.
-                except Exception:
-                    filename=''
-            else:
-                filename=''
-        filepath=opa(os.path.join(self.crd.directory,filename))
-
-        return [filepath, product] if source_function==self.get_scans_information else filepath
+            if productunfiltered and polarization == 'V':
+                return self.filepath(product[-1], False, polarization)
+            elif polarization == 'V':
+                return self.filepath(product[-1], productunfiltered, 'H')
+            elif productunfiltered:
+                return self.filepath(product[-1], False, polarization)
+            filename = ''
+            if product and source_function == self.get_scans_information and len(self.dsg.files_datetime):
+                #Try to find any file with the correct date and time, and if found, then determine the product contained in it
+                return self.filepath(source_function=source_function)
+            
+        filepath = self.crd.directory+'/'+filename if filename else ''
+        if product is None:
+            # The default product. 'z' does not need to be present, but the only information required for determining whether it is
+            # possible to obtain the Nyquist velocities is that the product is not equal to 'v'.
+            product = 'z'
+        return [filepath, product] if source_function == self.get_scans_information else [filepath, productunfiltered, polarization]
     
-    
-    def get_volume_type(self,filepath):
-        try:
-            with open(filepath,'rb') as vol:
-                line=vol.read(10).decode('utf-8')
-                vol.seek(0)
-                return 'rainbow5' if line[0]=='<' else 'rainbow3'
-        except Exception:
-            return None
-
 
     def get_scans_information(self):
         #product 'v' is tried initially, because it enables the program to obtain the Nyquist velocities
         #In the case of Zaventem it is however possible that the file that contains the reflectivity has more scans than the file that contains
-        #the velocity. In this case it is therefore necessary to take 'z' as product.
-        product='v' if not self.crd.radar=='Zaventem' else 'z'
-        filepath, product=self.filepath(product,source_function=self.get_scans_information)
-        file_extension=os.path.splitext(filepath)[1][1:]
-        #The testproduct is used to determine whether it is possible to obtain the Nyquist velocities (only when testproduct=='v')
-        if file_extension=='vol':
-            vol_type=self.get_volume_type(filepath)
-            self.vol_classes[vol_type].get_scans_information(filepath,product)
+        #the velocity. In this case it is therefore necessary to take 'z' as product.        
+        product = 'v' if self.crd.radar != 'Zaventem' else 'z'
+        filepath_hdf, filepath_product = self.filepath(product, source_function=self.get_scans_information)
+        if not filepath_hdf or filepath_product != product and any('.vol' in i for i in self.dsg.files_datetime):
+            return self.dsg.source_Leonardo.get_scans_information()
         else:
-            self.dsg.ODIM_hdf5.get_scans_information(filepath,product)
-            
-    def try_product(self,product,try_unfiltered):
-        filename=''; try_again=True
-        if try_unfiltered: #If unfiltered data has been requested but is not available, then first try the filtered variant
-            try:
-                product='u'+product
-                filename=[i for i in self.dsg.files_datetime if self.correct_filename(i,product)][0]
-                try_again=False                         
-            except Exception:
-                pass
-        if try_again:
-            try:
-                if try_unfiltered: product=product[1:]
-                filename=[i for i in self.dsg.files_datetime if self.correct_filename(i,product)][0]
-                try_again=False                         
-            except Exception:
-                pass
-        return product,filename,try_again
+            #product is used to determine whether it is possible to obtain the Nyquist velocities (only when product=='v')
+            self.dsg.ODIM_hdf5.get_scans_information(filepath_hdf, filepath_product)
         
     def get_data(self, j): #j is the panel
-        file_available=True
-        
-        """First try to obtain a file for self.crd.products[j], which is filtered/unfiltered depending on self.crd.productunfiltered[j].
-        If the unfiltered product is chosen and is not available, then first the filtered version is chosen.
-
-        If again not available, then file_available is set to False, except when self.crd.products[j] in ('z','v'), in which case it
-        is attempted to find a file for the other product (except when self.crd.products[j] is equal to that other product).
-        This is done because for old data for Wideumont it is the case that the V-dataset does not contain reflectivities, such that you
-        need to switch from dataset to view reflectivities. If self.crd.products[j]=='v', then without this last procedure it would
-        be the case that you need to switch manually to 'z' to view reflectivity, whereas with this last procedure you will automatically show
-        the reflectivity for the Z-dataset (at least when no velocity is available for that dataset, as is the case with old data for Wideumont).
-        """
-        product=self.crd.products[j]
-        product, filename, try_again=self.try_product(product,self.crd.productunfiltered[j])
-        if try_again:
-            changing_radardataset=self.dsg.changing_radar or self.dsg.changing_dataset
-            if changing_radardataset and self.crd.products[j]=='v':
-                #It is done only when changing from radar of dataset, because otherwise it could cause the product to change while pressing 
-                #LEFT/RIGHT, which is not desired. If in that case the selected product is not available, then the plot should not be updated.
-                product='z'
-            elif changing_radardataset and self.crd.products[j]=='z':
-                product='v'
-            else:
-                file_available=False
-                
-            if file_available:
-                product, filename, try_again=self.try_product(product,self.crd.productunfiltered[j])
-                if try_again:
-                    file_available=False
-                                
-        if file_available:
-            self.crd.products[j] = product[1] if product[0]=='u' else product
-            self.crd.using_unfilteredproduct[j] = product[0]=='u' and len(product)>1
-        
-        if not file_available:
-            raise Exception
-        else:
-            filepath=opa(os.path.join(self.crd.directory,filename))
-            
-        file_extension=os.path.splitext(filepath)[1][1:]
-        if file_extension=='vol':
-            vol_type=self.get_volume_type(filepath)
-            self.vol_classes[vol_type].get_data(filepath, j)
-        else:
+        filepath, self.crd.using_unfilteredproduct[j], polarization = self.filepath(gv.i_p[self.crd.products[j]], self.crd.productunfiltered[j], 
+                                                                                    self.crd.polarization[j])
+        if filepath:
+            self.crd.using_verticalpolarization[j] = polarization == 'V'
             self.dsg.ODIM_hdf5.get_data(filepath, j)
-        
-        
-    def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
-        product, filename, _ = self.try_product(product,productunfiltered)
-        # This needs to be done here
-        meta = {'using_unfilteredproduct': product[0]=='u' and len(product)>1, 'using_verticalpolarization': False}
-        if meta['using_unfilteredproduct']:
-            product = product[1:]
-        
-        filepath=opa(os.path.join(self.crd.directory,filename))
-        file_extension=os.path.splitext(filepath)[1][1:]
-        
-        if file_extension=='vol':
-            vol_type=self.get_volume_type(filepath)
-            data, scantimes, volume_starttime, volume_endtime =\
-                self.vol_classes[vol_type].get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)            
         else:
+            return self.dsg.source_Leonardo.get_data(j)        
+        
+    def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):        
+        filepath, productunfiltered, polarization = self.filepath(product, productunfiltered, polarization)
+        if filepath:
             data, scantimes, volume_starttime, volume_endtime, _ =\
                 self.dsg.ODIM_hdf5.get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
+        else:
+            return self.dsg.source_Leonardo.get_data_multiple_scans(product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
         
+        meta = {'using_unfilteredproduct':productunfiltered, 'using_verticalpolarization':polarization == 'V'}
         return data, scantimes, volume_starttime, volume_endtime, meta
                 
+    
     def get_filenames_directory(self,radar,directory):
         try:
             entries=os.listdir(directory)
@@ -243,7 +154,7 @@ class Source_KMI():
         filenames=np.sort(np.array([j for j in entries if os.path.splitext(j)[1][1:] in ('hdf','h5','vol')]))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([j[:12] for j in filenames],dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes   
     
@@ -271,16 +182,16 @@ class Source_skeyes():
     
                 
     def get_scans_information(self):
-        if self.dsg.files_datetime[0].endswith('scan_abc.hdf'):
-            self.dsg.source_classes['KMI'].get_scans_information(); return
+        if any(j in self.dsg.files_datetime[0] for j in ('.vol', 'scan_abc.hdf')):
+            return self.dsg.source_classes['KMI'].get_scans_information()
                 
         filepaths=[opa(os.path.join(self.crd.directory,j)) for j in self.dsg.files_datetime]
         self.dsg.skeyes_hdf5.get_scans_information(filepaths)                
         
     
     def get_data(self, j): #j is the panel
-        if self.dsg.files_datetime[0].endswith('scan_abc.hdf'):
-            self.dsg.source_classes['KMI'].get_data(j); return
+        if any(i in self.dsg.files_datetime[0] for i in ('.vol', 'scan_abc.hdf')):
+            return self.dsg.source_classes['KMI'].get_data(j)
         
         """Scans are stored in 3 different files per volume, and file_index contains the index of the file that contains data for the scan
         self.crd.scans[j].
@@ -292,24 +203,24 @@ class Source_skeyes():
 
     
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
-        if self.dsg.files_datetime[0].endswith('scan_abc.hdf'):
+        if any(j in self.dsg.files_datetime[0] for j in ('.vol', 'scan_abc.hdf')):
             return self.dsg.source_classes['KMI'].get_data_multiple_scans(product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
         
         filepaths=[opa(os.path.join(self.crd.directory,j)) for j in self.dsg.files_datetime]
         return self.dsg.skeyes_hdf5.get_data_multiple_scans(filepaths,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
 
 
-    def get_filenames_directory(self,radar,directory):
+    def get_filenames_directory(self,radar,directory):        
         try:
             entries=os.listdir(directory)
         except Exception: entries=[]
-        filenames=np.sort(np.array([j for j in entries if os.path.splitext(j)[1][1:] in ('hdf','h5')]))
+        if any(any(j in i for j in ('.vol', 'scan_abc.hdf')) for i in entries):
+            return self.dsg.source_classes['KMI'].get_filenames_directory(radar, directory)
         
-        if len(filenames)==0 or filenames[0].endswith('hdf'):
-            return filenames
+        filenames=np.sort(np.array([j for j in entries if os.path.splitext(j)[1][1:] == 'h5']))
+        
         #The code below is specifically for the h5 files delivered by skeyes, where some issues with repeated content must be addressed.
-        #Cases in which hdf and h5 files are put in the same folder are not permitted!
-            
+        #Cases in which hdf and h5 files are put in the same folder are not permitted!            
         
         startdatetimes=[j[4:16] for j in filenames]
         unique_startdatetimes=np.unique(startdatetimes)
@@ -334,8 +245,7 @@ class Source_skeyes():
         startdatetimes_filtered=[j[4:16] for j in filenames_filtered]
         unique_startdatetimes_filtered=np.unique(startdatetimes_filtered)
         if len(startdatetimes_filtered)==len(unique_startdatetimes_filtered): return filenames_filtered  
-                
-        
+                        
         """For data from Zaventem from before 2013, the data is provided both in the format from after 2012 (usually 3 files per volume),
         and per scan separately. The resulting files are all put in the same folder, whereas this program needs only the files that have
         the first format. The other files are therefore removed from the list. The files that should remain on the list can be recognized
@@ -363,7 +273,10 @@ class Source_skeyes():
         
         return filenames_filtered
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+        if any(any(j in i for j in ('.vol', 'scan_abc.hdf')) for i in filenames):
+            return self.dsg.source_classes['KMI'].get_datetimes_from_files(filenames, dtype, return_unique_datetimes, mode)
+        
         """For the skeyes hdf5 format there are multiple files (usually 3) per volume, such that the 
         datetimes determined here (per volume) are not simply the datetimes for all files, but the datetimes
         of the first files of all volumes. 
@@ -381,11 +294,8 @@ class Source_skeyes():
         datetimes=[]
         datetimes_h5=[]; seconds_h5=[]
         for j in filenames:
-            if j.endswith('hdf'):
-                datetimes.append(j[:12])
-            else:
-                datetimes_h5.append('20'+j[4:14])
-                seconds_h5.append(int(j[14:16]))
+            datetimes_h5.append('20'+j[4:14])
+            seconds_h5.append(int(j[14:16]))
         datetimes=np.array(datetimes)
         datetimes_h5=np.array(datetimes_h5); seconds_h5=np.array(seconds_h5)
         
@@ -445,7 +355,7 @@ class Source_DWD():
         filename = self.dsg.files_datetime[0] if not filename else filename
         return filename[-3:]
         
-    def get_file_availability_info(self):        
+    def get_file_availability_info(self):     
         if self.get_extension() == 'hd5':
             n = len(self.dsg.files_datetime)
             files_pvs, pvs = self.files_product_versions_datetimesdict[self.crd.date+self.crd.time], self.dsg.product_versions_datetime
@@ -463,8 +373,9 @@ class Source_DWD():
                 
         self.products_per_fileid, self.fileids_per_product, self.files_per_product_per_fileid = {}, {}, {}
         for j in filenames:
+            fileid = None
             for i in gv.productnames_DWD:
-                for product in ('z', 'v'):
+                for product in gv.productnames_DWD[i]:
                     product_str = '_'+gv.productnames_DWD[i][product]+'_'
                     if j.endswith(i) and product_str in j:
                         index = j.index(product_str)+len(product_str)
@@ -475,6 +386,9 @@ class Source_DWD():
                 else:
                     continue  # only executed if the inner loop did NOT break
                 break  # only executed if the inner loop DID break
+            if fileid is None:
+                # This should happen when the filename doesn't contain any of the supported products
+                continue
                         
             ft.init_dict_entries_if_absent(self.fileids_per_product, product, list)
             ft.init_dict_entries_if_absent(self.products_per_fileid, fileid, list)
@@ -547,10 +461,10 @@ class Source_DWD():
     def get_filenames_directory(self,radar,directory):
         try:
             entries=os.listdir(directory)
-        except Exception: entries=[]        
-        return np.sort([j for j in entries if any([j.endswith(i) for i in self.import_classes])])
+        except Exception: entries=[]
+        return np.sort([j for j in entries if any(j.endswith(i) for i in self.import_classes)])
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         #Flooring to 5 minutes is performed, because the DWD puts data for each scan separately in files, with a corresponding range of datetimes, 
         #while all these files belong to the same radar volume, that starts at the datetime to which a datetime below gets floored.
         # Historical DWD BUFR files might have a different naming compared to files made available on DWD's open data server, 
@@ -571,52 +485,46 @@ class Source_TUDelft():
         self.dp = self.dsg.dp
         self.pb = self.gui.pb
         
-        
-    
+            
     def filepath(self):
-        return os.path.join(self.crd.directory, self.dsg.files_datetime)
-        
+        return self.crd.directory+'/'+self.dsg.files_datetime[0]   
+          
     def get_scans_information(self):
         return self.dsg.TUDelft_nc.get_scans_information(self.filepath())
-        
-        
+                
     def get_data(self, j): #j is the panel
         return self.dsg.TUDelft_nc.get_data(self.filepath(), j)
-        
-        
+                
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
         return self.dsg.TUDelft_nc.get_data_multiple_scans(self.filepath(),product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
-        
-        
+                
     def get_filenames_directory(self, radar, directory):
         try:
             entries=os.listdir(directory)
         except Exception: entries=[]
         filenames=np.sort(np.array([j for j in entries if j[-3:]=='.nc']))
         return filenames
-        
-        
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+                
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         """This function actually returns both datetimes and dates instead of just datetimes. This is done because there is one file per date, and
         the dates are also used in nlr_datasourcegeneral.py.
         """
         dates = []
         for filename in filenames:
             dates += [ft.format_date(filename[5:15], 'YYYY-MM-DD->YYYYMMDD')]
-        dates = np.array(dates, dtype = dtype)
         dt = gv.volume_timestep_radars[self.crd.radar]
-        times = np.array([ft.time_to_minutes(j,inverse = True) for j in range(0, 1440, dt)], dtype=np.uint64)
+        times = [ft.time_to_minutes(j, inverse = True) for j in range(0, 1440, dt)]
         try:
-            datetimes = np.concatenate(np.array(dates, dtype = np.uint64)[:, np.newaxis]*10000 + times).astype(dtype)
+            datetimes = np.concatenate([[j+i for i in times] for j in dates]).astype(dtype)
         except Exception: # happens when no dates are available
-            datetimes = np.array([])
+            datetimes = []
         return (datetimes, dates) if mode == 'dates' else datetimes
     
     
     
     
     
-class Source_IMGW():
+class Source_Leonardo():
     def __init__(self, gui_class, dsg_class, parent = None):  
         self.gui = gui_class
         self.dsg = dsg_class
@@ -624,42 +532,72 @@ class Source_IMGW():
         self.dp = self.dsg.dp
         self.pb = self.gui.pb
         
+        self.vol_classes = {'rainbow3':self.dsg.Leonardo_vol_rainbow3,'rainbow5':self.dsg.Leonardo_vol_rainbow5}
         
-        
-    def filepath(self,product,source_function=None):
+                
+    def filepath(self, product, productunfiltered=False, polarization='H', source_function=None):
+        product = 'u'+product if productunfiltered else product
+        pol_suffix = 'v' if polarization == 'V' else ''
         try:
-            #First try to obtain a filename for the correct product
-            filename=[i for i in self.dsg.files_datetime if i[16:-4] == gv.productnames_IMGW[product]][0] 
+            # First try to obtain a filename for the correct product
+            if type(gv.productnames_Leonardo[product]) is str:
+                filename = [i for i in self.dsg.files_datetime if i[16:-4] == gv.productnames_Leonardo[product]+pol_suffix][0]
+            else: # type list
+                filename = [i for i in self.dsg.files_datetime if any(i[16:-4] == j+pol_suffix for j in gv.productnames_Leonardo[product])][0]
         except Exception:
-            if source_function==self.get_scans_information:
-                try:
-                    #Try to find any file with the correct date and time, and if found, then determine the product contained in it
-                    filename=self.dsg.files_datetime[0]
-                    product='z' #The default product. 'z' does not need to be present, but the only information required for determining whether it is possible to 
-                    #obtain the Nyquist velocities is that the product is not equal to 'v'.
-                except Exception:
-                    filename=''
-            else:
-                filename=''
-        filepath=opa(os.path.join(self.crd.directory,filename))
-
-        return [filepath, product] if source_function==self.get_scans_information else filepath
+            if productunfiltered and polarization == 'V':
+                return self.filepath(product[-1], False, polarization)
+            elif polarization == 'V':
+                return self.filepath(product[-1], productunfiltered, 'H')
+            elif productunfiltered:
+                return self.filepath(product[-1], False, polarization)
+            filename = ''
+            if source_function == self.get_scans_information and len(self.dsg.files_datetime):
+                #Try to find any file with the correct date and time, and if found, then determine the product contained in it
+                filename = self.dsg.files_datetime[0]
+                product = 'z' #The default product. 'z' does not need to be present, but the only information required for determining whether it is possible to 
+                #obtain the Nyquist velocities is that the product is not equal to 'v'.
+        filepath = self.crd.directory+'/'+filename if filename else ''
+        return [filepath, product] if source_function == self.get_scans_information else [filepath, productunfiltered, polarization]
+    
+    def get_vol_class(self,filepath):
+        with open(filepath,'rb') as vol:
+            line = vol.read(10).decode('utf-8')
+            vol.seek(0)
+            vol_type = 'rainbow5' if line[0] == '<' else 'rainbow3'
+            return self.vol_classes[vol_type]
     
         
     def get_scans_information(self):
-        return self.dsg.Gematronik_vol_rainbow5.get_scans_information(*self.filepath('v', source_function=self.get_scans_information))
+        filepath, product = self.filepath('v', source_function=self.get_scans_information)
+        return self.get_vol_class(filepath).get_scans_information(filepath, product)
         
-        
-    def get_data(self, j): #j is the panel        
-        return self.dsg.Gematronik_vol_rainbow5.get_data(self.filepath(gv.i_p[self.crd.products[j]]), j)
-        
+    def get_data(self, j): #j is the panel    
+        filepath, self.crd.using_unfilteredproduct[j], polarization = self.filepath(gv.i_p[self.crd.products[j]], self.crd.productunfiltered[j], 
+                                                                                    self.crd.polarization[j])
+        # The following lines are currently disabled, since they cause issues when looping through cases
+        # """For old Wideumont data it is the case that the V-dataset does not contain reflectivities, such that you
+        # need to switch from dataset to view reflectivities. If self.crd.products[j] == 'v', then without the following procedure it would
+        # be the case that you need to switch manually to 'z' to view reflectivity, whereas with this procedure you will automatically show
+        # the reflectivity for the Z-dataset (at least when no velocity is available for that dataset, as is the case with old Wideumont data).
+        # """
+        # changing_radardataset = self.dsg.changing_radar or self.dsg.changing_dataset
+        # if not filepath and changing_radardataset:
+        #     product = 'z' if self.crd.products[j] == 'v' else 'v'
+        #     filepath, self.crd.using_unfilteredproduct[j], polarization = self.filepath(gv.i_p[product], self.crd.productunfiltered[j], 
+        #                                                                             self.crd.polarization[j])
+        #     if filepath:
+        #         self.crd.products[j] = product
+
+        self.crd.using_verticalpolarization[j] = polarization == 'V'
+        return self.get_vol_class(filepath).get_data(filepath, j)
         
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
+        filepath, productunfiltered, polarization = self.filepath(product, productunfiltered, polarization)
         data, scantimes, volume_starttime, volume_endtime =\
-            self.dsg.Gematronik_vol_rainbow5.get_data_multiple_scans(self.filepath(product),product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
-        meta = {'using_unfilteredproduct': False, 'using_verticalpolarization': False}
+            self.get_vol_class(filepath).get_data_multiple_scans(filepath,product,scans,productunfiltered,polarization,apply_dealiasing,max_range)
+        meta = {'using_unfilteredproduct':productunfiltered, 'using_verticalpolarization':polarization == 'V'}
         return data, scantimes, volume_starttime, volume_endtime, meta
-        
         
     def get_filenames_directory(self, radar, directory):
         try:
@@ -669,7 +607,7 @@ class Source_IMGW():
         return filenames
         
         
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         datetimes=np.array([int(os.path.basename(j)[:12]) for j in filenames],dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes   
     
@@ -688,15 +626,13 @@ class Source_DMI():
         
         
     def filepath(self):
-        filepath=opa(os.path.join(self.crd.directory,gv.radar_ids[self.crd.radar]+'_'+self.crd.date+self.crd.time+'.vol.h5'))
-        return filepath
+        return self.crd.directory+'/'+self.dsg.files_datetime[0]
     
     def get_scans_information(self):
-        self.dsg.ODIM_hdf5.get_scans_information(self.filepath(),'v')
+        self.dsg.ODIM_hdf5.get_scans_information(self.filepath(), 'v')
 
     def get_data(self, j): #j is the panel
         self.dsg.ODIM_hdf5.get_data(self.filepath(),j)
-        self.crd.using_unfilteredproduct[j] = self.crd.products[j] == 'z' and self.crd.productunfiltered[j]
 
     def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
         return self.dsg.ODIM_hdf5.get_data_multiple_scans(self.filepath(),product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
@@ -705,12 +641,66 @@ class Source_DMI():
         try:
             entries=os.listdir(directory)
         except Exception: entries=[]
-        filenames=np.sort(np.array([j for j in entries if j[-2:]=='h5' and j.startswith(gv.radar_ids[radar])]))
+        filenames=np.sort([j for j in entries if j.split('.')[-1] in ('h5', 'hdf') and gv.radar_ids[radar] in j])
         return filenames
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
-        datetimes=np.array([j[-19:-7] for j in filenames],dtype=dtype)
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+        i = filenames[0].index(self.dsg.get_datetimes_from_files_dirdate)
+        datetimes=np.array([j[i:i+12] for j in filenames],dtype=dtype)
         return datetimes
+    
+    
+    
+    
+    
+class Source_AustroControl():
+    def __init__(self, gui_class, dsg_class, parent = None):  
+        self.gui=gui_class
+        self.dsg=dsg_class
+        self.crd=self.dsg.crd
+        self.dp=self.dsg.dp
+        self.pb = self.gui.pb
+        
+        
+        
+    def filepath(self, product, source_function=None):
+        if 'PPIVol' in self.dsg.files_datetime[0]:
+            filename = self.dsg.files_datetime[0]
+            product = 'v'
+        else:        
+            filename = ''
+            try:
+                filename = [j for j in self.dsg.files_datetime if gv.productnames_AustroControl[product] in j][0]
+            except Exception:
+                if source_function == self.get_scans_information and len(self.dsg.files_datetime):
+                    #Try to find any file with the correct date and time, and if found, then determine the product contained in it
+                    filename = self.dsg.files_datetime[0]
+                    product = 'z' #The default product. 'z' does not need to be present, but the only information required for determining whether it is possible to 
+                    # obtain the Nyquist velocities is that the product is not equal to 'v'.
+        filepath = self.crd.directory+'/'+filename if filename else ''
+        return (filepath, product) if source_function == self.get_scans_information else filepath
+    
+    def get_scans_information(self):
+        self.dsg.ODIM_hdf5.get_scans_information(*self.filepath('v', self.get_scans_information))
+
+    def get_data(self, j): #j is the panel
+        self.dsg.ODIM_hdf5.get_data(self.filepath(self.crd.products[j]),j)
+
+    def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
+        return self.dsg.ODIM_hdf5.get_data_multiple_scans(self.filepath(product),product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
+                    
+    def get_filenames_directory(self,radar,directory):
+        try:
+            entries=os.listdir(directory)
+        except Exception: entries=[]
+        filenames = np.sort([j for j in entries if j[-3:]=='hdf'])
+        return filenames
+    
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
+        if 'PPIVol' in filenames[0]:
+            return np.array([''.join(j.split('-')[-2:])[:12] for j in filenames], dtype=dtype)
+        else:
+            return np.array([j[-14:-4].replace('-', '')+j[14:18] for j in filenames], dtype=dtype)
 
 
 
@@ -751,9 +741,9 @@ class Source_CHMI():
         filenames = np.sort(np.array([j for j in entries if '.h' in j[-5:]]))
         return filenames
     
-    def get_datetimes_from_files(self,filenames,directory=None,dtype=str,return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self,filenames,dtype=str,return_unique_datetimes=True, mode='simple'):
         ext = os.path.splitext(filenames[0])[1] if len(filenames) else ''
-        floor_minutes = 5 if self.crd.radar in ('Skalky', 'Brdy-Praha') else 1
+        floor_minutes = 5 if self.crd.selected_radar in ('Skalky', 'Brdy-Praha') else 1
         datetimes = np.array([ft.floor_datetime(re.sub('[T_]', '', j[-len(ext)-15:-len(ext)-2]), floor_minutes) for j in filenames], dtype=dtype)
         return datetimes
         
@@ -768,7 +758,10 @@ class Source_MeteoFrance():
         self.crd=self.dsg.crd
         self.dp=self.dsg.dp
         self.pb = self.gui.pb
-                
+        
+        self.import_classes = {'buf':self.dsg.MeteoFrance_BUFR, 'nc':self.dsg.MeteoFrance_NetCDF}
+
+
         
     def get_file_availability_info(self):
         filenames = self.dsg.files_datetime
@@ -787,6 +780,9 @@ class Source_MeteoFrance():
             self.file_per_filetype_per_fileid[filetype][fileid] = j
             
     def get_scans_information(self):
+        if self.dsg.files_datetime[0].endswith('.nc'):
+            return self.dsg.MeteoFrance_NetCDF.get_scans_information(self.crd.directory+'/'+self.dsg.files_datetime[0])
+        
         self.get_file_availability_info()
     
         filepaths = {}
@@ -797,6 +793,9 @@ class Source_MeteoFrance():
         self.dsg.MeteoFrance_BUFR.get_scans_information(filepaths, self.filetypes_per_fileid)
 
     def get_data(self, j): #j is the panel
+        if self.dsg.files_datetime[0].endswith('.nc'):
+            return self.dsg.MeteoFrance_NetCDF.get_data(self.crd.directory+'/'+self.dsg.files_datetime[0], j)    
+    
         self.get_file_availability_info()
     
         i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
@@ -821,20 +820,70 @@ class Source_MeteoFrance():
         filenames = np.sort([j for j in entries if any(i in j for i in ('PAM', 'PAG'))])
         return filenames
     
-    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
-        if not len(filenames):
-            return []
-        if filenames[0].startswith('T_'):
+    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
+        if filenames[0].endswith('.nc'):
+            datetimes = [j.split('_')[-1][:12] for j in filenames]
+        elif filenames[0].startswith('T_'):
             datetimes = [j[16:28] for j in filenames]
         else:
-            _, _, current_dir_string, _ = self.dsg.get_variables(self.crd.selected_radar, self.crd.selected_dataset)
-            # No date is given in the filename, it therefore has to be determined from the directory 
-            date, _ = bg.get_date_and_time_from_dir(directory, current_dir_string, self.crd.selected_radar)
-            datetimes = [date+j[12:16] for j in filenames]
+            # No date is given in the filename, it is therefore determined in self.dsg.get_datetimes_from_files
+            datetimes = [self.dsg.get_datetimes_from_files_dirdate+j[12:16] for j in filenames]
         # -5 minutes, since end instead of start datetimes are given in the filenames
         datetimes = np.array([ft.next_datetime(j, -5) for j in datetimes], dtype=dtype)
         return np.unique(datetimes) if return_unique_datetimes else datetimes
 
+
+
+
+
+class Source_UKMO():
+    def __init__(self, gui_class, dsg_class, parent = None):
+        self.gui=gui_class
+        self.dsg=dsg_class
+        self.crd=self.dsg.crd
+        self.dp=self.dsg.dp
+        self.pb = self.gui.pb
+
+
+    def get_scans_information(self):
+        filepaths = [self.crd.directory+'/'+j for j in self.dsg.files_datetime]
+        self.dsg.UKMO_polar.get_scans_information(filepaths)
+        
+    def get_data(self, j):
+        i_p, scan = gv.i_p[self.crd.products[j]], self.crd.scans[j]
+        file_idx = self.dsg.scannumbers_all[i_p][scan][self.dsg.scannumbers_forduplicates[scan]]
+        filepath = self.crd.directory+'/'+self.dsg.files_datetime[file_idx]
+        self.dsg.UKMO_polar.get_data(filepath, j)
+
+    def get_data_multiple_scans(self,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
+        i_p = gv.i_p[product]
+        filepaths = {}
+        for j in scans:
+            file_idx = self.dsg.scannumbers_all[i_p][j][0]
+            filepaths[j] = opa(self.crd.directory+'/'+self.dsg.files_datetime[file_idx])
+        return self.dsg.UKMO_polar.get_data_multiple_scans(filepaths,product,scans,productunfiltered,polarization,apply_dealiasing,max_range) 
+        
+    def get_filenames_directory(self, radar, directory):
+        try:
+            entries = os.listdir(directory)
+        except Exception: entries = []
+        filenames = np.sort([j for j in entries if j[-7:] == '.dat.gz'])
+        return filenames
+    
+    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'): 
+        i = filenames[0].index('_raw')
+        # el_numbers = np.array([int(j[-8]) for j in filenames])
+        # filenames_el0 = filenames[el_numbers == 0]
+        # datetimes_el0 = np.array([j[i-12:i] for j in filenames_el0])
+        # delta_T = np.median(np.diff(ft.get_absolutetimes_from_datetimes(datetimes_el0)))/60  
+        
+        # The Z dataset actually has a timestep of 5 minutes, but flooring times to 5 minutes doesn't
+        # work for separating the 2 volumes within a 10-minute window. So it's decided to floor to 10 minutes,
+        # meaning that each 'volume' will actually contain 2 volumes, with each scan contained twice (duplicates).
+        delta_T = 10
+        datetimes = np.array([ft.floor_datetime(j[i-12:i], delta_T) for j in filenames])
+        return np.unique(datetimes) if return_unique_datetimes else datetimes
+                
 
 
 
@@ -932,7 +981,7 @@ class Source_NWS():
             # hence the following choice. Real-time volumes (bzip2-compressed) from Iowa State don't have the V version in the filename however. 
             # But since currently files always have reflectivity for V-scans, it is then assumed that it's present.
             v_scan_present = file_V_version % 3 == 0 or not fname[-3:] == '.gz'
-            product_versions = ['z_scan']+['v_scan']*v_scan_present
+            product_versions = ['z_scan']+['v_scan', 'combi_scan']*v_scan_present
             product_versions_datetimesdict = {j:product_versions for j in datetimes} 
             products_version_dependent = ['z'] # Only 'z' has 2 versions available
             product_versions_in1file = True
@@ -963,7 +1012,7 @@ class Source_NWS():
         filenames = np.sort(entries)
         return filenames
     
-    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
         try:
             level = self.get_level(filenames[0])
             if level == 2:
@@ -1041,7 +1090,7 @@ class Source_ARRC():
         # print(list(filenames[indices]))
         return filenames[indices]
     
-    def get_datetimes_from_files(self, filenames, directory=None, dtype=str, return_unique_datetimes=True, mode='simple'):
+    def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
         # print(filenames)
         scannumbers = self.get_scannumbers(filenames)
         datetimes = []

@@ -74,13 +74,17 @@ class Unet_VDA():
         if not hasattr(self, 'vda'):
             self.load_model()
             
+        n_unmasked = np.count_nonzero(~np.isnan(data))
+        if n_unmasked == 0:
+            # Processing an array with only empty velocity bins leads to errors elsewhere in the code, and is of course completely unnecessary
+            return data
+                    
         indices = np.s_[:]
         if not azis is None:
             #Add rows with nans in case that data doesn't cover the full 360 degrees
             data, vn, indices = self.expand_data_to_360deg(data, vn, azis, da)
-                
-        vn = vn if type(vn) in (list, np.ndarray) else np.repeat(vn, len(data))
-        
+             
+        vn = (vn if type(vn) is np.ndarray else np.repeat(vn, len(data))).astype('float32')
         data = self.run_model(data, vn[:, None], list(data.shape), extra_dealias).numpy()
         # Remove any extra nan rows by using indices
         return data[indices]
@@ -173,7 +177,7 @@ class Unet_VDA():
                
         if extra_dealias and vn[0,0] > 10:
             self.data = self.perform_extra_dealiasing(vn, data_shape)
-            
+
         return self.data
     
     def remap_azi_dim(self, data, vn, data_shape):

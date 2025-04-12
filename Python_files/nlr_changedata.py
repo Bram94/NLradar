@@ -1,12 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-from nlr_datasourcegeneral import DataSource_General
-from nlr_animate import Animate
-import nlr_functions as ft
-import nlr_background as bg
-import nlr_globalvars as gv
-
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer    
 
 import time as pytime
@@ -14,6 +8,12 @@ import numpy as np
 import os
 import copy
 import traceback
+
+from nlr_datasourcegeneral import DataSource_General
+from nlr_animate import Animate
+import nlr_functions as ft
+import nlr_background as bg
+import nlr_globalvars as gv
 
 
 """
@@ -99,6 +99,7 @@ class Change_RadarData(QObject):
         self.process_keyboardinput_timebetweenfunctioncalls=0.  
         self.previous_timebetweenfunctioncalls=0.
         self.process_keyboardinput_finished_before=True
+        self.process_keyboardinput_last_finished_action = None
         
         self.changing_subdataset=False #Is used in nlr_plottingbasic.py to determine whether self.before_variables['radardir_index']
         #or self.before_variables['product_version'] should be updated.
@@ -151,10 +152,11 @@ class Change_RadarData(QObject):
 
         panel_center_xy = self.pb.screencoord_to_xy(self.pb.panel_centers[0])
         if delta_time:
-            panel_center_xy += self.pb.translation_dist_km(delta_time)
+            panel_center_xy += self.pb.translation_dist_km(delta_time, self.date+self.time)
         
         panel_center_coords = self.pb.map_transforms['aeqd'].imap(panel_center_xy)
-        distances = {i:ft.calculate_great_circle_distance_from_latlon(panel_center_coords, gv.radarcoords[i]) for i in radar_keys}
+        distances = ft.calculate_great_circle_distance_from_latlon(panel_center_coords, [gv.radarcoords[i] for i in radar_keys])
+        distances = {r:distances[i] for i,r in enumerate(radar_keys)}
         if self.lrstep_beingperformed and self.radar in radar_keys:
             for i in radar_keys:
                 # Without this measure it sometimes happens that the program flips back and forth between 2 radars that are nearly as close.
@@ -164,7 +166,7 @@ class Change_RadarData(QObject):
                     distances[i] += 1
         # print(date, time, panel_center_coords, self.pb.map_transforms['aeqd'].radar, panel_center_xy, delta_time, distances['KUEX'], distances['KOAX'])
         i_sorted_distances = np.argsort(list(distances.values()))
-        
+                
         if check_date_availability:
             i = j = 0
             # Start with currently selected radar. This means that it will remain selected when no radar meets the criteria below.
@@ -177,13 +179,13 @@ class Change_RadarData(QObject):
                 directory = self.dsg.get_directory(date, time, desired_radar, self.selected_dataset)
                 datetimes = self.dsg.get_datetimes_directory(desired_radar, directory) if os.path.exists(directory) else []
                     
+                direction = np.sign(self.lrstep_beingperformed) if self.lrstep_beingperformed else 0
                 dir_string = self.dsg.get_dir_string(desired_radar, self.selected_dataset)
                 if '${date' in dir_string:
                     dir_dtbounds = bg.get_datetime_bounds_dir_string(dir_string, date, time)
                     
-                    threshold = 60*30
+                    threshold = 60*45
                     if self.lrstep_beingperformed:
-                        direction = np.sign(self.lrstep_beingperformed)
                         ref_datetime = dir_dtbounds[0 if direction == -1 else 1]
                         include_next_dir = direction*ft.datetimediff_s(date+time, ref_datetime) < threshold
                     else:
@@ -192,24 +194,32 @@ class Change_RadarData(QObject):
                         direction = -1 if diffs[0] < diffs[1] else 1
                         
                     if include_next_dir:
-                        next_dir = bg.get_next_possible_dir_for_dir_string(dir_string, desired_radar, date, time, direction)
+                        next_dir = bg.get_next_possible_dir_for_dir_string(dir_string, self.gui.radar_basedir, desired_radar, date, time, direction)
                         if os.path.exists(next_dir):
                             datetimes = np.append(datetimes, self.dsg.get_datetimes_directory(desired_radar, next_dir))
 
+                date_present = False
                 if not self.lrstep_beingperformed:
                     date_present = any(abs(ft.datetimediff_s(date+time, k)) < 60*20 for k in datetimes)
-                else:
-                    vt = self.determine_volume_timestep_m(datetimes, desired_radar)             
-                    date_present = any(0 < direction*ft.datetimediff_s(date+time, k) < 60*max(2*vt, 15) for k in datetimes)\
-                                   if desired_radar == self.selected_radar else\
-                                   (sum(0 < direction*ft.datetimediff_s(date+time, k) < 60*30 for k in datetimes) > 1)
+                elif len(datetimes):
+                    if desired_radar == self.selected_radar:
+                        date_present = any(0 <= direction*ft.datetimediff_s(date+time, k) <= 60*30 for k in datetimes) and delta_time != 0.
+                    else:                        
+                        vt = self.determine_volume_timestep_m(datetimes, desired_radar)
+                        time_to_last = abs(ft.datetimediff_s(date+time, datetimes[0 if direction == -1 else -1]))
+                        # Starting at 450 s has the advantage that we don' switch to a radar with data available for only
+                        # a very short time longer than the current radar
+                        t_start, t_end = 450, 1800
+                        n_required = max(1, 0.35/(60*vt)*(min(t_end, time_to_last)-t_start))
+                        date_present = sum(t_start < direction*ft.datetimediff_s(date+time, k) <= t_end for k in datetimes) >= n_required
+                    
                 if date_present:
                     selected_radar = desired_radar
                     j += 1
                 i += 1
         else:
             selected_radar = radar_keys[i_sorted_distances[min(n, n_radars)-1]]
-                                
+                                            
         radar_changed = self.radar != selected_radar
         # If called from self.process_datetimeinput, then continuation will be handled there
         if radar_changed and source != self.process_datetimeinput:
@@ -264,6 +274,8 @@ class Change_RadarData(QObject):
             # The second-newest datetime is also used, since it can happen that for the latest datetime only
             # a very incomplete volume is available.
             newest_datetimes = self.dsg.get_newest_datetimes_currentdata(self.radar,self.selected_dataset)
+            if not self.scans[0] in self.dsg.scannumbers_forduplicates:
+                print(self.dsg.scannumbers_forduplicates, self.dsg.scannumbers_all)
             duplicate = self.dsg.scannumbers_forduplicates[self.scans[0]]
             max_duplicate = len(self.dsg.scannumbers_all['z'][self.scans[0]])-1
             # Also consider which duplicates are currently shown. For the newest datetime this should be either the
@@ -314,8 +326,8 @@ class Change_RadarData(QObject):
         while new_dir_index != dir_index:
             try:
                 next_dir_string=dir_string_list[new_dir_index]
-                nearest_dir=bg.get_nearest_directory(next_dir_string,self.selected_radar,self.selected_date,self.selected_time,self.dsg.get_filenames_directory,self.dsg.get_datetimes_from_files)
-                date_nearest_dir=bg.get_date_and_time_from_dir(nearest_dir,next_dir_string,radar = self.selected_radar)[0]
+                nearest_dir=bg.get_nearest_directory(next_dir_string,self.gui.radar_basedir,self.selected_radar,self.selected_date,self.selected_time,self.dsg.get_filenames_directory,self.dsg.get_datetimes_from_files)
+                date_nearest_dir=bg.get_date_and_time_from_dir(nearest_dir,next_dir_string,self.gui.radar_basedir,self.selected_radar)[0]
                 if date_nearest_dir is None: #happens when the date variable is not in dir_string
                     datetimes = self.dsg.get_datetimes_directory(self.selected_radar,nearest_dir)
                     if any([k.startswith(self.selected_date) for k in datetimes]):
@@ -583,25 +595,19 @@ class Change_RadarData(QObject):
                     if sign == 1 and index > 0 or sign == -1 and index < len(timediffs)-1:
                         index -= sign
                     else: 
-                        lr_step = -sign
-                        
-                # These variables are used below when calling self.dsg.get_next_directory, but they are already set here since the change in
-                # lr_step that might occur above complicates setting it later.
-                ref_date, ref_time = date, time
-                desired_newdate = desired_newtime = None
-            else:
-                ref_date, ref_time = self.date, self.time
-                desired_newdate, desired_newtime = date, time
-                if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
-                    # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
-                    desired_newdate = desired_newtime = None
+                        lr_step = -sign                        
             
             update_directory = lr_step < 0 and index == 0 and mintimediff > 0 or lr_step > 0 and index == len(timediffs)-1 and mintimediff < 0
             # If this is the case, then the first or last file in self.filedatetimes is reached.
             if update_directory:
+                desired_newdate, desired_newtime = date, time
+                if abs(ft.datetimediff_s(self.date+self.time, date+time)) <= 300:
+                    # Setting to None prevents that first self.dsg.get_nearest_directory is called before determining the next directory
+                    desired_newdate = desired_newtime = None
+                
                 self.previous_directory = self.directory
-                self.directory = self.dsg.get_next_directory(self.selected_radar, self.selected_dataset, ref_date, ref_time, int(np.sign(lr_step)),
-                                                             desired_newdate, desired_newtime)
+                self.directory = self.dsg.get_next_directory(self.selected_radar, self.selected_dataset, self.date, self.time, 
+                                                             int(np.sign(lr_step)), desired_newdate, desired_newtime)
                 self.determine_list_filedatetimes()
 
                 #If not files_available, then the 'old' list with datetimes is still used.
@@ -642,6 +648,10 @@ class Change_RadarData(QObject):
             self.determine_list_filedatetimes(source=self.reset_dirinfo)
         
     
+    def check_nearest_radar(self):
+        return self.gui.view_nearest_radar and self.gui.use_storm_following_view and self.gui.stormmotion[1] != 0. and\
+               not self.change_radar_running
+    
     def process_datetimeinput(self,call_ID=None,set_data=True,change_datetime=None):
         # change_datetime=True should be given as input when self.dsg.scannumbers_forduplicates has changed in the function self.back_to_previous_plot, 
         # because there is otherwise no easy way to check for such a change in scannumbers_forduplicates.
@@ -661,10 +671,11 @@ class Change_RadarData(QObject):
             self.process_datetimeinput_running=False
             self.gui.datew.setText(self.date); self.gui.timew.setText(self.time)
             return
+
+        ref_datetime = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.date+self.time
+        delta_time = ft.datetimediff_s(ref_datetime, date+time) if not 'cc' in [ref_datetime, date+time] else 0
         
-        if time != 'c' and self.gui.view_nearest_radar and self.gui.use_storm_following_view and not self.change_radar_running:
-            ref_datetime = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.date+self.time
-            delta_time = ft.datetimediff_s(ref_datetime, date+time)
+        if time != 'c' and self.check_nearest_radar():
             self.switch_to_nearby_radar(1, delta_time=delta_time, source=self.process_datetimeinput)
             print('switch to nearby', self.selected_radar)
 
@@ -676,10 +687,8 @@ class Change_RadarData(QObject):
             self.selected_date,self.selected_time=self.get_closestdatetime(date,time)
             self.signal_set_datetimewidgets.emit(self.selected_date,self.selected_time) 
                      
-            if change_datetime is None:
-                change_datetime=True if (self.selected_date!=self.date or self.selected_time!=self.time or not self.pb.firstplot_performed) else False 
             self.requesting_latest_data = time == 'c'
-            returns = self.pb.set_newdata(self.pb.panellist,change_datetime,source_function=self.process_datetimeinput,set_data=set_data,
+            returns = self.pb.set_newdata(self.pb.panellist, delta_time, self.process_datetimeinput, set_data,
                                           apply_storm_centering=True)
             self.requesting_latest_data = False
             if not set_data:
@@ -719,7 +728,7 @@ class Change_RadarData(QObject):
         self.process_datetimeinput(set_data = False)
         
             
-    def perform_leftrightstep(self,lr_step):
+    def perform_leftrightstep(self, lr_step):
         """Check for the presence of scans that are performed more than once during a complete volume scan. If they are not present, or if the
         first (step backward)/last (step forward) of those scans is currently visible, then the time is changed.
         
@@ -731,13 +740,13 @@ class Change_RadarData(QObject):
         use_same_volumetime = False
         # vt is (typical) time between volumes for self.radar
         vt, input_dt = self.volume_timestep_m, self.desired_timestep_minutes()
-        consider_duplicates = input_dt == 0. or np.mod(input_dt, vt) > 0.
+        consider_duplicates = (input_dt == 0. or input_dt % vt > 0.) and abs(lr_step) == 1 and self.visible_productscans_with_duplicates
         # dt >= 1 is to ensure that self.filedatetimes_list gets updated in the function
         # self.get_closestdatetime when another date is reached. If not included, then the condition with mintimediff would
         # not be satisfied.
         dt = max(1, input_dt)
         
-        if abs(lr_step) == 1 and consider_duplicates and len(self.visible_productscans_with_duplicates):
+        if consider_duplicates:
             scans = self.visible_productscans_with_duplicates
             scannumbers = [self.dsg.scannumbers_all['z'][j] for j in scans]            
             scan_ndup_max = scans[np.argmax(len(j) for j in scannumbers)]
@@ -749,7 +758,7 @@ class Change_RadarData(QObject):
             
             for scan in self.productscans_with_duplicates:
                 ndup = len(self.dsg.scannumbers_all['z'][scan])
-                self.dsg.scannumbers_forduplicates[scan] = np.mod(int(np.floor(ratio*ndup)), ndup)
+                self.dsg.scannumbers_forduplicates[scan] = int(np.floor(ratio*ndup)) % ndup
             
             use_same_volumetime = 0 <= ratio < 1
             if dt < vt:
@@ -757,17 +766,27 @@ class Change_RadarData(QObject):
             else:                
                 volume_shift = abs(ratio//1)
                 timestep_m = lr_step*volume_shift*vt
-            estimated_timestep = lr_step*delta_i/ndup_max*vt
+            delta_time = lr_step*delta_i/ndup_max*vt
+            
+            radar_dataset = self.dsg.get_radar_dataset(self.selected_radar, self.selected_dataset)
+            if delta_i == 1 and self.gui.radardata_product_versions[radar_dataset] == 'combi_scan':
+                # For NEXRAD L2 combi_scan, the time difference between duplicates is quite unevenly distributed. 
+                # Almost all of the time difference occurs when going from odd to even index, hence the following change:
+                delta_time *= 2 if idup_max % 2 == 0 else 0.01
         else:
             if abs(lr_step) == 1:
                 timestep_m = lr_step*dt
             elif abs(lr_step) == 12: #Use a time step of 60 minutes.
                 timestep_m = np.sign(lr_step)*60
-            estimated_timestep = timestep_m
+            delta_time = timestep_m
             
         if not use_same_volumetime:
             trial_date, trial_time=ft.next_date_and_time(self.date,self.time,timestep_m)
             self.selected_date, self.selected_time = self.get_closestdatetime(trial_date,trial_time,lr_step=lr_step)
+            if not consider_duplicates:
+                # Keep using the already calculated delta_time in case of duplicates, to prevent getting a different value for
+                # situations where the volume time changes vs situations where this doesn't happen.
+                delta_time = ft.datetimediff_m(self.date+self.time, self.selected_date+self.selected_time)
 
             if self.selected_date==self.date and self.selected_time==self.time:
                 #No change of time in this case, and the scannumbers_forduplicates must be restored to 
@@ -776,9 +795,11 @@ class Change_RadarData(QObject):
                 #but for the one before.
                 self.dsg.scannumbers_forduplicates=self.current_variables['scannumbers_forduplicates'].copy()
                 use_same_volumetime=None
+                delta_time = 0
                 
-            self.signal_set_datetimewidgets.emit(self.selected_date,self.selected_time)
-        return use_same_volumetime, estimated_timestep
+            self.signal_set_datetimewidgets.emit(self.selected_date, self.selected_time)
+
+        return use_same_volumetime, delta_time, timestep_m
     
     def desired_timestep_minutes(self):
         return self.gui.desired_timestep_minutes if not self.gui.desired_timestep_minutes == 'V' else self.volume_timestep_m
@@ -787,22 +808,24 @@ class Change_RadarData(QObject):
         # from cProfile import Profile
         # profiler = Profile()
         # profiler.enable() 
-        if not call_ID is None:
-            self.process_keyboardinput_call_ID=call_ID
         self.process_keyboardinput_running=True
         """Important: self.process_keyboardinput_running must be set to False before every return in this function.
         """
+        if not call_ID is None:
+            self.process_keyboardinput_call_ID=call_ID
 
-        if not from_timer and leftright_step!=0. and self.timer_process_keyboardinput.isActive(): 
-            #In this case it is not desired to evaluate this function.
-            #The last condition is only for leftright_step!=0., to enable the program to process other events when self.ani.continue_type!='None'.
-            #These are events like a change in scan or change in product.
-            self.process_keyboardinput_running=False
-            return 
-        elif not from_timer:
-            self.process_keyboardinput_arguments=[leftright_step,downup_step,new_scan,new_product,call_ID]
+        if not from_timer:
+            if self.timer_process_keyboardinput.isActive():
+                # Stop evaluation when a timer is already running. But update self.process_keyboardinput_arguments in case of
+                # changing product or scan, to ensure that these changes are processed during an animation.
+                if leftright_step == 0:
+                    self.process_keyboardinput_arguments[1:-1] = [downup_step, new_scan, new_product]
+                self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
+                return
+            else:
+                self.process_keyboardinput_arguments = [leftright_step, downup_step, new_scan, new_product, call_ID]
         elif from_timer:
-            leftright_step,downup_step,new_scan,new_product,call_ID=self.process_keyboardinput_arguments
+            leftright_step, downup_step, new_scan, new_product, call_ID = self.process_keyboardinput_arguments
             
         
         #A try-except clausule is used to handle exceptions that occur when self.dsg.scannumbers_all is incomplete
@@ -811,10 +834,10 @@ class Change_RadarData(QObject):
             if not self.pb.firstplot_performed and (leftright_step!=0 or downup_step!=0 or new_scan!=0): 
                 #This is done because in these cases this function needs information about the scan attributes, that is not available before
                 #the first plot is performed.
-                self.process_keyboardinput_running=False
+                self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
                 return
             
-            if not self.ani.continue_type == 'None' and not call_ID is None and call_ID>1 and self.process_keyboardinput_finished_before:
+            if self.ani.continue_type != 'None' and call_ID != None and call_ID > 1 and self.process_keyboardinput_finished_before:
                 #self.process_keyboardinput_timebetweenfunctioncalls should be approximately equal to the time it takes to finish all commands
                 #that are executed (by OpenGL etc.) after finishing this function call.
                 #It is only updated when continuing to the left or when showing an animation, because in other cases this method does not work.
@@ -872,7 +895,7 @@ class Change_RadarData(QObject):
                 time_to_wait = max([time_to_wait, 0.01])
     
             if not from_timer and time_to_wait>0.:
-                self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False
+                self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
                 
                 if self.timer_process_keyboardinput.isActive():
                     self.timer_process_keyboardinput.stop()
@@ -896,13 +919,13 @@ class Change_RadarData(QObject):
                         self.selected_date,self.selected_time=self.get_closestdatetime(self.date,self.time,lr_step=leftright_step)
                         self.date=self.selected_date; self.time=self.selected_time
                     except Exception:
-                        self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False
+                        self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
                         return
                 else:
-                    self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False
+                    self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
                     return
                     
-                
+            delta_time = 0    
             if leftright_step!=0:
                 #Contains duplicate scans and plain products in plain_products_affect_by_double_volume in the case of a double volume.
                 self.productscans_with_duplicates=[i for i,j in self.dsg.scannumbers_all['z'].items() if len(j)>1]
@@ -911,15 +934,25 @@ class Change_RadarData(QObject):
     
                 radar_changed = False
                 try:
-                    use_same_volumetime, estimated_timestep = self.perform_leftrightstep(leftright_step)
-                    if self.gui.view_nearest_radar and self.gui.use_storm_following_view and not self.change_radar_running:
-                        delta_time = estimated_timestep*60
+                    use_same_volumetime, delta_time, trial_timestep_m = self.perform_leftrightstep(leftright_step)
+                    if self.check_nearest_radar():
+                        large_timestep_first_check_nearby_radars = delta_time >= trial_timestep_m+30
+                        if large_timestep_first_check_nearby_radars:
+                            trial_date, trial_time = ft.next_date_and_time(self.date, self.time, trial_timestep_m)
+                            self.signal_set_datetimewidgets.emit(trial_date, trial_time)
+                        
+                        delta_time = delta_time*60
                         radar_changed = self.switch_to_nearby_radar(1, delta_time=delta_time, source=self.process_keyboardinput)
-                        use_same_volumetime = False if radar_changed else use_same_volumetime
+                        if not radar_changed and large_timestep_first_check_nearby_radars:
+                            self.signal_set_datetimewidgets.emit(self.selected_date, self.selected_time)
+                        else:
+                            use_same_volumetime = False if radar_changed else use_same_volumetime
                 except Exception as e:
                     print(e, 'perform_leftrightstep')
+                    print('return 3')
+                    self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
                     return
-                
+                                
                 # print('print3', use_same_volumetime, radar_changed)
                 if use_same_volumetime is None or radar_changed: 
                     # In first case the date and time haven't changed, so there is no need to continue. In second case the change of
@@ -930,6 +963,7 @@ class Change_RadarData(QObject):
                         self.ani.continue_type='None'
                     if radar_changed:
                         self.end_time=pytime.time()
+                    print('return 4')
                     return
                          
             if new_scan!=0:
@@ -1016,13 +1050,12 @@ class Change_RadarData(QObject):
                     panellist_change=self.column_mode(variables_change='products' if new_product!='0' else 'scans')
                 else: panellist_change=[self.pb.panel]
                 
-                if self.products[self.pb.panel] in gv.plain_products_with_parameters or self.pb.products_before[self.pb.panel] in gv.plain_products_with_parameters:
-                    for j in (self.products[self.pb.panel], self.pb.products_before[self.pb.panel]):
-                        #Handle the cases in which only one of self.products[self.pb.panel] and self.pb.products_before[self.pb.panel]
-                        #is a plain product, and also the case in which both are a plain product.
-                        if j in gv.plain_products_with_parameters:
-                            panellist_change += self.gui.change_PP_parameters_panels(j)
-                    panellist_change = list(np.unique(panellist_change)) 
+                for p in (self.products[self.pb.panel], self.pb.products_before[self.pb.panel]):
+                    #Handle the cases in which only one of self.products[self.pb.panel] and self.pb.products_before[self.pb.panel]
+                    #is a plain product, and also the case in which both are a plain product.
+                    if p in gv.plain_products_with_parameters:
+                        panellist_change += self.gui.change_PP_parameters_panels(p)
+                panellist_change = list(np.unique(panellist_change))
             elif abs(downup_step)>0. and abs(downup_step)!=1.1: 
                 panellist_change=[j for j in self.pb.panellist if self.products[j] not in gv.plain_products]
             elif abs(downup_step)==1.1 and self.products[self.pb.panel] not in gv.plain_products:
@@ -1038,9 +1071,7 @@ class Change_RadarData(QObject):
                 panellist_change=[j for j in self.pb.panellist]
             
             if panellist_change:
-                change_datetime = leftright_step != 0
-                self.pb.set_newdata(panellist_change,change_datetime=change_datetime,source_function=self.process_keyboardinput,
-                                    apply_storm_centering=True)
+                self.pb.set_newdata(panellist_change, delta_time, self.process_keyboardinput, apply_storm_centering=True)
                 
 
             if new_scan!=0 or abs(downup_step)==1.1: self.time_last_individualscanchange=pytime.time()
@@ -1052,12 +1083,13 @@ class Change_RadarData(QObject):
             self.lrstep_beingperformed=None
             self.process_keyboardinput_running=False
             self.process_keyboardinput_finished_before=True
+            self.process_keyboardinput_last_finished_action = self.process_keyboardinput_arguments.copy()
             # profiler.disable()
             # import pstats
             # stats = pstats.Stats(profiler).sort_stats('cumtime')
             # stats.print_stats(1)  
         else:
-            self.process_keyboardinput_running=False; self.process_keyboardinput_finished_before=False
+            self.process_keyboardinput_running = self.process_keyboardinput_finished_before = False
             print(e,'process_keyboardinput')
         
                 
@@ -1140,7 +1172,6 @@ class Change_RadarData(QObject):
         A date and time should be given when requesting the second-newest datetime (as is done below when the desired scans are not yet 
         available for the newest datetime).
         """
-        print('plot current')
         radar = self.selected_radar if radar is None else radar
         if radar != self.selected_radar:
             #It could be that the radar changes in between emitting the signal in nlr_currentdata.py and actually calling this function.
@@ -1199,8 +1230,8 @@ class Change_RadarData(QObject):
         elif set_data:
             # Doing this also at the end of an iteration ensures that when a new scan comes available it is already included in the same iteration
             self.requesting_latest_data = True
-            self.pb.set_newdata(self.pb.panellist, change_datetime = save_date+save_time!=self.selected_date+self.selected_time,
-                                apply_storm_centering=True)
+            delta_time = ft.datetimediff_s(save_date+save_time, self.selected_date+self.selected_time)
+            self.pb.set_newdata(self.pb.panellist, delta_time, apply_storm_centering=True)
             self.requesting_latest_data = False
     
         self.plot_current_call_ID=call_ID

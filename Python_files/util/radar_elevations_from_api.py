@@ -10,13 +10,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import requests
 import time as pytime
 
-os.chdir('D:/NLradar/NLradar/Python_files')
+os.chdir('C:/Users/bramv/NLradar/NLradar_private/Python_files')
 import nlr_globalvars as gv
 import nlr_functions as ft
-radars = gv.radars['CHMI']
+radars = gv.radars['Austro Control']
 radarcoords = {i:j for i,j in gv.radarcoords.items() if i in radars}
-
-
+# 1/0
 #%%
 elevs = {}
 for i in radars:
@@ -28,11 +27,12 @@ for i in radars:
     elevs[i] = output['results'][0]['elevation']
     pytime.sleep(2)
     # print(i, output, "\n")
-  
+print(elevs)
+1/0  
 #%%
-# with open(gv.programdir+'/util/radar_elevs_eu.txt', 'w', encoding="utf-8") as f:
-#     for i in elevs:
-#         f.write(i+f'\t{elevs[i]}\n')
+with open('util/radar_elevs_eu.txt', 'w', encoding="utf-8") as f:
+    for i in elevs:
+        f.write(i+f'\t{int(round(elevs[i]))}\n')
 
 
 #%%

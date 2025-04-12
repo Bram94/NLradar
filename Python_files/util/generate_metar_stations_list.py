@@ -36,7 +36,14 @@ import nlr_functions as ft
 
 #%%
 country_stations = {'Poland':['EPSY'], 'Denmark':['EKYT'], 'France':['LFOE'], 'Czech':['LKCV'], 'Germany':['EDDP'], 'Switzerland':['LSMA']}
-country_stations = {'Czech':['LKCV']}
+country_stations = {'Slovakia':['LZPP'], 'Austria':['LOWW']}
+country_stations = {'Belgium':['EBBE'], 'Netherlands':['EHGG']}
+country_stations = {'UK':['EGJJ']}
+country_stations = {'IT':['LIPH']}
+country_stations = {'SI':['LJLJ']}
+country_stations = {'EE':['EETU']}
+country_stations = {'HR':['LDOS'], 'BA':['LQTZ'], 'HU':['LHKE'], 'RS':['LYBE']}
+country_stations = {'FI':['EFHA']}
 import json
 
 # hdr = {"X-API-Key": "910f8b04ed2c4be99d3f9a88e9"}
@@ -59,7 +66,7 @@ string = ''
 for country in country_stations:
     for request_station in country_stations[country]:
         print(request_station)
-        params = {'TYPE':'sfregion', 'DATE':'current', 'HOUR':'current', 'UNITS':'M', 'STATION':request_station}
+        params = {'TYPE':'sfregion', 'DATE':'20240717', 'HOUR':'12', 'UNITS':'M', 'STATION':request_station}
         text = requests.get('http://weather.uwyo.edu/cgi-bin/wyowx.fcgi', params=params).text
         indices = [i.end() for i in re.finditer('STATION=', text)]
         stations = np.unique([text[i:i+4].rstrip('>') for i in indices])

@@ -16,14 +16,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import nlr_globalvars as gv
-import nlr_functions as ft
-
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication   
 
 import time as pytime
 import numpy as np
+
+import nlr_globalvars as gv
+import nlr_functions as ft
 
 
 
@@ -96,7 +96,6 @@ class Animate(QThread):
         
     def continue_leftright(self):
         self.process_keyboardinput_call_ID=0
-        
         while self.continue_type in ('leftright', 'cases'):
             if self.continue_type == 'leftright':
                 #Do not emit a new signal before the previous one is processed.
@@ -235,6 +234,7 @@ class Animate(QThread):
             self.process_keyboardinput_call_ID=0
             self.previous_request = {'datetime':None, 'scannumbers_forduplicates':None, 'radar':None}
             
+            n_repeats = 0
             while 'ani' in self.continue_type:
                 if not self.update_animation and self.datetime==self.enddatetime:
                     try: 
@@ -259,13 +259,26 @@ class Animate(QThread):
                 # Allow self.datetime to be a bit before self.startdatetime. This is done since when combining viewing nearest radar with storm-following
                 # view, it can happen that a switch from radar leads to a slightly earlier datetime.
                 timerange_check = ft.datetimediff_m(str(self.startdatetime), str(self.datetime)) > -10 and self.datetime < self.enddatetime
-                repeat = self.datetime == self.previous_request['datetime'] and\
-                         self.dsg.scannumbers_forduplicates == self.previous_request['scannumbers_forduplicates'] and\
-                         self.crd.radar == self.previous_request['radar']
-                if repeat:
+                
+                # Check for repeating frames, but make sure that self.crd.process_keyboardinput actually finished for a left-right step
+                if self.datetime == self.previous_request['datetime'] and\
+                self.dsg.scannumbers_forduplicates == self.previous_request['scannumbers_forduplicates'] and\
+                self.crd.radar == self.previous_request['radar']:
+                    n_repeats += 1
+                else:
+                    n_repeats = 0
+                       
+                
+                # repeat = self.crd.process_keyboardinput_last_finished_action and\
+                #          self.crd.process_keyboardinput_last_finished_action[0] and\
+                #          self.crd.process_keyboardinput_last_finished_action[-1] == self.process_keyboardinput_call_ID and\
+                #          self.datetime == self.previous_request['datetime'] and\
+                #          self.dsg.scannumbers_forduplicates == self.previous_request['scannumbers_forduplicates'] and\
+                #          self.crd.radar == self.previous_request['radar']
+                if n_repeats == 3:
                     print('repeating frames, restarting animation', self.datetime, self.dsg.scannumbers_forduplicates, 
                           self.crd.scans, self.crd.radar)
-                if not self.update_animation and not repeat and (timerange_check or (self.datetime == self.enddatetime and duplicates_condition)):
+                if not self.update_animation and n_repeats < 3 and (timerange_check or (self.datetime == self.enddatetime and duplicates_condition)):
                     running_condition=not self.crd.process_keyboardinput_running and not self.crd.process_datetimeinput_running and pytime.time()-self.crd.end_time>0.005
                     if running_condition and self.process_keyboardinput_call_ID in (0,self.crd.process_keyboardinput_call_ID):
                         self.previous_request = {'datetime':self.datetime, 'scannumbers_forduplicates':self.dsg.scannumbers_forduplicates.copy(), 'radar':self.crd.radar}

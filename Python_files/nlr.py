@@ -1,15 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-from nlr_plotting import Plotting
-from nlr_changedata import Change_RadarData
-from nlr_currentdata import AutomaticDownload, DownloadOlderData, CurrentData
-from VWP.nlr_vwp import GUI_VWP
-import nlr_background as bg
-import nlr_functions as ft
-import nlr_globalvars as gv
-
-from PyQt5 import QtCore,QtGui,QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -25,7 +16,6 @@ from numpy import array, float32 # For use of eval
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" #I haven't yet seen this doing anything
 opa=os.path.abspath #opa should always be used when specifying a pathname
-import io
 import subprocess
 import glob
 import time as pytime
@@ -36,6 +26,15 @@ import shutil
 import pickle
 import copy
 import bisect
+import pyperclip
+
+from nlr_plotting import Plotting
+from nlr_changedata import Change_RadarData
+from nlr_currentdata import AutomaticDownload, DownloadOlderData, CurrentData
+from VWP.nlr_vwp import GUI_VWP
+import nlr_background as bg
+import nlr_functions as ft
+import nlr_globalvars as gv
 
 
 
@@ -67,6 +66,7 @@ nlr_globalvars contains global parameters that don't change within the applicati
 #At first, each variable is assigned its default value (defined in nlr_globalvars), but if they are saved from a previous run this value is
 #subsequently overwritten.
 
+radar_basedir = gv.default_basedir
 radarsources_dirs = {}
 radardirs_additional = {}
 radardata_dirs={}
@@ -134,7 +134,7 @@ api_keys = {} # Default values are assigned below when necessary
 pos_markers_latlons = []
 pos_markers_positions = []
 pos_markers_latlons_save = []
-stormmotion_save = {'sm':np.array([0,0]), 'radar':None}
+stormmotion_save = {}
 use_storm_following_view = False
 view_nearest_radar = False
 radar_bands_view_nearest_radar = ['S', 'C', 'X']
@@ -203,13 +203,13 @@ reset_volume_attributes = True #Gets set to False in nlr_datasourcegeneral.py
 
 
 
-variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','cartesian_product_maxrange','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
-variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dealiasing_dualprf_n_it','self.cartesian_product_res','self.cartesian_product_maxrange','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
+variables_names_raw=['variables_resettodefault_version','reset_volume_attributes','radar_basedir','radarsources_dirs','radardirs_additional','radardata_dirs','radardata_dirs_indices','derivedproducts_dir','derivedproducts_filename_version','radardata_product_versions','selected_product_versions_ordered','movefiles_parameters','radar','scan_selection_mode','date','time','current_case_list_name','current_case','cases_offset_minutes','cases_looping_speed','cases_animation_window','cases_use_case_zoom','cases_loop_subset','cases_loop_subset_ncases','animation_duration','animation_speed_minpsec','animation_hold_lastframe','desired_timestep_minutes','max_timestep_minutes','maxspeed_minpsec','dataset','products','productunfiltered','polarization','apply_dealiasing','dealiasing_setting','dealiasing_max_nyquist_vel','dealiasing_dualprf_n_it','cartesian_product_res','cartesian_product_maxrange','scans','plot_mode','savefig_filename','savefig_include_menubar','animation_filename','ani_delay_ref','ani_delay','ani_delay_end','ani_sort_files','ani_group_datasets','ani_quality','networktimeout','minimum_downloadspeed','api_keys','stormmotion_save','pos_markers_latlons','pos_markers_latlons_save','use_storm_following_view','view_nearest_radar','radar_bands_view_nearest_radar','data_selected_startazimuth','show_vwp','include_sfcobs_vwp','vwp_manual_sfcobs','vwp_manual_axlim','vvp_range_limits','vvp_height_limits','vvp_vmin_mps','vwp_sigmamax_mps','vwp_shear_layers','vwp_vorticity_layers','vwp_srh_layers','vwp_sm_display','base_url_obs','cmaps_minvalues','cmaps_maxvalues','PP_parameter_values','PP_parameters_panels','max_radardata_in_memory_GBs','sleeptime_after_plotting','use_scissor','colortables_dirs_filenames','dimensions_main','fontsizes_main','bgcolor','panelbdscolor','bgmapcolor','mapvisibility','mapcolorfilter','maptiles_update_time','radar_markersize','radar_colors','lines_colors','lines_show','lines_width','lines_antialias','ghtext_show','grid_showtext','show_heightrings_derivedproducts','showgridheightrings_panzoom','showgridheightrings_panzoom_time','gridheightrings_fontcolor','gridheightrings_fontsize','grid_showtext']
+variables_names_withclassreference=['variables_resettodefault_version','self.reset_volume_attributes','self.radar_basedir','self.radarsources_dirs','self.radardirs_additional','self.radardata_dirs','self.radardata_dirs_indices','self.derivedproducts_dir','self.derivedproducts_filename_version','self.radardata_product_versions','self.selected_product_versions_ordered','self.movefiles_parameters','self.crd.radar','self.crd.scan_selection_mode','self.crd.date','self.crd.time','self.current_case_list_name','self.current_case','self.cases_offset_minutes','self.cases_looping_speed','self.cases_animation_window','self.cases_use_case_zoom','self.cases_loop_subset','self.cases_loop_subset_ncases','self.animation_duration','self.animation_speed_minpsec','self.animation_hold_lastframe','self.desired_timestep_minutes','self.max_timestep_minutes','self.maxspeed_minpsec','self.crd.dataset','self.crd.products','self.crd.productunfiltered','self.crd.polarization','self.crd.apply_dealiasing','self.dealiasing_setting','self.dealiasing_max_nyquist_vel','self.dealiasing_dualprf_n_it','self.cartesian_product_res','self.cartesian_product_maxrange','self.crd.scans','self.crd.plot_mode','self.savefig_filename','self.savefig_include_menubar','self.animation_filename','self.ani_delay_ref','self.ani_delay','self.ani_delay_end','self.ani_sort_files','self.ani_group_datasets','self.ani_quality','self.networktimeout','self.minimum_downloadspeed','self.api_keys','self.stormmotion_save','self.pos_markers_latlons','self.pos_markers_latlons_save','self.use_storm_following_view','self.view_nearest_radar','self.radar_bands_view_nearest_radar','self.data_selected_startazimuth','self.show_vwp','self.include_sfcobs_vwp','self.vwp_manual_sfcobs','self.vwp_manual_axlim','self.vvp_range_limits','self.vvp_height_limits','self.vvp_vmin_mps','self.vwp_sigmamax_mps','self.vwp_shear_layers','self.vwp_vorticity_layers','self.vwp_srh_layers','self.vwp_sm_display','self.base_url_obs','self.cmaps_minvalues','self.cmaps_maxvalues','self.PP_parameter_values','self.PP_parameters_panels','self.max_radardata_in_memory_GBs','self.sleeptime_after_plotting','self.use_scissor','self.colortables_dirs_filenames','self.dimensions_main','self.fontsizes_main','self.bgcolor','self.panelbdscolor','self.bgmapcolor','self.mapvisibility','self.mapcolorfilter','self.maptiles_update_time','self.radar_markersize','self.radar_colors','self.lines_colors','self.lines_show','self.lines_width','self.lines_antialias','self.ghtext_show','self.grid_showtext','self.show_heightrings_derivedproducts','self.showgridheightrings_panzoom','self.showgridheightrings_panzoom_time','self.gridheightrings_fontcolor','self.gridheightrings_fontsize','self.grid_showtext']
 
 #Variables that are reset to their default for the next update. Needs to be updated before every new update, 
 #and 'variables_resettodefault_version' should always be included!!!!! reset_volume_attributes maybe too.
-variables_resettodefault_forupdate=['variables_resettodefault_version', 'vwp_sm_display']
-variables_resettodefault_version = 9 #Version for variables_resettodefault_forupdate. Number needs to be increased by 1 before every new update!!!!!
+variables_resettodefault_forupdate=['variables_resettodefault_version', 'stormmotion_save']
+variables_resettodefault_version = 10 #Version for variables_resettodefault_forupdate. Number needs to be increased by 1 before every new update!!!!!
 
 try:
     #pickle.load appears to be incompatible with changes in pyqt version, i.e. when the file is saved while using pyqt5, then it also needs pyqt5 for loading the file.
@@ -315,6 +315,7 @@ else:
 # vwp_shear_layers = {1:[0,1], 2:[0,3], 3:[0,6], 4:[1,6]}
 
 
+
 class ListWidgetItem(QListWidgetItem):
     def __lt__(self, other):
         listwidget = self.listWidget()
@@ -359,6 +360,7 @@ class GUI(QWidget):
 
         
         #Variables with gui as their living class are assigned to gui here.
+        self.radar_basedir = radar_basedir
         self.radarsources_dirs = radarsources_dirs
         self.radardirs_additional = radardirs_additional
         self.radardata_dirs=radardata_dirs
@@ -495,7 +497,7 @@ class GUI(QWidget):
             self.ad[j]=AutomaticDownload(gui_class=self,radar=j)
             self.dod[j]=DownloadOlderData(gui_class=self,radar=j)
             self.cd[j]=CurrentData(gui_class=self,radar=j)
-            self.cds = self.cd[j].cds #is the same for all radars
+        self.cds = self.cd[gv.radars_all[0]].cds #is the same for all radars
         #Enable self.crd to also use self.dod
         self.crd.dod=self.dod
         
@@ -549,8 +551,6 @@ class GUI(QWidget):
         self.widgets = ('datew', 'timew', 'casesw', 'download_timerangew', 'download_startstopw', 'animation_settingsw', 'desired_timestep_minutesw', 'max_timestep_minutesw', 'maxspeed_minpsecw', 'textbar', 'hodow', 'savefig_include_menubarw', 'extraw', 'settingsw', 'helpw')
         self.f1 = QFont('Times')
         f2 = QFont('Consolas') # Use a monospace font for the textbar
-        # self.f1.setPixelSize(int(round(self.pb.scale_pixelsize(14))))
-        # QApplication.instance().setFont(self.f1)
         for w in self.widgets:
             widget = getattr(self, w)
             widget.setMinimumWidth(1)
@@ -617,11 +617,11 @@ class GUI(QWidget):
         QShortcut(QKeySequence('RIGHT'),self,lambda: self.crd.process_keyboardinput(1,0,0,'0',None,False))
         QShortcut(QKeySequence('SHIFT+LEFT'),self,lambda: self.crd.process_keyboardinput(-12,0,0,'0',None,False))
         QShortcut(QKeySequence('SHIFT+RIGHT'),self,lambda: self.crd.process_keyboardinput(12,0,0,'0',None,False))
-        QShortcut(QKeySequence('ALT+LEFT'),self,lambda: self.ani.change_continue_type('leftright',-1))
-        QShortcut(QKeySequence('ALT+RIGHT'),self,lambda: self.ani.change_continue_type('leftright',1))
+        QShortcut(QKeySequence(','),self,lambda: self.ani.change_continue_type('leftright',-1))
+        QShortcut(QKeySequence('.'),self,lambda: self.ani.change_continue_type('leftright',1))
         QShortcut(QKeySequence('SPACE'),self,lambda: self.ani.change_continue_type('ani',0))
-        QShortcut(QKeySequence('ALT+C'),self,lambda: self.crd.plot_mostrecent_data(True))
-        QShortcut(QKeySequence('ALT+SHIFT+C'),self,lambda: self.crd.plot_mostrecent_data(False))
+        QShortcut(QKeySequence('END'),self,lambda: self.crd.plot_mostrecent_data(True))
+        QShortcut(QKeySequence('SHIFT+END'),self,lambda: self.crd.plot_mostrecent_data(False))
         QShortcut(QKeySequence('CTRL+Return'),self,lambda: self.move_to_next_case(None,0))
         QShortcut(QKeySequence('CTRL+LEFT'),self,lambda: self.move_to_next_case(None,-1))
         QShortcut(QKeySequence('CTRL+RIGHT'),self,lambda: self.move_to_next_case(None,1))
@@ -1034,9 +1034,9 @@ class GUI(QWidget):
 
     def cases_menu(self):
         cases_menu = QMenu(self)
-        cases_menu.setStyleSheet("QMenu::item{padding-left:5px; padding-right:5px;}\
-                                  QMenu::item::selected{background-color:rgb(100,255,255);}\
-                                  QMenu::item:default{padding-left:5px; padding-right:5px; color:#ff00ff;}")
+        # cases_menu.setStyleSheet("QMenu::item{padding-left:5px; padding-right:5px;}\
+        #                           QMenu::item::selected{background-color:rgb(100,255,255);}\
+        #                           QMenu::item:default{padding-left:5px; padding-right:5px; color:#ff00ff;}")
         position = self.casesw.geometry()
         point = position.bottomLeft()
 
@@ -1064,8 +1064,8 @@ class GUI(QWidget):
                 action.triggered.connect(lambda state, list_name=list_name: self.delete_case_list(list_name))
             
             othercases_menu = cases_menu.addMenu('Select case from other list')
-            othercases_menu.setStyleSheet("QMenu::item{padding-left:5px; padding-right:15px;}\
-                                               QMenu::item::selected{background-color:rgb(100,255,255);}")
+            # othercases_menu.setStyleSheet("QMenu::item{padding-left:5px; padding-right:15px;}\
+            #                                    QMenu::item::selected{background-color:rgb(100,255,255);}")
             max_length = 100
             if len(other_case_lists) == 0:
                 action = othercases_menu.addAction('No other lists available yet')
@@ -1240,7 +1240,11 @@ class GUI(QWidget):
         
         # self.crd.selected_radar is used in self.update_stormmotion and self.pb.change_map_center
         self.crd.selected_radar = radar
-        self.update_stormmotion(case_dict['stormmotion'] if 'stormmotion' in case_dict else np.array([0, 0]))
+        sm = case_dict.get('stormmotion', np.array([0, 0]))
+        if type(sm) is dict and 'radar' in sm:
+            # In the past only a single SM was supported. This updates SMs using old format to new format
+            sm = {date+time:sm}
+        self.update_stormmotion(sm)
         if self.pb.map_transforms['aeqd'].radar != radar:
             self.pb.change_map_center()
             
@@ -1526,8 +1530,70 @@ class GUI(QWidget):
             else:
                 action = menu.addAction('Start automatic download for '+selected_radar)
                 action.triggered.connect(lambda: self.start_automatic_download(selected_radar))
+
+            menu.addSeparator()
             
-            menu.addSeparator()     
+            action = menu.addAction('Set SM marker')
+            if not self.pb.firstplot_performed:
+                action.setEnabled(False)
+            action.triggered.connect(lambda: self.set_sm_marker_properties())
+            
+            action = menu.addAction('Remove SM marker')
+            if not self.sm_marker_present: 
+                action.setEnabled(False)
+            action.triggered.connect(lambda: self.remove_marker('sm'))
+            
+            
+            submenu = menu.addMenu('Set SM vector')
+            action = submenu.addAction('Calculate from marker')
+            if not self.sm_marker_present or\
+            self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
+                action.setEnabled(False)
+            action.triggered.connect(lambda: self.set_stormmotion_from_marker('single'))
+            
+            action = submenu.addAction('Calculate from marker and set new SM marker')
+            if not self.sm_marker_present or\
+            self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
+                action.setEnabled(False)
+            action.triggered.connect(lambda: (self.set_stormmotion_from_marker('single'), self.set_sm_marker_properties()))
+                        
+            action = submenu.addAction('Set manually')
+            action.triggered.connect(lambda: self.set_stormmotion_manually('single'))
+                            
+            
+            submenu = menu.addMenu('Set another SM vector')
+            action = submenu.addAction('Calculate from marker')
+            if not self.sm_marker_present or\
+            self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
+                action.setEnabled(False)
+            action.triggered.connect(lambda: self.set_stormmotion_from_marker('multiple'))
+            
+            action = submenu.addAction('Calculate from marker and set new SM marker')
+            if not self.sm_marker_present or\
+            self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
+                action.setEnabled(False)
+            action.triggered.connect(lambda: (self.set_stormmotion_from_marker('multiple'), self.set_sm_marker_properties()))
+            
+            action = submenu.addAction('Set manually')
+            action.triggered.connect(lambda: self.set_stormmotion_manually('multiple'))       
+            
+            
+            if self.stormmotion[1] != 0. or len(self.stormmotion_save) == 0.:
+                action = menu.addAction('Reset SM vector')
+                action.triggered.connect(lambda: self.change_stormmotion(np.array([0, 0])))
+                if self.stormmotion[1] == 0.:
+                    action.setEnabled(False)
+            else:
+                action = menu.addAction('Restore SM vector')
+                action.triggered.connect(lambda: self.change_stormmotion(self.stormmotion_save, False))
+            
+            menu.addSeparator()
+            
+            action = menu.addAction('Copy mouse coordinates to clipboard')
+            action.triggered.connect(self.copy_mouse_coordinates_to_clipboard)
+            
+            action = menu.addAction('Set position marker: Paste from clipboard')
+            action.triggered.connect(lambda: self.set_pos_markers_properties('Clipboard'))
             
             action = menu.addAction('Set position marker: Mouse position')
             action.triggered.connect(lambda: self.set_pos_markers_properties('Mouse'))
@@ -1544,43 +1610,11 @@ class GUI(QWidget):
             else:
                 action = menu.addAction('Restore position markers')
                 action.triggered.connect(self.restore_pos_markers)
-            
-            menu.addSeparator()
-            
-            action = menu.addAction('Set SM marker')
-            if not self.pb.firstplot_performed:
-                action.setEnabled(False)
-            action.triggered.connect(lambda: self.set_sm_marker_properties())
-            
-            action = menu.addAction('Remove SM marker')
-            if not self.sm_marker_present: 
-                action.setEnabled(False)
-            action.triggered.connect(lambda: self.remove_marker('sm'))
-            
-            action = menu.addAction('Calculate SM vector from marker')
-            if not self.sm_marker_present or\
-            self.pb.data_attr['scantime'].get(self.pb.panel, self.sm_marker_scantime) == self.sm_marker_scantime:
-                action.setEnabled(False)
-            action.triggered.connect(self.set_stormmotion_from_marker)
-            
-            action = menu.addAction('Set SM vector manually')
-            action.triggered.connect(self.set_stormmotion_manually)
-            
-            if self.stormmotion[1] != 0. or self.stormmotion_save['sm'][1] == 0.:
-                action = menu.addAction('Reset SM vector')
-                action.triggered.connect(lambda: self.change_stormmotion(np.array([0, 0])))
-                if self.stormmotion[1] == 0.:
-                    action.setEnabled(False)
-            else:
-                action = menu.addAction('Restore SM vector')
-                action.triggered.connect(lambda: self.change_stormmotion(self.stormmotion_save, False))
-            
-            menu.addSeparator()
-            
-            action = menu.addAction('Adjust start azimuth of scans (certain radars)')
-            if not self.crd.radar in gv.radars_with_adjustable_startazimuth:
-                action.setEnabled(False)
-            action.triggered.connect(self.set_data_selected_startazimuth)
+                                   
+            if self.crd.radar in gv.radars_with_adjustable_startazimuth:
+                menu.addSeparator()
+                action = menu.addAction('Adjust start azimuth of scans (certain radars)')
+                action.triggered.connect(self.set_data_selected_startazimuth)
             
             menu.addSeparator()
 
@@ -1646,6 +1680,11 @@ class GUI(QWidget):
         elif mode == 'loose':
             return any(abs(ft.datetimediff_s(datetime, j)) <= max_datetimediff_s for j in case_dts)
                     
+        
+    def copy_mouse_coordinates_to_clipboard(self):
+        x, y = self.pb.screencoord_to_xy(self.pb.last_mousepress_pos)
+        lat, lon = ft.aeqd(gv.radarcoords[self.crd.radar], np.array([x, y]), inverse=True)
+        pyperclip.copy(f'{lat}, {lon}')
             
     def set_marker_coordinates(self):
         self.marker_coordinates_widget = QWidget()
@@ -1675,8 +1714,8 @@ class GUI(QWidget):
         n = len(self.pos_markers_positions)
         list_index = min([index, n]) if not index is None else n
         
-        if input_type == 'Coordinates':
-            input_marker_latlon = self.pos_markers_latlonsw[index].text()
+        if input_type in ('Coordinates', 'Clipboard'):
+            input_marker_latlon = self.pos_markers_latlonsw[index].text() if input_type == 'Coordinates' else pyperclip.paste()
             try:
                 lat, lon = ft.determine_latlon_from_inputstring(input_marker_latlon)
                 x, y = ft.aeqd(gv.radarcoords[self.crd.radar], np.array([lat, lon]))
@@ -1712,6 +1751,7 @@ class GUI(QWidget):
     def set_sm_marker_properties(self):
         self.sm_marker_position = self.pb.screencoord_to_xy(self.pb.last_mousepress_pos)
         self.sm_marker_latlon = ft.aeqd(gv.radarcoords[self.crd.radar],self.sm_marker_position,inverse=True)
+        self.sm_marker_datetime = self.crd.date+self.crd.time
         self.sm_marker_scantime = self.pb.data_attr['scantime'][self.pb.panel]
         self.sm_marker_scandatetime = self.pb.data_attr['scandatetime'][self.pb.panel]
         
@@ -1742,7 +1782,7 @@ class GUI(QWidget):
         self.pb.set_sm_pos_markers()
 
 
-    def set_stormmotion_from_marker(self):
+    def set_stormmotion_from_marker(self, mode='single'):
         mouse_position=self.pb.screencoord_to_xy(self.pb.last_mousepress_pos)
         timediff_seconds=ft.datetimediff_s(self.sm_marker_scandatetime, self.pb.data_attr['scandatetime'][self.pb.panel])
         position_diff=mouse_position-self.sm_marker_position
@@ -1750,9 +1790,9 @@ class GUI(QWidget):
         sm_speed_mps=np.linalg.norm(position_diff)*1000./timediff_seconds
         if timediff_seconds<0:
             sm_direction=np.mod(sm_direction+180,360); sm_speed_mps*=-1
-        self.change_stormmotion(np.array([sm_direction, sm_speed_mps]), convert_units=False)
+        self.change_stormmotion(np.array([sm_direction, sm_speed_mps]), convert_units=False, from_marker=True, mode=mode)
                 
-    def set_stormmotion_manually(self):
+    def set_stormmotion_manually(self, mode='single'):
         self.set_stormmotion=QWidget()
         self.set_stormmotion.setWindowTitle('Storm motion')
         layout=QFormLayout()
@@ -1763,45 +1803,70 @@ class GUI(QWidget):
         layout.addRow(QLabel('From (degrees)'),self.sm_direction)
         layout.addRow(QLabel('Speed ('+self.pb.productunits['s']+')'),self.sm_speed)
 
-        self.sm_direction.editingFinished.connect(self.change_stormmotion); self.sm_speed.editingFinished.connect(self.change_stormmotion)  
+        self.sm_direction.editingFinished.connect(lambda: self.change_stormmotion(mode=mode))
+        self.sm_speed.editingFinished.connect(lambda: self.change_stormmotion(mode=mode))  
         
         self.set_stormmotion.setLayout(layout)
         self.set_stormmotion.resize(self.set_stormmotion.sizeHint())
         self.set_stormmotion.show()
         
-    def update_stormmotion_change_radar(self):
-        """The storm motion vector will be slightly different for an AEQD projection centered on a different radar.
-        The method used here is slightly less accurate than reprojecting the full position difference vector,
-        and calculating the new SM from this. But it works well enough, especially together with some measures in
-        self.ani.update_datetimes_and_perform_firstplot that ensure that each animation iteration starts at the original
-        panel view.
-        """
-        sm = self.stormmotion_save['sm']*np.array([np.pi/180, 1])
-        # Always use the radar for which the storm motion was set (i.e. self.stormmotion_save['radar']) as reference.
-        # Not doing that leads to slightly different SM when reprojecting back and forth between radars.
-        old_radar, new_radar = self.stormmotion_save['radar'], self.crd.selected_radar
-        pos1, pos2 = np.zeros(2), np.array([np.sin(sm[0]), np.cos(sm[0])])
-        pos1_latlon, pos2_latlon = ft.aeqd(gv.radarcoords[old_radar], np.array([pos1, pos2]), inverse=True)
-        pos1, pos2 = ft.aeqd(gv.radarcoords[new_radar], np.array([pos1_latlon, pos2_latlon]))
-        position_diff = pos1-pos2
-        sm_direction=ft.calculate_azimuth(position_diff)
-        sm_speed_mps=np.linalg.norm(position_diff)*sm[1]
-        self.stormmotion = np.array([sm_direction, sm_speed_mps])
+    def select_nearest_sm_datetime(self, ref_datetime):
+        datetime = int(ref_datetime)
+        sm_datetimes = np.sort(np.array(list(self.stormmotion_save), dtype='uint64'))
+        return str(sm_datetimes[0] if datetime <= sm_datetimes[0] else sm_datetimes[sm_datetimes <= datetime][-1]) 
         
-    def update_stormmotion(self, stormmotion):
+    def update_stormmotion_change_datetime_or_radar(self, datetime=None, radar=None, set_stormmotion=True):
+        radar = radar if radar else self.crd.selected_radar
+        datetime = datetime if datetime else self.crd.selected_date+self.crd.selected_time
+        key = self.select_nearest_sm_datetime(datetime)
+        sm_dict = self.stormmotion_save[key]
+        
+        if hasattr(self, 'previous_sm_request') and self.previous_sm_request[0] == (str(sm_dict), radar):
+            sm = self.previous_sm_request[1]
+        else:
+            """The storm motion vector will be slightly different for an AEQD projection centered on a different radar.
+            The method used here is slightly less accurate than reprojecting the full position difference vector,
+            and calculating the new SM from this. But it works well enough, especially together with some measures in
+            self.ani.update_datetimes_and_perform_firstplot that ensure that each animation iteration starts at the original
+            panel view.
+            """
+            sm = sm_dict['sm']*np.array([np.pi/180, 1])
+            # Always use the radar for which the storm motion was set (i.e. self.stormmotion_save['radar']) as reference.
+            # Not doing that leads to slightly different SM when reprojecting back and forth between radars.
+            old_radar = sm_dict['radar']
+            if old_radar != radar:
+                pos1, pos2 = np.zeros(2), np.array([np.sin(sm[0]), np.cos(sm[0])])
+                pos1_latlon, pos2_latlon = ft.aeqd(gv.radarcoords[old_radar], np.array([pos1, pos2]), inverse=True)
+                pos1, pos2 = ft.aeqd(gv.radarcoords[radar], np.array([pos1_latlon, pos2_latlon]))
+                position_diff = pos1-pos2
+                sm_direction=ft.calculate_azimuth(position_diff)
+                sm_speed_mps=np.linalg.norm(position_diff)*sm[1]
+                sm = np.array([sm_direction, sm_speed_mps])
+            else:
+                sm = sm_dict['sm']                
+            self.previous_sm_request = [(str(sm_dict), radar), sm]
+            
+        if set_stormmotion:
+            self.stormmotion = sm
+        else:
+            return sm
+        
+    def update_stormmotion(self, stormmotion, mode='single'):
         # Updates only storm motion, without performing additional (e.g. plotting) actions
         # stormmotion can be either a 2-element array, or a dictionary of the form {'sm':array, 'radar':radar}
-        if type(stormmotion) == dict:
+        if type(stormmotion) is dict:
             self.stormmotion_save = stormmotion
-            self.update_stormmotion_change_radar()
+            self.update_stormmotion_change_datetime_or_radar()
         else:
             self.stormmotion = stormmotion
             if stormmotion[1] != 0.:
-                self.stormmotion_save = {'sm':stormmotion, 'radar':self.crd.radar}
+                if mode == 'single':
+                    self.stormmotion_save = {}
+                self.stormmotion_save[self.crd.date+self.crd.time] = {'sm':stormmotion, 'radar':self.crd.radar}
         
-    def change_stormmotion(self, stormmotion=None, convert_units=True):
-        if type(stormmotion) == dict:
-            self.update_stormmotion(stormmotion)
+    def change_stormmotion(self, stormmotion=None, convert_units=True, from_marker=False, mode='single'):
+        if type(stormmotion) is dict:
+            self.update_stormmotion(stormmotion, mode)
         else: 
             if stormmotion is None:
                 input_sm_direction, input_sm_speed = self.sm_direction.text(), self.sm_speed.text()
@@ -1815,12 +1880,17 @@ class GUI(QWidget):
                 if convert_units:
                     sm_speed_mps /= self.pb.scale_factors['s']
                 self.stormmotion = np.array([number1 % 360, sm_speed_mps])
-                if self.stormmotion[1] == 0.: 
+                if self.stormmotion[1] == 0.:
                     self.stormmotion[0] = 0
                 else:
-                    # Save also the current radar with the storm motion, since the function update_stormmotion_change_radar
+                    # Save also the current radar with the storm motion, since the function update_stormmotion_change_datetime_or_radar
                     # requires information about the radar for which the saved storm motion is valid.
-                    self.stormmotion_save = {'sm':self.stormmotion, 'radar':self.crd.radar}
+                    datetime = self.crd.date+self.crd.time
+                    if from_marker and int(datetime) > int(self.sm_marker_datetime):
+                        datetime = self.sm_marker_datetime
+                    if mode == 'single':
+                        self.stormmotion_save = {}
+                    self.stormmotion_save[datetime] = {'sm':self.stormmotion, 'radar':self.crd.radar}                        
             else:
                 self.sm_direction.setText(format(self.stormmotion[0], '.1f'))
                 self.sm_speed.setText(format(self.stormmotion[1]*self.pb.scale_factors['s'], '.1f'))
@@ -2113,14 +2183,20 @@ class GUI(QWidget):
                 panels = choices[i]['panels']
                 panellist = [self.pb.plotnumber_to_panelnumber[panels][j] for j in range(panels)]
                 for k in choices_text:
-                    for j in panellist:
-                        product, scanangle = choices[i]['products'][j], choices[i]['selected_scanangles'].get(j, None)
-                        height = choices[i].get('selected_heights', {}).get(j, scanangle)
-                        specs = product
-                        if not product in gv.plain_products:
-                            specs += ft.format_nums(scanangle) if k == 'angle' else ft.format_nums(height)
-                        choices_text[k][i] += ' '*bool(j and specs) + specs
-                    choices_text[k][i] = self.compress_choice_text_and_split_rows(choices_text[k][i])
+                    # Errors can occur when selected_heights and selected_scanangles are not compatible (i.e. stored for different number
+                    # of panels or different products). This needs to be improved later, for now a try-except block is used.
+                    try:
+                        for j in panellist:
+                            product, scanangle = choices[i]['products'][j], choices[i]['selected_scanangles'].get(j, None)
+                            height = choices[i].get('selected_heights', {}).get(j, scanangle)
+                            specs = product
+                            if not product in gv.plain_products:
+                                specs += ft.format_nums(scanangle) if k == 'angle' else ft.format_nums(height)
+                            choices_text[k][i] += ' '*bool(j and specs) + specs
+                        choices_text[k][i] = self.compress_choice_text_and_split_rows(choices_text[k][i])
+                    except Exception as e:
+                        print(e, k, choices[i])
+                        choices_text[k][i] = {0:'', 1:''}
 
         self.choices_widget = QWidget()
         self.choices_widget.setWindowTitle('Saved panel configurations')  
@@ -2492,12 +2568,11 @@ class GUI(QWidget):
                     indices = [j[-1] for j in datetimes]
                     new_frames = list(frames_all[select][indices])
             
-                    frames, deltas = [], []
                     for i,dt_i in enumerate(datetimes[:-1]):
                         n = min(len(dt_i), len(datetimes[i+1])) - 1 # -1, since the last column of datetimes contains an index, see above
                         for j in range(n):
                             timediff = ft.datetimediff_s(dt_i[j], datetimes[i+1][j])
-                            if timediff > 0:
+                            if timediff > 1:
                                 frames.append(new_frames[i])
                                 deltas.append(timediff/60*self.ani_delay)
                                 break
@@ -2520,10 +2595,14 @@ class GUI(QWidget):
                 shape = Image.open(frames[0]).size
                 crf = 1+5*(10-self.ani_quality)
                 stream = container.add_stream('libx264', width=shape[0], height=shape[1], pix_fmt='yuv420p', options={"crf":str(crf)})
-                
-                # Use a time resolution of ms
-                csum = 10*np.cumsum(np.concatenate(([0], deltas)))
-                stream.codec_context.time_base = Fraction(1, 1000)
+        
+                # Use a time resolution of ms, unless is needs to be higher to prevent possible errors.
+                # These errors can occur when time_res/100*min(deltas) < 1, in which case the following error can occur:
+                # "Application provided invalid, non monotonically increasing dts to muxer in stream".
+                time_res = max(1000, int(np.ceil(100/min(deltas))))
+                # delta-values correspond to a time resolution of cs, hence division by 100
+                csum = time_res/100*np.cumsum(np.concatenate(([0], deltas)))
+                stream.codec_context.time_base = Fraction(1, time_res)
                 # ffmpeg time is "complicated". read more at https://github.com/PyAV-Org/PyAV/blob/main/docs/api/time.rst
                 
                 for i,frame in enumerate(frames+[frames[-1]]):
@@ -2539,6 +2618,11 @@ class GUI(QWidget):
                 
             self.set_textbar('Animation created', 'green', 1)
         except Exception as e:
+            try:
+                for i in range(len(deltas)):
+                    print(i, deltas[i], csum[i])
+            except Exception:
+                pass
             self.set_textbar(str(e), 'red', 3)
     
     def change_savefig_include_menubar(self, state):
@@ -2675,7 +2759,7 @@ class GUI(QWidget):
             
             duplicate_number = self.check_duplicates()
 
-            savefig_filename = gv.radars_nospecialchar_names[self.crd.radar].replace(' ','')+f'_{self.crd.dataset}'*(self.crd.radar in gv.radars_with_datasets)+'_'
+            savefig_filename = gv.radars_ascii_names[self.crd.radar].replace(' ','')+f'_{self.crd.dataset}'*(self.crd.radar in gv.radars_with_datasets)+'_'
             savefig_filename += self.crd.date[2:]+self.crd.time+'_'
             products_scans = ' '.join([product_and_scan_string(j,self.crd.products[j],self.crd.scans[j]) for j in self.pb.panellist])
             savefig_filename += ''.join(list(self.compress_choice_text_and_split_rows(products_scans).values())).replace(' ', '')
@@ -3551,6 +3635,14 @@ class GUI(QWidget):
         
         datastorage_widgets_layout=QFormLayout()
         
+        self.radar_basedirw = QPushButton(self.radar_basedir, autoDefault=True)
+        self.radar_basedir_defaultdirw=QPushButton('Default', autoDefault=True)
+        hbox_basedir = QHBoxLayout(); 
+        hbox_basedir.addWidget(self.radar_basedirw, 6); hbox_basedir.addWidget(self.radar_basedir_defaultdirw, 1)
+        datastorage_widgets_layout.addRow(QLabel('Radar base directory'), hbox_basedir)
+        self.radar_basedirw.clicked.connect(self.set_radar_basedir)
+        self.radar_basedir_defaultdirw.clicked.connect(self.usedefault_basedir)
+        
         self.dirselectw=QPushButton('Set', autoDefault=True)
         datastorage_widgets_layout.addRow(QLabel('Directory structures'),self.dirselectw)
         self.dirselectw.clicked.connect(self.selectdirs)
@@ -3560,19 +3652,28 @@ class GUI(QWidget):
         hbox_derivedproducts=QHBoxLayout(); 
         hbox_derivedproducts.addWidget(self.derivedproducts_dirselectw,6); hbox_derivedproducts.addWidget(self.derivedproducts_defaultdirw,1)
         datastorage_widgets_layout.addRow(QLabel('Derived products'),hbox_derivedproducts)
-        self.derivedproducts_dirselectw.clicked.connect(self.selectdir_derivedproducts)
+        self.derivedproducts_dirselectw.clicked.connect(self.set_dir_derivedproducts)
         self.derivedproducts_defaultdirw.clicked.connect(self.usedefaultdir_derivedproducts)
         
         datastorage_layout.addLayout(datastorage_widgets_layout)
         self.settingsdatastorage.setLayout(datastorage_layout)
+        
+    def set_radar_basedir(self):
+        _input=str(QFileDialog.getExistingDirectory(None, 'Select the folder:',self.radar_basedir))
+        if _input:
+            self.radar_basedir = _input
+            self.radar_basedirw.setText(self.radar_basedir)
+    def usedefault_basedir(self):
+        self.radar_basedir = gv.default_basedir
+        self.radar_basedirw.setText(self.radar_basedir)
                     
-    def selectdir_derivedproducts(self):
+    def set_dir_derivedproducts(self):
         derivedproducts_dir_input=str(QFileDialog.getExistingDirectory(None, 'Select the folder:',self.derivedproducts_dir))
         if derivedproducts_dir_input!='':
             self.derivedproducts_dir=derivedproducts_dir_input    
             self.derivedproducts_dirselectw.setText(self.derivedproducts_dir)
     def usedefaultdir_derivedproducts(self):
-        self.derivedproducats_dir=gv.derivedproducts_dir_Default
+        self.derivedproducts_dir=gv.derivedproducts_dir_Default
         self.derivedproducts_dirselectw.setText(self.derivedproducts_dir)
         
         
@@ -3672,7 +3773,7 @@ class GUI(QWidget):
         example_date, example_time=self.generate_dir_example_date_and_time()
              
         example_dir_list = bg.dirstring_to_dirlist(dir_string)
-        return ', '.join([bg.convert_dir_string_to_real_dir(d, radar, example_date, example_time)
+        return ', '.join([bg.convert_dir_string_to_real_dir(d, self.radar_basedir, radar, example_date, example_time)
                               for j,d in enumerate(example_dir_list)])
 
     def change_radardata_dir(self, source, key): # key has format source_dataset
@@ -3949,10 +4050,10 @@ class GUI(QWidget):
         global plottimes_max
         keyboard_layout=QFormLayout()
         keyboard_text=[['ENTER','Plot for current input'],
-                  ['SPACE',"Start/stop animation, or stop continuing backward/forward in time. Animation ends at input date and time. If both 'c', then end time gets updated when new data available."],
-                  ['ALT+C/ALT+SHIFT+C',"Set the date and time equal to 'c', with/without plotting the data."],
-                  ['ALT+LEFT/RIGHT','Go continuously backward/forward in time.'],
                   ['LEFT/RIGHT, SHIFT+LEFT/RIGHT','Go to previous/next radar volume, go one hour backward/forward in time.'],
+                  ['END/SHIFT+END', "Set the date and time equal to 'c' (most current data), with/without plotting the data."],
+                  ['SPACE',"Start/stop animation, or stop continuing backward/forward in time. Animation ends at input date and time. If both 'c', then end time gets updated when new data available."],        
+                  ['</>','Go continuously backward/forward in time.'],
                   ['(SHIFT+)BACKSPACE','Go back to the previous combination of radar and dataset (and also date and time).'],
                   ['CTRL+SPACE, (CTRL+)SHIFT+SPACE','Loop through case list, animate case by looping through the animation window specified in Cases/Settings (while looping through case list too)'],
                   ['CTRL+(ENTER/LEFT/RIGHT, BACKSPACE)','Switch to current/previous/next case in currently selected case list, switch back to previously shown case (can be from other list)'],

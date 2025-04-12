@@ -1,18 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import nlr_background as bg
-import nlr_functions as ft
-import nlr_globalvars as gv
-from dealiasing import nlr_dealiasing as da
-from derived import nlr_derived_tilts as dt
-from decoders.nexrad_l2 import NEXRADLevel2File
-from decoders.nexrad_l3 import NEXRADLevel3File
-from decoders.dorade import DORADEFile
-
-
-from numpy_bufr import decode_bufr
-
 import os
 opa=os.path.abspath
 import re
@@ -26,6 +14,20 @@ import time as pytime
 import datetime as dtime
 import netCDF4 as nc
 from scipy.interpolate import interp1d
+import warnings
+
+from numpy_bufr import decode_bufr
+
+import nlr_background as bg
+import nlr_functions as ft
+import nlr_globalvars as gv
+from dealiasing import nlr_dealiasing as da
+from derived import nlr_derived_tilts as dt
+from decoders.nexrad_l2 import NEXRADLevel2File
+from decoders.nexrad_l3 import NEXRADLevel3File
+from decoders.dorade import DORADEFile
+from decoders.ukmo_polar import UKMOPolarFile
+
 
 
 """Remark: Always save numpy arrays as type 'float32', because that works a little faster and does not lead to severe errors for this kind of data.
@@ -66,7 +68,17 @@ def process_azis_array(azis, da, calc_azi_offset, azi_pos='center'):
         azi_offset = np.mean([ft.angle_diff(0.5*da, (azis[i]+offset) % da) for i in range(n_azi)])
     return azis, n_azi, da, azi_offset, diffs
 
+ij_map = ref_azi_offset = None
+input_before = {j:None for j in ('n_azi', 'azis', 'diffs', 'da', 'azi_offset', 'azi_pos')}
 def map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='center'):
+    global ij_map, ref_azi_offset, input_before
+    args = locals()
+    _input = {k:(args[k].tolist() if type(args[k]) is np.ndarray else args[k]) for k in input_before}
+    if _input == input_before:
+        data = data[ij_map]
+        data[ij_map == -1] = np.nan
+        return data, ref_azi_offset
+    
     # azi_pos ('center'/'left') specifies whether the azimuth values are given for the center of a radial, or for the left edge
     """Map the data onto a regular grid with constant azimuthal spacing. The azimuthal resolution of the grid is set such that
     the positional error (defined as the difference in actual position of an edge of a radial, and the position of that edge on 
@@ -83,12 +95,12 @@ def map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='cen
     x = np.append(azis, [azis[i_min]+360, azis[i_max]-360])
     y = np.append(np.arange(n_azi, dtype='float64'), [i_min, i_max])
     f = interp1d(x, y, kind='nearest')
-    max_error = 0.125
+    max_error = 0.05
     max_error_width_correction = 4/3*max_error
     
     diffs = np.append(diffs, ft.angle_diff(azis[-1], azis[0]))
     k_max = max(int(np.ceil(0.5*da/max_error)), 2)
-    for k in range(1, k_max+1): 
+    for k in range(1, k_max+1):
         ref_n_azi = int(round(360*k/da))
         ref_da = 360/ref_n_azi
         # Decrease azi_offset with decreasing ref_da, to prevent that its magnitude can become larger than ref_da
@@ -157,13 +169,14 @@ def map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='cen
     
     data = data[ij_map]
     data[ij_map == -1] = np.nan
+    input_before = _input
     return data, ref_azi_offset
 
 
 
 
 
-class Gematronik_vol_rainbow3():
+class Leonardo_vol_rainbow3():
     def __init__(self, gui_class, dsg_class, parent = None):  
         self.gui=gui_class
         self.dsg=dsg_class
@@ -183,18 +196,8 @@ class Gematronik_vol_rainbow3():
             colon_index=header.index(b':')
             return_index=header.index(b'\r')
             
-            new_string=header[colon_index+2:return_index].decode('utf-8')
-            new_list=[]
-            while ' ' in new_string:
-                space_index=new_string.index(' ')
-                new_list.append(new_string[:space_index])
-                try:
-                    while new_string[space_index+1]==' ':
-                        space_index+=1
-                except Exception:
-                    pass
-                new_string=new_string[space_index+1:]
-            new_list.append(new_string)
+            new_string = header[colon_index+2:return_index].decode('utf-8')
+            new_list = [s for s in new_string.split(' ') if s]
             dic[header[:colon_index-1].decode('utf-8')]=new_list
     
             header=header[return_index+1:]
@@ -315,7 +318,7 @@ class Gematronik_vol_rainbow3():
 
 
 
-class Gematronik_vol_rainbow5():
+class Leonardo_vol_rainbow5():
     def __init__(self, gui_class, dsg_class, parent = None):  
         self.gui=gui_class
         self.dsg=dsg_class
@@ -355,7 +358,7 @@ class Gematronik_vol_rainbow5():
             if product == 'v':
                 # This parameter is used in dealias_velocity. Older versions of the vol format don't provide the 'multitripprfmode' attribute,
                 # is e.g. the case for the Wideumont radar. In that case assume a default value of 'single', which at least works for Wideumont.         
-                self.parameter_dicts[product]['multitripprfmode'] = xml_dict['volume']['scan']['pargroup'].get('multitripprfmode', 'single')               
+                self.parameter_dicts[product]['multitripprfmode'] = xml_dict['volume']['scan'].get('pargroup', {}).get('multitripprfmode', 'single')               
 
         return parameter_dicts
 
@@ -376,9 +379,11 @@ class Gematronik_vol_rainbow5():
                 try:
                     self.dsg.nyquist_velocities_all_mps[j]=float(subdict['dynv']['@max']) #Is available for all products
                 except Exception:
-                    #For data from Wideumont for some older days before 2015 the Nyquist velocities are located under the key 
-                    #'rawdata' instead of 'dynv'.
-                    self.dsg.nyquist_velocities_all_mps[j]=float(subdict['slicedata']['rawdata']['@max']) #Is available for all products 
+                    self.dsg.nyquist_velocities_all_mps[j] = None
+                    if product == 'v':
+                        #For data from Wideumont for some older days before 2015 the Nyquist velocities are located under the key 
+                        #'rawdata' instead of 'dynv'.
+                        self.dsg.nyquist_velocities_all_mps[j]=float(subdict['slicedata']['rawdata']['@max']) #Is available for all products
                 for i in range(j - 1, -1, -1):
                     try:
                         prf_l = float(parameter_dicts[i]['lowprf'])
@@ -396,10 +401,17 @@ class Gematronik_vol_rainbow5():
                     #first scan.
                     self.dsg.radial_res_all['z'][j]=self.dsg.radial_res_all['z'][j-1]
                 self.dsg.scannumbers_all['z'][j]=[j]
-                                                                      
-            for i in self.dsg.scannumbers_all:
-                for j in gv.volume_attributes_p: 
-                    self.dsg.__dict__[j][i] = copy.deepcopy(self.dsg.__dict__[j]['z'])
+                
+        if self.crd.radar == 'Zaventem':
+            # See ODIM_hdf5.get_scans_information for explanation
+            self.dsg.scanangles_all['z'] = {j:0.5 if a <= 0.6 else a for j,a in self.dsg.scanangles_all['z'].items()}
+                
+        extra_attrs = [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
+        self.dsg.scannumbers_all['z'] = bg.sort_volume_attributes(self.dsg.scanangles_all['z'], self.dsg.radial_bins_all['z'], self.dsg.radial_res_all['z'], extra_attrs)
+                                                                  
+        for i in self.dsg.scannumbers_all:
+            for j in gv.volume_attributes_p: 
+                self.dsg.__dict__[j][i] = copy.deepcopy(self.dsg.__dict__[j]['z'])
                
                                                    
     def get_data(self,filepath, j): #j is the panel 
@@ -431,12 +443,14 @@ class Gematronik_vol_rainbow5():
             data_mask = self.dsg.data[j]<=self.dsg.data[j].min()
             if i_p == 'v':
                 if self.crd.apply_dealiasing[j] and not self.dsg.low_nyquist_velocities_all_mps[self.crd.scans[j]] is None:
-                    self.dsg.data[j] = self.dealias_velocity(self.dsg.data[j], data_mask, self.crd.scans[j])
+                    productunfiltered = self.crd.using_unfilteredproduct[j]
+                    polarization = 'V' if self.crd.using_verticalpolarization[j] == 'V' else 'H'
+                    self.dsg.data[j] = self.dealias_velocity(self.dsg.data[j], data_mask, productunfiltered, polarization, self.crd.scans[j])
                     
             self.dsg.data[j][data_mask]=self.pb.mask_values[product]
             
             
-    def dealias_velocity(self, data, data_mask, scan, max_range = None): #vol is the opened file object, volreader the read in file object
+    def dealias_velocity(self, data, data_mask, productunfiltered, polarization, scan, max_range = None):
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         """Important: The KMI seems to use two PRFs per radial, seems to correct velocities using the lower Nyquist velocity. Both vn_l and vn_h in apply_dual_prf_dealiasing are therefore set to vn_l.        
         Further, for Jabbeke the dual PRF errors can be all multiples of the low Nyquist velocity, and not only even multiples. Hence multiplication of vn_l by 0.5.
@@ -449,8 +463,10 @@ class Gematronik_vol_rainbow5():
             deviation_factor = 1.33 #The maximum allowed velocity deviation is increased slightly, to reduce the smoothing of the velocity field a little.
         radial_res = self.dsg.radial_res_all['v'][scan]
         
-        self.filepath, p = self.dsg.source_KMI.filepath('c', source_function = self.dsg.source_KMI.get_scans_information) #Specify source function, because 
-        #in that case the product for which the filepath is valid is returned.
+        source = self.dsg.source_Leonardo
+        # Specify source function, because in that case the product for which the filepath is valid is returned.
+        self.filepath, p = source.filepath('c', productunfiltered, polarization, source_function = source.get_scans_information)
+        
         if p != 'c':
             c_array = None
         else:
@@ -547,7 +563,7 @@ class Gematronik_vol_rainbow5():
                 data_mask = data[j] <= data[j].min()
                 if i_p == 'v':
                     if apply_dealiasing[j] and not self.dsg.low_nyquist_velocities_all_mps[j] is None:
-                        data[j] = self.dealias_velocity(data[j], data_mask, j, max_range)
+                        data[j] = self.dealias_velocity(data[j], data_mask, productunfiltered, polarization, j, max_range)
                 data[j][data_mask]=np.nan
                 data[j] = [data[j]]
 
@@ -768,12 +784,23 @@ class KNMI_hdf5():
                         gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
                         offset=float(calibration_formula[calibration_formula.index('+')+1:])
                         sqi_array = np.array(scangroup['scan_'+productname+'_data'],dtype='float32')*gain+offset
-                        sqi_filter = sqi_array < 0.3
+                        
+                        productname = gv.productnames_KNMI['z']
+                        scangroup=hf['scan'+str(scan)]
+                        calibrationgroup=scangroup['calibration']
+                        calibration_formula=self.process_attr(calibrationgroup.attrs['calibration_'+productname+'_formulas'])
+                        gain=float(calibration_formula[calibration_formula.index('=')+1:calibration_formula.index('*')])
+                        offset=float(calibration_formula[calibration_formula.index('+')+1:])
+                        z_array = np.array(scangroup['scan_'+productname+'_data'],dtype='float32')*gain+offset
+
+                        # sqi_array = ft.get_window_mean(sqi_array, data_mask, [2,4,2])
+                        z_crit = z_array < 30.
+                        sqi_filter = (sqi_array < 0.3) & z_crit
                         if not self.dsg.low_nyquist_velocities_all_mps[self.crd.scans[j]] is None:
                             #Only for the dual PRF scans: Filter also the radar bins to the right (in the clockwise direction), since velocity
                             #estimates for these bins are effected by the low quality of the already selected bins (a characteristic of the dual
                             #PRF technique).
-                            sqi_filter |= np.roll(sqi_filter, 1, axis=0)
+                            sqi_filter |= np.roll(sqi_filter, 1, axis=0) & z_crit
                         data_mask |= sqi_filter
                         self.crd.using_unfilteredproduct[j] = False
                     except Exception:
@@ -800,8 +827,9 @@ class KNMI_hdf5():
         c_array = None #Array with correlation coefficients. None if unavailable
         mask_all_nearzero_velocities = False
         if len(self.dsg.scanangles_all['z']) == 15: #For the new radars
-            window_size = None
-            vn_h =self.dsg.high_nyquist_velocities_all_mps[scan]
+            window_detection = [0,3,6,9,3,6,0]
+            window_correction = [0,3,6,3,0]
+            vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
             
             #Obtain array with correlation coefficients
             productname = gv.productnames_KNMI['c']
@@ -814,11 +842,13 @@ class KNMI_hdf5():
             s = s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all['v'][scan], 'gr+theta->sr') / self.dsg.radial_res_all['v'][scan]))]
             c_array = 100. * (np.array(scangroup['scan_'+productname+'_data'][s],dtype='float32')*gain+offset)
         else:
-            window_size = [1,1,1] #For the old radars there are less aliasing errors, except in the case that the dual PRF
-            #errors can be all multiples of the low Nyquist velocity. If that is not the case, then the window size can be pretty small.
+            # For the old radars there are less aliasing errors, except in the case that the dual PRF
+            # errors can be all multiples of the low Nyquist velocity. If that is not the case, then the window size can be pretty small.
+            window_detection = window_correction = [1,1,1] 
             if int(self.crd.date) >= 20110910 and int(self.crd.date) <= 20140103: 
-                window_size = [2,2,2] #Take the window size somewhat larger, because there are much more aliasing errors.
+                # Take the window size somewhat larger, because there are much more aliasing errors.
                 vn_l *= 0.5
+                window_detection = window_correction = [2,2,2]
                 deviation_factor = 1.33 #The maximum allowed velocity deviation is increased slightly, to reduce the smoothing of the velocity field a little.
             vn_h = vn_l
             mask_all_nearzero_velocities = True #For the old radars there are usually fairly many bins with near-zero velocities in regions of low reflectivity.
@@ -827,7 +857,7 @@ class KNMI_hdf5():
         radial_res = self.dsg.radial_res_all['v'][scan]
         n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
-        vn_l, vn_h, 'h', window_detection = window_size, window_correction = window_size, deviation_factor = deviation_factor, n_it = n_it,\
+        vn_l, vn_h, 'h', window_detection, window_correction, deviation_factor = deviation_factor, n_it = n_it,\
         c_array = c_array, mask_all_nearzero_velocities = mask_all_nearzero_velocities) #The first azimuth is scanned with a high PRF
 
                 
@@ -906,44 +936,57 @@ class ODIM_hdf5():
         self.crd=self.dsg.crd
         self.pb = self.gui.pb
                 
-        # Some data sources provide one file per product, and some provide one file for the full radar volume, which contains all products.
-        # In the latter case each product is put in a different sub-group, with name data{n}, with n an integer value starting at 1.
-        # For these cases it's necessary to specify the map from product to integer below.
-        self.product_to_data_n_map = {'DMI': {'z':1,'uz':3,'v':2,'w':4,'d':5,'c':6,'p':7,'x':8},
-                                      'Holesov':{'z':1},
-                                      'Milešovka':{'z':2,'v':3,'d':4,'k':5,'p':6,'c':7,'w':8,'q':9}
-                                     }
-           
+        self.product_names = {'DBZH':'z','TH':'uz','UZ':'uz','VRAD':'v','VRADH':'v','UV':'uv','WRAD':'w','WRADH':'w','UW':'uw',
+                              'ZDR':'d','AttCorrZDRCorr':'d','RHOHV':'c','URHOHV':'c','PHIDP':'p','UPHIDP':'p',
+                              'KDPCorr':'k','KDP':'k','SQI':'q','SQIH':'q','SNR':'i','STAT2':'STAT2'}
+        
     
-    def get_data_n(self, product, default=None):
-        data_map = self.product_to_data_n_map.get(self.dsg.data_source(), {})
-        if not data_map:
-            data_map = self.product_to_data_n_map.get(self.crd.radar, {})
-        # Setting default=None means that None is returned and an exception will be raised in the code. This is desired when requesting a
-        # specific product that's unavailable. It's not desired in get_scans_information.
-        return data_map.get(product, default) if data_map else 1
-           
+    def find_product_dataset(self, scangroup, product):
+        datasets = [key for key in scangroup if key.startswith('data')]
+        for d in datasets:
+            dataset = scangroup[d]
+            p_name = dataset['what'].attrs['quantity'].decode('utf-8')
+            if self.product_names.get(p_name, '') == product:
+                return dataset
+            elif not p_name in self.product_names:
+                if p_name == 'SCAN' and len(datasets) == 1:
+                    # In this case the product name is not correctly specified, and with only 1 dataset present it is assumed
+                    # that it contains the requested product
+                    return dataset
+            
     def get_scans_information(self,filepath,product='z'):
         with h5py.File(filepath,'r') as hf: 
             scans = [int(j[7:]) for j in hf if j.startswith('dataset')]
             for j in scans:
                 try:
-                    dataset=hf['dataset'+str(j)]; attrs=dataset['where'].attrs
-                except Exception: continue
-                self.dsg.scanangles_all['z'][j]=ft.rndec(float(attrs['elangle']),2)
+                    scangroup=hf['dataset'+str(j)]; attrs=scangroup['where'].attrs
+                except Exception: 
+                    continue
+                if 'how' in scangroup and scangroup['how'].attrs.get('task', '')[:3] == b'RHI':
+                    # At least ESTEA files include some RHI scans
+                    continue
+                self.dsg.scanangles_all['z'][j]=ft.rndec(float(attrs['elangle']), 2)
                 self.dsg.radial_bins_all['z'][j]=int(attrs['nbins'])
                 self.dsg.radial_res_all['z'][j]=float(attrs['rscale']/1000.)
                 
-                data_n = self.get_data_n(product, default=1)
-                self.dsg.nyquist_velocities_all_mps[j] = abs(float(dataset[f'data{data_n}']['what'].attrs['offset'])) if product == 'v' else None
+                self.dsg.nyquist_velocities_all_mps[j] = None
+                if product == 'v':
+                    try:
+                        self.dsg.nyquist_velocities_all_mps[j] = abs(float(scangroup['how'].attrs['NI']))
+                    except Exception:
+                        dataset = self.find_product_dataset(scangroup, product)
+                        self.dsg.nyquist_velocities_all_mps[j] = abs(float(dataset['what'].attrs['offset']))
                 
                 try:
                     radar_wavelength = float(hf['how'].attrs['wavelength']) * 1e-2
                     if not self.crd.radar in ('Jabbeke', 'Wideumont'):
-                        try:
-                            prf_l = float(hf['dataset'+str(j)]['how'].attrs['lowprf'])
-                            prf_h = float(hf['dataset'+str(j)]['how'].attrs['highprf'])
-                        except Exception:
+                        if 'lowprf' in scangroup['how'].attrs:
+                            prf_l = float(scangroup['how'].attrs['lowprf'])
+                            prf_h = float(scangroup['how'].attrs['highprf'])
+                        elif 'lowprf' in hf['how'].attrs:
+                            prf_l = float(hf['how'].attrs['lowprf'])
+                            prf_h = float(hf['how'].attrs['highprf'])
+                        else:
                             prf_h = float(hf['how'].attrs['prf'])
                             prf_fac = float(hf['how'].attrs['prffac'])
                             if prf_fac == 1:
@@ -957,11 +1000,15 @@ class ODIM_hdf5():
                         #They are therefore provided manually. Further, only the low prf is needed.
                         prf_l = 800 if self.crd.radar == 'Jabbeke' else 960.
                         prf_h = None
-                    self.dsg.low_nyquist_velocities_all_mps[j] = None if prf_l == prf_h else radar_wavelength*prf_l/4.
-                    """Important: The KMI seems to use two PRFs per radial, seems to correct velocities using the lower Nyquist velocity. Both vn_l and vn_h in apply_dual_prf_dealiasing are therefore set to vn_l.
-                    Further, for Jabbeke the dual PRF errors can be all multiples of the low Nyquist velocity, and not only even multiples. Hence multiplication of vn_l by 0.5.
-                    """
-                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] if self.crd.radar in ('Jabbeke', 'Wideumont') else radar_wavelength*prf_h/4.
+                    vn_l = radar_wavelength*prf_l/4
+                    vn_h = radar_wavelength*prf_h/4
+                    if gv.data_sources[self.crd.radar] == 'Austro Control':
+                        vn_l = vn_h
+                    elif self.crd.radar in ('Jabbeke', 'Wideumont'):
+                        vn_h = vn_l
+                    if prf_l == prf_h and 0.9 < vn_l/self.dsg.nyquist_velocities_all_mps[j] < 1.1:
+                        raise Exception # In this case the scan is mono-PRF
+                    self.dsg.low_nyquist_velocities_all_mps[j], self.dsg.high_nyquist_velocities_all_mps[j] = vn_l, vn_h
                 except Exception:
                     self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = None
         
@@ -977,7 +1024,7 @@ class ODIM_hdf5():
         
         extra_attrs = [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
         self.dsg.scannumbers_all['z'] = bg.sort_volume_attributes(self.dsg.scanangles_all['z'], self.dsg.radial_bins_all['z'], self.dsg.radial_res_all['z'], extra_attrs)
-            
+
         for p in self.dsg.scannumbers_all:
             for j in gv.volume_attributes_p: 
                 self.dsg.__dict__[j][p] = copy.deepcopy(self.dsg.__dict__[j]['z'])
@@ -1049,60 +1096,169 @@ class ODIM_hdf5():
             for p in self.dsg.scanangles_all:
                 self.dsg.scanangles_all[p] = {j:0.5 if a == 0.51 else a for j,a in self.dsg.scanangles_all[p].items()}
                 
-           
-    def get_data(self,filepath, j): #j is the panel
+                                
+    def read_data(self, filepath, product, scan, apply_dealiasing=True, productunfiltered=False, panel=None, data_mask=False, check_azis=True):
+        # When a product is not included in gv.i_p, one can provide a productname instead.
+        # This requires adding the map productname:productname to self.product_names
+        i_p = gv.i_p.get(product, product) # In case of productname
         with h5py.File(filepath,'r') as hf:
-            product, i_p = self.crd.products[j], gv.i_p[self.crd.products[j]]
-            scan=self.dsg.scannumbers_all[i_p][self.crd.scans[j]][self.dsg.scannumbers_forduplicates[self.crd.scans[j]]]
-            scangroup = hf['dataset'+str(scan)]
+            _i_p = i_p if i_p in self.dsg.scannumbers_all else 'z' # In case of productname
+            dataset_n = self.dsg.scannumbers_all[_i_p][scan][self.dsg.scannumbers_forduplicates[scan]]
+            scangroup = hf[f'dataset{dataset_n}']
                 
-            self.dsg.scantimes[j] = self.get_scan_timerange(hf, scangroup)
-            p = i_p
-            if i_p == 'z' and self.crd.radar in gv.radars['DMI'] and self.crd.productunfiltered[j]:
-                p = 'uz'
-            data_n = self.get_data_n(p)
-            calibrationgroup=scangroup[f'data{data_n}']['what']
-            gain=float(calibrationgroup.attrs['gain'])
-            offset=float(calibrationgroup.attrs['offset'])
-            self.dsg.data[j]=np.array(scangroup[f'data{data_n}']['data'],dtype='float32')*gain+offset
-            if product == 'c': 
-                self.dsg.data[j] *= 100./(254*gain if self.crd.radar in gv.radars['DMI'] else 1.)
-            if product == 'p': self.dsg.data[j] = np.mod(np.rad2deg(self.dsg.data[j]), 360)
-            # print(product,self.dsg.data[j].min(),self.dsg.data[j].max())
+            unfiltered = productunfiltered or gv.data_sources[self.crd.radar] == 'ARPAV'
+            p = 'u'*unfiltered+i_p
+            dataset = self.find_product_dataset(scangroup, p)
+            if not dataset:
+                p = i_p
+                dataset = self.find_product_dataset(scangroup, p)
+                if not dataset:
+                    raise Exception(p+' not present in file')
+            elif panel != None:
+                self.crd.using_unfilteredproduct[panel] = productunfiltered
+            
+            gain = float(dataset['what'].attrs['gain'])
+            offset = float(dataset['what'].attrs['offset'])
+            nodata = int(dataset['what'].attrs['nodata'])
+            undetect = int(dataset['what'].attrs['undetect'])
+            data = dataset['data'][:]
+            data_mask = (data == nodata) | (data == undetect)
+            data = data.astype('float32')*gain+offset
+            
+            if i_p == 'c': 
+                data *= 100./(254*gain if self.crd.radar in gv.radars['DMI'] else 1.)
+            elif i_p == 'k' and gv.data_sources[self.crd.radar] == 'DHMZ':
+                data_mask |= (data == 0.)
+            elif i_p == 'p':
+                data = np.rad2deg(data) if data.max() < 10 else data
+                data %= 360.
+            elif p[-1] == 'v' and data.max() < 2.:
+                data *= self.dsg.nyquist_velocities_all_mps[scan]
+                
+            if gv.data_sources[self.crd.radar] == 'Austro Control' and product != 'z':
+                if not productunfiltered:
+                    z_filepath = self.dsg.source_AustroControl.filepath('z')
+                    z_data, z_data_mask = self.read_data(z_filepath, 'z', scan, data_mask=data_mask, check_azis=False)[:2]
+                    data_mask |= z_data_mask
+                    
+                    if i_p == 'v':
+                        phi = data * np.pi/self.dsg.nyquist_velocities_all_mps[scan]
+                        window = [1,2,3,2,1]
+                        v_std = ft.get_window_phase_stdev(phi, data_mask, window)*self.dsg.nyquist_velocities_all_mps[scan]/np.pi
                         
-            data_maskvalue=self.dsg.data[j].min()
-            int255_datavalue=np.float32(255*gain)+offset 
-            data_mask = (self.dsg.data[j]<=data_maskvalue) | (self.dsg.data[j]==int255_datavalue)
+                        z_std = ft.get_window_stdev(z_data, data_mask, window)
+                        z_thres = (z_data < 10 ) | ((z_data >= 10) & (z_data < 25) & (z_std < 3))
+                        data_mask[z_thres & (v_std > 10)] = True
+
+                elif panel != None:
+                    self.crd.using_unfilteredproduct[panel] = True  
+                    
+            elif gv.data_sources[self.crd.radar] == 'ESTEA' and i_p != 'z':
+                if not productunfiltered:
+                    kwargs = {'panel':None, 'check_azis':False}
+                    SQI_data = data.copy() if i_p == 'q' else self.read_data(filepath, 'q', scan, productunfiltered=True, **kwargs)[0]
+                    Z_data = self.read_data(filepath, 'z', scan, **kwargs)[0] # Use filtered Z
+                    # For the dual-PRF scans use a higher threshold, because it often has issues with 2nd-trip echoes
+                    # that can have fairly high dBZ values
+                    threshold = 10. if self.dsg.low_nyquist_velocities_all_mps[scan] is None else 30.
+                    data_mask |= (SQI_data < 0.25) & (np.isnan(Z_data) | (Z_data < threshold))
+                elif panel != None:
+                    self.crd.using_unfilteredproduct[panel] = True
+                
+            elif gv.data_sources[self.crd.radar] in ('ARPA FVG', 'ARPAV'):
+                if not productunfiltered:
+                    key = filepath+str(scan)
+                    if hasattr(self, 'extra_mask') and self.extra_mask['key'] == key:
+                        extra_mask = self.extra_mask['mask']
+                    else:
+                        kwargs = {'apply_dealiasing':False, 'productunfiltered':True, 'panel':None, 'check_azis':False}
+                        # copy is used for storing in self.p_data, since without copy the arrays would be altered in subsequent
+                        # operations on the data array
+                        if gv.data_sources[self.crd.radar] == 'ARPAV':
+                            Z, Z_mask = (data.copy(), data_mask) if i_p == 'z' else self.read_data(filepath, 'z', scan, **kwargs)[:2]
+                            STAT2, STAT2_mask = self.read_data(filepath, 'STAT2', scan, **kwargs)[:2]
+                            SQI, SQI_mask = (data.copy(), data_mask) if i_p == 'q' else self.read_data(filepath, 'q', scan, **kwargs)[:2]
+                            W, W_mask = (data.copy(), data_mask) if i_p == 'w' else self.read_data(filepath, 'w', scan, **kwargs)[:2]
+                            V, V_mask = (data.copy(), data_mask) if i_p == 'v' else self.read_data(filepath, 'v', scan, **kwargs)[:2]
+                            ground_clutter_mask = (STAT2_mask | (STAT2 < 2)) & (np.abs(V) < 0.5) & ((W < 2.5) | W_mask)
+                            if self.dsg.scanangles_all[i_p][scan] < 3:
+                                extra_mask = Z_mask | ground_clutter_mask | ((SQI < 0.05) & (Z < 25.)) | SQI_mask
+                            else:
+                                extra_mask = Z_mask | ground_clutter_mask | (((SQI < 0.05) | SQI_mask) & (Z < 25.))
+                        elif gv.data_sources[self.crd.radar] == 'ARPA FVG':
+                            SNR_data = data.copy() if i_p == 'i' else self.read_data(filepath, 'i', scan, **kwargs)[0]
+                            W_data = data.copy() if i_p == 'w' else self.read_data(filepath, 'w', scan, **kwargs)[0]
+                            V_data, V_data_mask = (data.copy(), data_mask) if i_p == 'v' else self.read_data(filepath, 'v', scan, **kwargs)[:2]
+                            ground_clutter_mask = ((np.abs(V_data) < 0.5) & (W_data < 0.75))
+                            extra_mask = np.isnan(SNR_data) | (SNR_data < 3.) | ground_clutter_mask# | (SQI_data < 0.1)                            
+                        
+                        self.extra_mask = {'mask':extra_mask, 'key':key}
+                    data_mask |= extra_mask
+                    
+                    if i_p == 'v' and gv.data_sources[self.crd.radar] == 'ARPA FVG':
+                        phi = data * np.pi/self.dsg.nyquist_velocities_all_mps[scan]
+                        window = [1,2,3,2,1]
+                        v_std = ft.get_window_phase_stdev(phi, data_mask, window)*self.dsg.nyquist_velocities_all_mps[scan]/np.pi
+                        
+                        Z, Z_mask = self.read_data(filepath, 'z', scan, panel=None, check_azis=False)[:2]
+                        Z_std = ft.get_window_stdev(Z, Z_mask, window)
+                        z_thres = Z_mask | (Z < 10 ) | ((Z >= 10) & (Z < 25) & (Z_std < 3))
+                        
+                        data_mask[z_thres & (v_std > 10)] = True
+                elif panel != None:
+                    self.crd.using_unfilteredproduct[panel] = True
+            
+            data[data_mask] = np.nan
             if i_p == 'v':
-                if self.crd.apply_dealiasing[j] and not self.dsg.low_nyquist_velocities_all_mps[self.crd.scans[j]] is None:
-                    self.dsg.data[j] = self.dealias_velocity(self.dsg.data[j], data_mask, self.crd.scans[j])
+                if apply_dealiasing and self.dsg.low_nyquist_velocities_all_mps[scan] != None:
+                    data = self.dealias_velocity(data, data_mask, scan)
                     
-            self.dsg.data[j][data_mask]=self.pb.mask_values[product]
-                    
-                    
+                if panel != None and apply_dealiasing and 'Unet VDA' in self.gui.dealiasing_setting:
+                    # Performing mono PRF dealiasing must be done before the regridding that's done below
+                    data = self.dsg.perform_mono_prf_dealiasing(panel, data)
+            
+            if check_azis and 'how' in scangroup and 'startazA' in scangroup['how'].attrs:
+                da = int(round(360/ft.from_list_or_nolist(scangroup['where'].attrs['nrays'])))
+                azis = scangroup['how'].attrs['startazA']
+                stop_azis = scangroup['how'].attrs['stopazA']
+                # For at least 1 radar (Fossalon, ARPA FVG) it has been observed that radials are 'skipped', in which
+                # case empty radials need to be introduced in the data array. This is done here.
+                select = np.append(0., ft.angle_diff(stop_azis[:-1], azis[1:])) > 0.25*da
+                indices = np.nonzero(select)[0]
+                for i in indices:
+                    azis[i] = (stop_azis[i-1]+0.5*ft.angle_diff(stop_azis[i-1], azis[i])) % 360.
+                
+                azis, n_azi, da, azi_offset, diffs = process_azis_array(azis, da, calc_azi_offset=panel!=None, azi_pos='left')
+                data, azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset, azi_pos='left')
+                data_mask = np.isnan(data)
+                if panel != None:
+                    self.dsg.data_azimuth_offset[panel] = azi_offset
+                                            
+            scantime = self.get_scan_timerange(hf, scangroup)
+            
+        return data, data_mask, scantime
+        
     def dealias_velocity(self, data, data_mask, scan):
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
+        dr = self.dsg.radial_res_all['v'][scan]
         """Important: The KMI seems to use two PRFs per radial, seems to correct velocities using the lower Nyquist velocity. Both vn_l and vn_h in apply_dual_prf_dealiasing are therefore set to vn_l.
         Further, for Jabbeke the dual PRF errors can be all multiples of the low Nyquist velocity, and not only even multiples. Hence multiplication of vn_l by 0.5.
         """
+        window_detection = window_correction = None
         deviation_factor = 1.
         if self.crd.radar == 'Jabbeke' or (self.crd.radar == 'Wideumont' and int(self.crd.date) > 20220501): 
             vn_l *= 0.5; vn_h *= 0.5
-            deviation_factor = 1.33 #The maximum allowed velocity deviation is increased slightly, to reduce the smoothing of the velocity field a little.
-        radial_res = self.dsg.radial_res_all['v'][scan]
-        #For Zaventem the window is chosen to be slightly larger than the default window in nlr_dealiasing.py, as the low and high Nyquist velocities are larger
-        #than the 30/40 kts on which the window sizes in nlr_dealiasing.py are based.
-        window_detection = [2,2,2] if self.crd.radar == 'Jabbeke' else ([3,5,7,5,3] if self.crd.radar == 'Zaventem' else None)
-        window_correction = [2,2,2] if self.crd.radar == 'Jabbeke' else ([5,7,5] if self.crd.radar == 'Zaventem' else None)
-        # if self.crd.radar == 'Wideumont':
-        #     window_detection = [1,2,1]
-        #     window_correction = [1,2,1]
+            deviation_factor = 1.#33 #The maximum allowed velocity deviation is increased slightly, to reduce the smoothing of the velocity field a little.
+            window_detection = window_correction = [2, 2, 2]
+        elif gv.data_sources[self.crd.radar] == 'Austro Control':
+            vn_l = vn_h
+            window_detection = [0,3,6,9,3,6,0] if dr == 0.25 else [1,2,3,4,3,2,1]
+            window_correction = [0,3,6,3,0] if dr == 0.25 else [0,1,2,3,2,1,0]
         n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
-        return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
+        return da.apply_dual_prf_dealiasing(data, data_mask, dr, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, None, window_detection = window_detection, window_correction = window_correction, deviation_factor = deviation_factor,\
         n_it = n_it, mask_all_nearzero_velocities = self.crd.radar == 'Wideumont') #The first azimuth is scanned with a high PRF
-
 
     def get_scan_timerange(self, hf, scangroup):
         starttime = ft.format_time(scangroup['what'].attrs['starttime'].decode('utf-8'))
@@ -1113,7 +1269,13 @@ class ODIM_hdf5():
             startdate = scangroup['what'].attrs['startdate'].decode('utf-8')
             antspeed = float(hf['how'].attrs['rpm'])*360/60 # To °/s
             return ft.get_timerange_from_starttime_and_antspeed(startdate,starttime,antspeed)
-    
+
+
+    def get_data(self,filepath, j): #j is the panel
+        product, scan = self.crd.products[j], self.crd.scans[j]
+        self.dsg.data[j], data_mask, self.dsg.scantimes[j] = self.read_data(filepath, product, scan, self.crd.apply_dealiasing[j], 
+                                                                            self.crd.productunfiltered[j], j)        
+        self.dsg.data[j][data_mask] = self.pb.mask_values[product]    
     
     def get_data_multiple_scans(self,filepath,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
         """apply_dealiasing can be either a bool or a dictionary that specifies per scan whether dealiasing should be applied.
@@ -1126,48 +1288,29 @@ class ODIM_hdf5():
         if isinstance(apply_dealiasing, bool):
             apply_dealiasing = {j: apply_dealiasing for j in scans}
         
-        data={}; scantimes={}
-        meta = {'using_unfilteredproduct': False, 'using_verticalpolarization': False}
-        with h5py.File(filepath,'r') as hf:
-            for j in scans: 
-                data[j] = []; scantimes[j] = []
-                for scan in self.dsg.scannumbers_all[i_p][j]:
-                    scangroup = hf['dataset'+str(scan)]
-                    scantimes[j] += [self.get_scan_timerange(hf, scangroup)]
-                        
-                    p = i_p
-                    if i_p == 'z' and self.crd.radar in gv.radars['DMI'] and productunfiltered:
-                        meta['using_unfilteredproduct'] = True
-                        p = 'uz'
-                    data_n = self.get_data_n(p)
-                    calibrationgroup=scangroup[f'data{data_n}']['what']
-                    gain=float(calibrationgroup.attrs['gain'])
-                    offset=float(calibrationgroup.attrs['offset'])
-                    s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
-                    data[j] += [np.array(scangroup[f'data{data_n}']['data'][s],dtype='float32')*gain+offset]
-                    if product == 'c':
-                        data[j][-1] *= 100./(254*gain if self.crd.radar in gv.radars['DMI'] else 1.)
-                    if product == 'p': data[j][-1] = np.mod(np.rad2deg(data[j][-1]), 360)
-                                
-                    data_maskvalue=data[j][-1].min()
-                    int255_datavalue=np.float32(255*gain)+offset
-                    data_mask = (data[j][-1]<=data_maskvalue) | (data[j][-1]==int255_datavalue)
-                    if i_p == 'v':
-                        if self.crd.radar == 'Zaventem':
-                            """There is an issue with velocities for Zaventem for slant ranges between about 3 and 7 km. For low reflectivities
-                            these slant ranges show clearly erroneous velocities, that need to be filtered away for a correct VVP retrieval.
-                            That is done here.
-                            """
-                            i = self.dsg.scannumbers_all[i_p][j].index(scan)
-                            data_range = np.tile(np.arange(z_data[j][i].shape[1]) * self.dsg.radial_res_all['z'][j], (360, 1))
-                            data_mask |= ((z_data[j][i] < -15.) & (data_range >= 3) & (data_range <= 7))
-                        
-                        if apply_dealiasing[j] and not self.dsg.low_nyquist_velocities_all_mps[j] is None:
-                            data[j][-1] = self.dealias_velocity(data[j][-1], data_mask, j)
-                    data[j][-1][data_mask] = np.nan
+        data, scantimes = {}, {}
+        meta = {'using_unfilteredproduct':False, 'using_verticalpolarization':False}
+        for j in scans: 
+            data[j], scantimes[j] = [], []
+            for scan in self.dsg.scannumbers_all[i_p][j]:
+                data_mask = False
+                if i_p == 'v' and self.crd.radar == 'Zaventem':
+                    """There is an issue with velocities for Zaventem for slant ranges between about 3 and 7 km. For low reflectivities
+                    these slant ranges show clearly erroneous velocities, that need to be filtered away for a correct VVP retrieval.
+                    That is done here.
+                    """
+                    i = self.dsg.scannumbers_all[i_p][j].index(scan)
+                    data_range = np.tile(np.arange(z_data[j][i].shape[1]) * self.dsg.radial_res_all['z'][j], (360, 1))
+                    data_mask = ((z_data[j][i] < -15.) & (data_range >= 3) & (data_range <= 7))
+                _data, data_mask, _scantime = self.read_data(filepath, product, j, apply_dealiasing, productunfiltered, data_mask=data_mask)
+                _data[data_mask] = np.nan
+                
+                data[j].append(_data)
+                scantimes[j].append(_scantime)
                 
         volume_starttime, volume_endtime = ft.get_start_and_end_volumetime_from_scantimes([i[0] for i in scantimes.values()])                
         return data, scantimes, volume_starttime, volume_endtime, meta
+    
     
     
     
@@ -1450,9 +1593,8 @@ class DWD_odimh5():
                     scantime = ft.format_time(dataset['what'].attrs['starttime'].decode('utf-8'))+\
                                   '-'+ft.format_time(dataset['what'].attrs['endtime'].decode('utf-8'))
                     if i_p == 'v':
-                        prf_first_azimuth = dataset['how'].attrs['prf'][0]
-                        radar_wavelength = float(hf['how'].attrs['wavelength']) * 1e-2
-                        vn_first_azimuth = 'l' if radar_wavelength*prf_first_azimuth/4. == self.dsg.low_nyquist_velocities_all_mps[scan] else 'h'
+                        prfs = dataset['how'].attrs['prf'][:2]
+                        vn_first_azimuth = 'l' if prfs[0] < prfs[1] else 'h'
                     
                 data += [np.array(dataset['data1']['data'])]
                 if len(data[-1]) > 360:
@@ -1484,8 +1626,13 @@ class DWD_odimh5():
             data_mask = data_mask[0] & data_mask[1]
         else:
             data, data_mask = data[0], data_mask[0]
-            
-        if i_p == 'v':
+        
+        if i_p == 'c':
+            data *= 100.
+            data_mask = data < 20.
+        elif i_p == 'p':
+            data %= 360.
+        elif i_p == 'v':
             if apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
                 data = self.dealias_velocity(data, data_mask, scan, vn_first_azimuth, combi=len(filepaths) > 0)
         
@@ -1496,8 +1643,8 @@ class DWD_odimh5():
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
         n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
-        window_detection = [3,5,7,5,3] if combi else None
-        window_correction = [3,5,3] if combi else None
+        window_detection = [1,4,7,4,1] if combi else None
+        window_correction = [2,4,2] if combi else None
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan],\
         vn_l, vn_h, vn_first_azimuth, window_detection, window_correction, n_it = n_it)
             
@@ -1646,6 +1793,7 @@ class DWD_BUFR():
             
         #The end datetime is given in the filename, and the start datetime in the file itself
         datetime = ''.join([format(int(round(float(data_info['00400'+str(j)][-1]))),'02') for j in (1,2,3,4,5,7)])
+        datetime = ft.next_datetime(datetime[:10], 1)+'00' if datetime[-2:] == '60' else datetime
         starttime = ft.format_time(datetime[-6:])
         end_datetime = ft.get_datetimes_from_absolutetimes(ft.get_absolutetimes_from_datetimes(datetime[:-2]+datetime[-2:])+\
                                                            round(data_loops[1]['004026'][-1]), include_seconds=True)
@@ -1678,6 +1826,7 @@ class DWD_BUFR():
             data_info, data_loops = data_info[0], data_loops[0]
             
             datetime = ''.join([format(int(round(float(data_info['00400'+str(j)][-1]))),'02') for j in (1,2,3,4,5,7)])
+            datetime = ft.next_datetime(datetime[:10], 1)+'00' if datetime[-2:] == '60' else datetime
             starttime = ft.format_time(datetime[-6:])
             end_datetime = ft.get_datetimes_from_absolutetimes(ft.get_absolutetimes_from_datetimes(datetime[:-2]+datetime[-2:])+\
                                                                round(data_loops[1]['004026'][-1]), include_seconds=True)
@@ -1917,7 +2066,8 @@ class MeteoFrance_BUFR():
         self.product_filetypes = {'z':['PAM','PAG'], 'v':['PAG'], 'c':['PAM'], 'd':['PAM'], 'p':['PAM'], 'sigma':['PAG','PAM']}
         
         # Sigma denotes the standard deviation of reflectivity
-        self.product_order = {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':[1,4]}
+        self.product_order = lambda date: ({'z':0, 'v':2, 'c':1, 'd':3, 'p':2, 'sigma':[1,4]} if int(date) < 20180818 else
+                                           {'z':0, 'v':2, 'c':1, 'd':2, 'p':3, 'sigma':[1,4]})
         # Offsets for 'v' and 'sigma' include a correction for the fact that integer data values represent the start of an interval,
         # with the average being 0.5 higher
         self.product_offset = {'z':-10.5, 'v':60, 'c':30.5, 'd':-9.85, 'p':0.5, 'sigma':0.125}
@@ -1934,7 +2084,7 @@ class MeteoFrance_BUFR():
                 # In this case the last message in the file has LZW compression instead of gzip compression, and therefore needs
                 # to be excluded to prevent errors in the gzip library
                 indices += [content.rindex(b'\x1f\x9d\x90B')]
-            index = self.product_order[product]
+            index = self.product_order(self.crd.date)[product]
             if product == 'sigma':
                 index = index[1] if index[1]+1 < len(indices) else index[0]
             i1, i2 = indices[index], indices[index+1] if index+1 < len(indices) else None
@@ -1947,6 +2097,8 @@ class MeteoFrance_BUFR():
             
         for fileid, filepath in filepaths.items():
             try:
+                # Only one type of file is opened here, either PAM or PAG. This means that filetype-dependent parameters below
+                # can't be determined from data_info.
                 content = self.get_file_content(filepath, 'z')
                 _, _, data_info, data_loops = self.bufr_decoder(content, read_mode=['002125'])
                 data_info, data_loops = data_info[0], data_loops[0]
@@ -1965,7 +2117,7 @@ class MeteoFrance_BUFR():
                 # (Z is contained in both PAG and PAM files, with preferential use of high-res PAM file, but in real-time use PAG might come available first).
                 j = filetype_p+','+fileid
                 
-                if p == 'v':
+                if p == 'v':                    
                     prfs = np.array(data_loops[1]['002125'])
                     prfs = np.unique(prfs)[::-1]
                     # if len(prfs) != len(np.unique(prfs)):
@@ -1975,15 +2127,19 @@ class MeteoFrance_BUFR():
                     #     continue
                     wavelength = 299792458/data_info['002121'][0]
                     vns = prfs*wavelength/4
-                    ratios = vns[1:]/vns[:-1]
-                    factors = np.round(ratios/(1-ratios))
-                    self.dsg.nyquist_velocities_all_mps[j] = factors[0]*vns[0]
-                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = vns[-1]
+                    # MF always aims at an extended Nyquist velocity around 60 m/s. The method to calculate it is described in https://journals.ametsoc.org/view/journals/atot/23/12/jtech1923_1.xml?tab_body=pdf.
+                    # But in practice it can simply be calculated as n*vns[0], where n is the integer that gives the extended Nyquist velocity
+                    # closest to 60 m/s.
+                    n = round(60/vns[0])
+                    self.dsg.nyquist_velocities_all_mps[j] = (n+1)*vns[0]
+                    self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = vns[0]
                 
                 self.dsg.scanangles_all[p][j] = data_info['007021'][0]
                 if round(self.dsg.scanangles_all[p][j]) == 90.:
                     # Sometimes the value is a bit less than 90., which is changed below, in order to easily check for vertical scans in other code
                     self.dsg.scanangles_all[p][j] = 90.
+                # These attributes are set manually, since they differ per filetype and only one filetype gets opened.
+                # Otherwise it would be codes 030021 for nr, 055233 for dr
                 self.dsg.radial_bins_all[p][j] = 1066 if filetype_p == 'PAM' else 256
                 self.dsg.radial_res_all[p][j] = 0.24 if filetype_p == 'PAM' else 1.
                 if p == 'sigma' and filetype_p == 'PAM':
@@ -2009,9 +2165,16 @@ class MeteoFrance_BUFR():
             # print(p, self.dsg.scanangles_all[p], self.dsg.scannumbers_all[p])
                     
         
-    def read_extra_product(self, product, scan, data_shape):
+    def read_extra_product(self, product, scan, data_shape, prefer_lowres=False):
         filetype, fileid = self.dsg.scannumbers_all[product][scan][self.dsg.scannumbers_forduplicates[scan]].split(',')[:2]
-        filepath = opa(self.crd.directory+'/'+self.dsg.source_MeteoFrance.file_per_filetype_per_fileid[filetype][fileid])
+        filename = self.dsg.source_MeteoFrance.file_per_filetype_per_fileid[filetype][fileid]
+        if product == 'z' and prefer_lowres:
+            try:
+                filename = self.dsg.source_MeteoFrance.file_per_filetype_per_fileid['PAG'][fileid]
+                filetype = 'PAG'
+            except Exception:
+                pass
+        filepath = self.crd.directory+'/'+filename
         p_data, p_data_mask = self.read_data(filepath, product, scan)[:2]
         
         na, nr = data_shape
@@ -2029,7 +2192,9 @@ class MeteoFrance_BUFR():
             n = nr*r_ratio
             i = np.floor(np.linspace(0.5, nr_p-0.5, n, dtype='float32')).astype('uint16')                
             p_data[p_data_mask] = np.nan
-            return np.nanmean(np.reshape(p_data[:,i], (360, a_ratio, nr, r_ratio)), axis=(1,3))
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', message='Mean of empty slice')
+                return np.nanmean(np.reshape(p_data[:,i], (360, a_ratio, nr, r_ratio)), axis=(1,3))
         elif na_p*nr_p < na*nr:
             a, r = 0.5+np.arange(na), 0.5+np.arange(nr)
             a_ratio, r_ratio = na/na_p, nr/nr_p
@@ -2043,7 +2208,9 @@ class MeteoFrance_BUFR():
         _, _, data_info, data_loops = self.bufr_decoder(content, read_mode='all')
         data_info, data_loops = data_info[0], data_loops[0]
         
-        n_rad = self.dsg.radial_bins_all[i_p][scan]
+        # Obtain n_rad from data_info and not from self.dsg.radial_bins_all, since for reflectivity it's possible that
+        # the low-res version is requested, which has a different number of radial bins.
+        n_rad = int(data_info['030021'][0])
         offset, scale = self.product_offset[i_p], self.product_scale[i_p]
         loop_id = list(data_loops)[-2]
         data = offset+scale*data_loops[loop_id]['030001'].astype('float32')
@@ -2063,14 +2230,40 @@ class MeteoFrance_BUFR():
                 data_mask[sigma_data < 2.5] = True
             except Exception:
                 print('Product filtering not possible')
+                
+        if i_p == 'v':
+            data[data == -59.5] = -(59.5+self.dsg.nyquist_velocities_all_mps[scan])/2.
+            data[data == 60.] = (60.+self.dsg.nyquist_velocities_all_mps[scan])/2.
+            if not productunfiltered or apply_dealiasing:
+                z_data = None
+                try:
+                    z_data = self.read_extra_product('z', scan, data.shape, prefer_lowres=True)
+                except Exception:
+                    print('Z array not available')
+                c_data = None
+                try:
+                    c_data = self.read_extra_product('c', scan, data.shape)
+                except Exception:
+                    print('C array not available')
             
-        if i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
-            c_data = None
-            try:
-                c_data = self.read_extra_product('c', scan, data.shape)
-            except Exception:
-                print('C array not available')
-            data = self.dealias_velocity(data, data_mask, scan, c_data)
+            if not productunfiltered:                 
+                data_mask[np.abs(data) > self.dsg.nyquist_velocities_all_mps[scan]] = True
+                phi = data * np.pi/self.dsg.nyquist_velocities_all_mps[scan]
+                window = [1,2,3,2,1]
+                v_std = ft.get_window_phase_stdev(phi, data_mask, window)*self.dsg.nyquist_velocities_all_mps[scan]/np.pi
+                
+                low_thres = False
+                if not z_data is None:
+                    z_std = ft.get_window_stdev(z_data, data_mask, window)
+                    if not c_data is None:
+                        low_thres = (z_data < 10 ) | ((z_data >= 10) & (z_data < 25) & (z_std < 3) & (c_data < 85))
+                    else:
+                        low_thres = (z_data < 10 ) | ((z_data >= 10) & (z_data < 25) & (z_std < 3))
+                data_mask[low_thres & (v_std > 20)] = True
+                # data_mask[~low_thres & (v_std > 30)] = True
+            
+            if apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None:
+                data = self.dealias_velocity(data, data_mask, scan, z_data, c_data)
                 
         #The end datetime is given here
         datetime = ''.join([format(int(float(data_info['00400'+str(j)][0])), '02') for j in range(1, 7)])
@@ -2091,17 +2284,16 @@ class MeteoFrance_BUFR():
         self.dsg.data[j][data_mask] = self.pb.mask_values[product]
         
         self.crd.using_unfilteredproduct[j] = self.crd.productunfiltered[j]
-        self.crd.using_verticalpolarization[j] = False
         
         
-    def dealias_velocity(self, data, data_mask, scan, c_array=None):
+    def dealias_velocity(self, data, data_mask, scan, z_array=None, c_array=None):
         vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
         vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
         radial_res = self.dsg.radial_res_all['v'][scan]
         n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
         return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan], vn_l, vn_h, None, 
-                                            window_detection = [1,2,1], window_correction = [1,2,1], deviation_factor = 1.5, n_it = n_it,
-                                            c_array=c_array)
+                                            window_detection = [1,2,1], window_correction = [1,2,1], deviation_factor = 1., n_it = n_it,
+                                            z_array=z_array, c_array=c_array)
             
             
     def get_data_multiple_scans(self,filepaths,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
@@ -2123,7 +2315,189 @@ class MeteoFrance_BUFR():
         volume_starttime, volume_endtime = ft.get_start_and_end_volumetime_from_scantimes([i[0] for i in scantimes.values()])                
         meta = {'using_unfilteredproduct': productunfiltered, 'using_verticalpolarization': False}
         return data, scantimes, volume_starttime, volume_endtime, meta  
+
+
+
+
+
+class MeteoFrance_NetCDF():
+    def __init__(self, gui_class, dsg_class, parent = None):
+        self.gui=gui_class
+        self.dsg=dsg_class
+        self.crd=self.dsg.crd
+        self.pb = self.gui.pb   
+        
+        self.productnames = {'z':'TH', 'v':'VRAD'}
+        
     
+    def get_scans_information(self, filepath):
+        with nc.Dataset(filepath) as f:
+            scans = f.variables['sweep_number'][:]
+            for j in scans:
+                i_start = f.variables['sweep_start_ray_index'][j]
+                self.dsg.scanangles_all['z'][j] = f.variables['elevation'][i_start]
+                self.dsg.radial_bins_all['z'][j] = f.variables['TH'].shape[1]
+                self.dsg.radial_res_all['z'][j] = f.variables['range'].meters_between_gates/1000
+                
+                self.dsg.nyquist_velocities_all_mps[j] = None
+                self.dsg.high_nyquist_velocities_all_mps[j] = self.dsg.low_nyquist_velocities_all_mps[j] = None
+                
+        extra_attrs = [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
+        self.dsg.scannumbers_all['z'] = bg.sort_volume_attributes(self.dsg.scanangles_all['z'], self.dsg.radial_bins_all['z'], self.dsg.radial_res_all['z'], extra_attrs) 
+
+        for i in self.dsg.scannumbers_all:
+            for j in gv.volume_attributes_p: 
+                self.dsg.__dict__[j][i] = copy.deepcopy(self.dsg.__dict__[j]['z'])
+                
+    def get_data(self, filepath, j):
+        product, scan = self.crd.products[j], self.crd.scans[j]
+        duplicate = self.dsg.scannumbers_forduplicates[scan]
+        pname = self.productnames[product]
+        
+        with nc.Dataset(filepath) as f:
+            idx = f.variables['sweep_start_ray_index'][self.dsg.scannumbers_all[product][scan][duplicate]]
+            self.dsg.data[j] = f.variables[pname][idx:idx+720].astype('float32').filled(self.pb.mask_values[product])
+            data_mask = self.dsg.data[j] == self.dsg.data[j].min()
+            if product == 'v':
+                self.dsg.data[j] *= -1
+            
+            self.dsg.data[j][data_mask] = self.pb.mask_values[product]
+
+            volume_start_time = b''.join(f.variables['time_coverage_start'][:]).decode('utf-8').replace('\x00', '')
+            volume_start_time = dtime.datetime.strptime(volume_start_time, '%Y-%m-%dT%H:%M:%SZ')
+            print(idx)
+            ray_times = f.variables['real_time'][idx:idx+720]
+            if ray_times[0]:
+                start_time = (volume_start_time+dtime.timedelta(seconds=round(ray_times.min()))).strftime('%H:%M:%S')
+                end_time = (volume_start_time+dtime.timedelta(seconds=round(ray_times.max()))).strftime('%H:%M:%S')
+                self.dsg.scantimes[j] = start_time+'-'+end_time
+            else:
+                self.dsg.scantimes[j] = ''
+            
+
+
+
+
+
+
+class UKMO_Polar():
+    def __init__(self, gui_class, dsg_class, parent = None):
+        self.gui=gui_class
+        self.dsg=dsg_class
+        self.crd=self.dsg.crd
+        self.pb = self.gui.pb
+        
+        self.reader = UKMOPolarFile()
+        
+
+
+    def get_scans_information(self, filepaths):
+        # For at least one date+radar (20150701, Hameldon Hill) it has been observed that the listed average elevations are incorrect.
+        # Or well, the angles themselves are in fact present in the radar volume, but they are associated with the wrong scan/file.
+        # In this case the order of requested elevations was however correct, so it's therefore decided to first collect a list of
+        # both avg and req elevations, and then use the observation that req elevations are correctly ordered to determine the correct
+        # avg elevation.
+        avg_elevations, req_elevations = [], []
+        for j, filepath in enumerate(filepaths):
+            volume_header, scan_header = self.reader(filepath, products=[])
+            self.dsg.radial_res_all['z'][j] = volume_header['processed range bin length']/1e3
+            self.dsg.radial_bins_all['z'][j] = volume_header['number of bins per ray']
+            avg_elevations += [scan_header['scan average elevation']/10.]
+            req_elevations += [scan_header['scan requested elevation']/10.]
+            if avg_elevations[j] == 0.:
+                avg_elevations[j] = req_elevations[j]
+            elif abs(avg_elevations[j] - 90) < 1:
+                avg_elevations[j] = 90
+                
+            self.dsg.nyquist_velocities_all_mps[j] = volume_header['unambiguous velocity']/100.
+            prf_l, prf_h = volume_header['primary PRF'], volume_header['secondary PRF']
+            radar_wavelength = volume_header['channel 1 wavelength']/1e3
+            self.dsg.low_nyquist_velocities_all_mps[j] = radar_wavelength*prf_l/4. if prf_h != 0. else None
+            self.dsg.high_nyquist_velocities_all_mps[j] = radar_wavelength*prf_h/4. if prf_h != 0. else None        
+        sorted_avg = sorted(avg_elevations)
+        sorted_req = sorted(req_elevations)
+        self.dsg.scanangles_all['z'] = {j:sorted_avg[sorted_req.index(req_elevations[j])] for j in self.dsg.radial_res_all['z']}
+
+        extra_attrs = [self.dsg.nyquist_velocities_all_mps, self.dsg.high_nyquist_velocities_all_mps, self.dsg.low_nyquist_velocities_all_mps]
+        self.dsg.scannumbers_all['z'] = bg.sort_volume_attributes(self.dsg.scanangles_all['z'], self.dsg.radial_bins_all['z'], self.dsg.radial_res_all['z'], extra_attrs)
+                    
+        for i in self.dsg.scannumbers_all:
+            for j in gv.volume_attributes_p: 
+                self.dsg.__dict__[j][i] = copy.deepcopy(self.dsg.__dict__[j]['z'])
+
+    def read_data(self, filepath, product, scan, apply_dealiasing=False, productunfiltered=False):
+        i_p = gv.i_p[product]
+        p_name = gv.productnames_UKMO[i_p]
+        apply_dealiasing = i_p == 'v' and apply_dealiasing and not self.dsg.low_nyquist_velocities_all_mps[scan] is None
+
+        products = set([p_name] + ['CI', 'CPA', 'SQI', 'REF']*(not productunfiltered) + ['RHO']*apply_dealiasing)
+        data_products, volume_header, scan_header, ray_headers = self.reader(filepath, products)
+        # Make a copy, since the product array gets cached in UKMOPolarFile and subsequent actions here should not alter that array
+        data = data_products[p_name].copy()
+        if product == 'p':
+            data %= 360.
+        
+        if productunfiltered:
+            data_mask = np.zeros_like(data, bool)
+        else:
+            if 'CI' in data_products:
+                data_mask = (data_products['CI'] < 3.5) |\
+                            ((data_products['CI'] < 4.25) & (data_products['REF'] < 30.)) |\
+                            ((data_products['CI'] < 5.) & (data_products['REF'] < 15.))
+            elif 'CPA' in data_products:
+                data_mask = (data_products['CPA'] > 0.5)
+            if 'SQI' in data_products:
+                data_mask |= (data_products['SQI'] < 0.25) & (data_products['REF'] < 15.)
+        
+        if apply_dealiasing:
+            data = self.dealias_velocity(data, data_mask, scan, c_array=data_products.get('RHO', None))
+        
+        start_time = ''.join([format(j, '02d') for j in volume_header['volume start time and date'][3:]])
+        end_time = ''.join([format(j, '02d') for j in volume_header['volume stop time and date'][3:]])
+        scantime = ft.format_time(start_time)+'-'+ft.format_time(end_time)
+        return data, data_mask, scantime
+                
+    def get_data(self, filepath, j):
+        product, scan = self.crd.products[j], self.crd.scans[j]
+        
+        self.dsg.data[j], data_mask, self.dsg.scantimes[j] = self.read_data(filepath, product, scan, self.crd.apply_dealiasing[j], self.crd.productunfiltered[j])
+        self.dsg.data[j][data_mask] = self.pb.mask_values[product]
+        
+        self.crd.using_unfilteredproduct[j] = self.crd.productunfiltered[j]
+
+    def dealias_velocity(self, data, data_mask, scan, z_array=None, c_array=None):
+        vn_l = self.dsg.low_nyquist_velocities_all_mps[scan]
+        vn_h = self.dsg.high_nyquist_velocities_all_mps[scan]
+        # The staggered-PRF aliasing errors can be any linear combination of the form n1*vn_l+n2*vn_h, with n1 and n2 integers.
+        # Considering all these options leads however to too much smoothing during dealiasing, so it's decided to only consider
+        # the most prevalent aliasing errors, which deviate by (vn_l+vn_h)/2.
+        vn_l = vn_h = (vn_l+vn_h)/2.
+        radial_res = self.dsg.radial_res_all['v'][scan]
+        n_it = 1 if self.gui.vwp.updating_vwp else self.gui.dealiasing_dualprf_n_it
+        return da.apply_dual_prf_dealiasing(data, data_mask, radial_res, self.dsg.nyquist_velocities_all_mps[scan], vn_l, vn_h, None, 
+                                            window_detection = [1,2,1], window_correction = [1,2,1], deviation_factor = 1.0, n_it = n_it,
+                                            z_array=z_array, c_array=c_array)
+
+    def get_data_multiple_scans(self,filepaths,product,scans,productunfiltered=False,polarization='H',apply_dealiasing=True,max_range=None):
+        """apply_dealiasing can be either a bool or a dictionary that specifies per scan whether dealiasing should be applied.
+        max_range specifies a possible maximum range (in km) up to which data should be obtained.
+        """
+        i_p = gv.i_p[product]
+        if isinstance(apply_dealiasing, bool):
+            apply_dealiasing = {j: apply_dealiasing for j in scans}
+        
+        data = {}; scantimes = {}
+        for j in scans:
+            data[j], data_mask, scantimes[j] = self.read_data(filepaths[j], product, j, apply_dealiasing, productunfiltered)
+            data[j][data_mask] = np.nan
+            s = np.s_[:] if max_range is None else np.s_[:, :int(np.ceil(ft.var1_to_var2(max_range, self.dsg.scanangles_all[i_p][j], 'gr+theta->sr') / self.dsg.radial_res_all[i_p][j]))]
+            data[j] = data[j][s]
+            data[j], scantimes[j] = [data[j]], [scantimes[j]]
+        
+        volume_starttime, volume_endtime = ft.get_start_and_end_volumetime_from_scantimes([i[0] for i in scantimes.values()])                
+        meta = {'using_unfilteredproduct': productunfiltered, 'using_verticalpolarization': False}
+        return data, scantimes, volume_starttime, volume_endtime, meta  
+
     
     
     
@@ -2192,10 +2566,10 @@ class NEXRAD_L2():
         i_scans_include = [i for i in range(n_scans) if not i in i_scans_exclude]
         i_scans_v = [i for i in i_scans_include[1:] if i-1 in i_scans_z]
         
-        z_v_scan_present = self.dsg.product_versions_datetime == ['z_scan', 'v_scan']
-        products_z = ['z z_scan'] if z_v_scan_present else 'z'          
-        products_v = ['z v_scan', 'v'] if z_v_scan_present else 'v'
-        products_all = ['z z_scan', 'z v_scan', 'v'] if z_v_scan_present else ['z', 'v']
+        v_scan_present = 'v_scan' in str(self.dsg.product_versions_datetime) # Can be None
+        products_z = ['z z_scan'] if self.dsg.product_versions_in1file else ['z']
+        products_v = ['z v_scan', 'v'] if v_scan_present else ['v']
+        products_all = products_z+products_v
         for j in gv.volume_attributes_p:
             ft.init_dict_entries_if_absent(self.dsg.__dict__[j], products_all, dict)
         for i in i_scans_include:
@@ -2243,6 +2617,26 @@ class NEXRAD_L2():
             self.dsg.scannumbers_all[p] = bg.sort_volume_attributes(self.dsg.scanangles_all[p], self.dsg.radial_bins_all[p], self.dsg.radial_res_all[p], extra_attrs)
             for i, j in self.dsg.scannumbers_all[p].items():
                 self.dsg.scannumbers_all[p][i] = [scans_startend_pos[k-1] for k in j]
+                
+        if v_scan_present:
+            # Add scannumbers for 'z' for the combi_scan. These are a combination of those for z_scan and v_scan. 
+            # Since this is only done for 'z' and not for other products, a consequence is that 'z' gets twice as many duplicates.
+            # And since changes to self.dsg.scannumbers_forduplicates are based on self.dsg.scannumbers_all['z'], this becomes
+            # an issue for other products without some other measures. The remedy for this is a new function self.dsg.duplicate,
+            # which halves the duplicate index (i.e. self.dsg.scannumbers_forduplicates[scan]) for products other than 'z'.
+            self.dsg.scannumbers_all['z combi_scan'] = {}
+            for j,s1 in self.dsg.scannumbers_all['z z_scan'].items():
+                s2 = self.dsg.scannumbers_all['z v_scan'].get(j, s1)
+                if s1 != s2:
+                    self.dsg.scannumbers_all['z combi_scan'][j] = []
+                    l1, l2 = len(s1), len(s2)
+                    for k in range(max(l1, l2)):
+                        self.dsg.scannumbers_all['z combi_scan'][j] += ([s1[k]] if k < l1 else []) + ([s2[k]] if k < l2 else [])
+                else:
+                    self.dsg.scannumbers_all['z combi_scan'][j] = s1
+            for j in (a for a in gv.volume_attributes_p if a != 'scannumbers_all'):
+                self.dsg.__dict__[j]['z combi_scan'] = self.dsg.__dict__[j]['z z_scan'].copy()
+                
         self.dsg.high_nyquist_velocities_all_mps = self.dsg.low_nyquist_velocities_all_mps = {i:None for i in self.dsg.scannumbers_all['v']}
         
         for j in gv.volume_attributes_p:
@@ -2274,14 +2668,14 @@ class NEXRAD_L2():
                     
         azis = self.file.get_azimuth_angles(scans=[scan_index])
         da = msg['msg_header'].get('azimuth_resolution', 2)/2
-        azis, n_azi, da, azi_offset, diffs = process_azis_array(azis, da, calc_azi_offset=not panel is None)
+        azis, n_azi, da, azi_offset, diffs = process_azis_array(azis, da, calc_azi_offset=panel != None)
                 
         moment = gv.productnames_NEXRAD[i_p]
         dr = msg[moment]['gate_spacing']/1e3
         r_first_gate = msg[moment]['first_gate']/1e3-0.5*dr
         first_gate = int(np.ceil(r_first_gate/dr))
         rad_offset = r_first_gate - first_gate*dr
-        if not panel is None:
+        if panel != None:
             self.dsg.data_radius_offset[panel] = rad_offset
         
         raw_data = self.file.get_data(moment, n_rad-first_gate, scans=[scan_index], raw_data=True)
@@ -2299,11 +2693,11 @@ class NEXRAD_L2():
         # Sometimes more than one Nyquist velocity is used for different sectors of a scan.
         vn_azis = self.file.get_nyquist_vel(scans=[scan_index])[-n_azi:]
         # Exclude Nyquist velocities of 0 as is the case for TDWR radars
-        if i_p == 'v' and vn_azis[0] != 0. and not panel is None and self.crd.apply_dealiasing[panel] and 'Unet VDA' in self.gui.dealiasing_setting:
+        if i_p == 'v' and vn_azis[0] != 0. and panel != None and self.crd.apply_dealiasing[panel] and 'Unet VDA' in self.gui.dealiasing_setting:
             data = self.dsg.perform_mono_prf_dealiasing(panel, data, vn_azis, azis, da)
         
         data, azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset)
-        if not panel is None:
+        if panel != None:
             self.dsg.data_azimuth_offset[panel] = azi_offset
         data_mask = np.isnan(data)
         
@@ -2318,15 +2712,25 @@ class NEXRAD_L2():
         # the average actual scanangle could be done in get_scans_information itself, but the problem with that is that for
         # bzip2-compressed files data for only a few radials is obtained, which makes calculating the actual average impossible.
         scanangle = self.file.get_elevation_angles(scans=[scan_index]).mean()
+        duplicate = self.dsg.duplicate(product, scan)
         scanangle_in_dict = isinstance(self.dsg.scanangles_all[i_p][scan], dict) and\
-                            self.dsg.scannumbers_forduplicates[scan] in self.dsg.scanangles_all[i_p][scan]
+                            duplicate in self.dsg.scanangles_all[i_p][scan]
         if self.dsg.scanangles_all[i_p][scan] != scanangle and not scanangle_in_dict:
-            if len(self.dsg.scannumbers_all[i_p][scan]) == 1:
-                self.dsg.scanangles_all[i_p][scan] = scanangle
-            else:
-                if not isinstance(self.dsg.scanangles_all[i_p][scan], dict):
-                    self.dsg.scanangles_all[i_p][scan] = {}
-                self.dsg.scanangles_all[i_p][scan][self.dsg.scannumbers_forduplicates[scan]] = scanangle
+            # For 'z' multiple product versions (pvs) are available, with combi_scan combining z_scan and v_scan.
+            # This means that each scan for 'z' is contained in 2 pvs, while it gets imported only once.
+            # It's therefore necessary to also update the scanangle for the other pv below.
+            s = self.dsg.scannumbers_all[i_p][scan][duplicate]
+            keys = ['z '+pv for pv in self.dsg.product_versions_datetime] if i_p == 'z' else [i_p]
+            for k in keys:
+                if s in self.dsg.scannumbers_all[k][scan]:
+                    _duplicate = self.dsg.scannumbers_all[k][scan].index(s)
+                    if len(self.dsg.scannumbers_all[k][scan]) == 1:
+                        self.dsg.scanangles_all[k][scan] = scanangle
+                    else:
+                        if not isinstance(self.dsg.scanangles_all[k][scan], dict):
+                            self.dsg.scanangles_all[k][scan] = {}
+                        self.dsg.scanangles_all[k][scan][_duplicate] = scanangle
+                
             self.dsg.update_volume_attributes = True
             # For bzip2-compressed files the start and end positions of the data for each scan are expected to vary from volume to volume
             self.dsg.variable_attributes = ['scanangles_all']+['scannumbers_all']*(not self.filepath.endswith('.gz'))
@@ -2360,12 +2764,12 @@ class NEXRAD_L2():
                 self.file.close()
             self.file = NEXRADLevel2File(filepath, read_mode, moments)
         self.filepath, self.read_mode, self.moments = filepath, read_mode, moments
-        
+                
     def get_data(self, filepath, j): #j is the panel        
         product, i_p = self.crd.products[j], gv.i_p[self.crd.products[j]]
         scan = self.crd.scans[j]
         
-        scan_index = self.dsg.scannumbers_all[i_p][scan][self.dsg.scannumbers_forduplicates[scan]]
+        scan_index = self.dsg.scannumbers_all[i_p][scan][self.dsg.duplicate(product, scan)]
         self.read_file(filepath, scan_index, j=j)
         self.dsg.data[j], data_mask, self.dsg.scantimes[j] = self.read_data(product, scan, panel=j)
         self.dsg.data[j][data_mask] = self.pb.mask_values[product]
@@ -2478,12 +2882,12 @@ class NEXRAD_L3():
         file = NEXRADLevel3File(filepath)
                 
         rad_offset = file.packet_header['first_bin']/1e3
-        if not panel is None:
+        if panel != None:
             self.dsg.data_radius_offset[panel] = rad_offset
         
         azis = file.get_azimuth()
         da = 1
-        azis, n_azi, da, azi_offset, diffs = process_azis_array(azis, da, calc_azi_offset=not panel is None)
+        azis, n_azi, da, azi_offset, diffs = process_azis_array(azis, da, calc_azi_offset=panel != None)
         
         file_data = file.get_data().filled(np.nan)[-n_azi:]
         # Sometimes different duplicates of a scan have a slightly different number of radial bins, which can lead
@@ -2495,7 +2899,7 @@ class NEXRAD_L3():
         data[:, :n_rad2] = file_data[:, :n_rad1]
         
         data, azi_offset = map_onto_regular_grid(data, n_azi, azis, diffs, da, azi_offset)
-        if not panel is None:
+        if panel != None:
             self.dsg.data_azimuth_offset[panel] = azi_offset
         data_mask = np.isnan(data)
         

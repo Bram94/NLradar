@@ -1,13 +1,6 @@
 # Copyright (C) 2016-2024 Bram van 't Veen, bramvtveen94@hotmail.com
 # Distributed under the GNU General Public License version 3, see <https://www.gnu.org/licenses/>.
 
-import nlr_background as bg
-import nlr_customvispy as cv
-import nlr_functions as ft
-import nlr_globalvars as gv
-import nlr_maptiles as mt
-from VWP.nlr_plottingvwp import PlottingVWP
-
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer, QObject, pyqtSignal
 
@@ -29,6 +22,13 @@ opa=os.path.abspath
 import time as pytime
 import copy
 import traceback
+
+import nlr_background as bg
+import nlr_customvispy as cv
+import nlr_functions as ft
+import nlr_globalvars as gv
+import nlr_maptiles as mt
+from VWP.nlr_plottingvwp import PlottingVWP
 
 
 
@@ -85,7 +85,7 @@ class Plotting(QObject,app.Canvas):
         self.data_attr_before = copy.deepcopy(self.data_attr)
         
         self.heightrings_scanangles = {j:-1 for j in range(self.max_panels)}
-        self.products_before=self.crd.products.copy(); self.scans_before=self.crd.scans.copy()  
+        self.products_before = self.crd.products.copy(); self.scans_before=self.crd.scans.copy()  
         self.productunits=gv.productunits_default.copy()
         self.scale_factors={j: 1. for j in gv.products_all}
         self.firstdraw_map=True #It is important to draw the map for all panels during the first draw, because otherwise the scale gets screwed up when changing the
@@ -474,14 +474,16 @@ class Plotting(QObject,app.Canvas):
         self.vwp_relxdim = 0.255*f #The fractional width of the VWP plot relative to that of the whole canvas
             
     def on_resize(self, event=None):
-        # font_size = int(round(self.scale_pixelsize(14)))
-        # if True or font_size != self.gui.f1.pixelSize():
-        #     self.gui.f1.setPixelSize(font_size)
-        #     # QApplication.instance().setFont(self.gui.f1)
-        #     for widget in QApplication.allWidgets():
-        #         f = widget.font()
-        #         f.setPixelSize(font_size)
-        #         widget.setFont(f)
+        font_size = int(round(self.scale_pixelsize(13)))
+        # Set pixel size instead of point size, since setting point size leads to weird results. I.e. using value of 8 leads to much
+        # much bigger fonts than size of 7.
+        if font_size != self.gui.f1.pixelSize():
+            self.gui.f1.setPixelSize(font_size)
+            QApplication.instance().setFont(self.gui.f1)
+            for widget in QApplication.allWidgets():
+                f = widget.font()
+                f.setPixelSize(font_size)
+                widget.setFont(f)
         
         self.dpi = self.gui.screen_DPI()
         
@@ -660,17 +662,41 @@ class Plotting(QObject,app.Canvas):
         else:
             self.set_panels_sttransforms_manually(translate=pc)
             
-    def translation_dist_km(self, delta_time):
-        # Is also used in self.dsg.check_need_scans_change
-        SM = self.gui.stormmotion
-        SM = -SM[1]*np.array([np.sin(np.deg2rad(SM[0])), np.cos(np.deg2rad(SM[0]))])
-        return SM*delta_time/1e3
+    def translation_dist_km(self, delta_time, start_datetime):
+        # Obtain dt_bounds with seconds accuracy, since for small delta_time these seconds can be important.
+        # Without seconds accuracy, it can be the case that a small change in delta_time leads to a larger change in the
+        # contributions from different storm motions (through delta_t values that are changed by +/-60 seconds), which
+        # can lead to small jumps in the translation.
+        start_datetime = start_datetime+'00'
+        end_datetime = ft.next_datetime_s(start_datetime, delta_time)
+        dt_bounds = sorted([start_datetime, end_datetime])
+        
+        sm_datetimes = sorted([j for j in self.gui.stormmotion_save if int(dt_bounds[0]) < int(j+'00') < int(dt_bounds[1])])
+        keys = [self.gui.select_nearest_sm_datetime(dt_bounds[0][:12])] + sm_datetimes
+        sign = np.sign(delta_time)
+        delta_time = abs(delta_time)
+        dist = 0.
+        for i,key in enumerate(keys):
+            if i == 0 and len(keys) > 1:
+                delta_t = ft.datetimediff_s(dt_bounds[0], keys[1])
+            elif len(keys) > i+1:
+                delta_t = ft.datetimediff_s(key, keys[i+1])
+            else:
+                delta_t = delta_time
+            delta_time -= delta_t
+            
+            SM = self.gui.update_stormmotion_change_datetime_or_radar(key, self.crd.radar, set_stormmotion=False)
+            SM = -SM[1]*np.array([np.sin(np.deg2rad(SM[0])), np.cos(np.deg2rad(SM[0]))])
+            dist += SM*sign*delta_t/1e3
+            
+        return dist          
+        
     def move_view_with_storm(self, panellist):
         # print('Move_view_with_storm')
         dt = abs(ft.datetimediff_s(self.crd.before_variables['datetime'], self.crd.date+self.crd.time))
         max_dt = 60*(self.ani.duration+60) if self.ani.continue_type[:3] == 'ani' else self.max_delta_time_move_view_with_storm
         # Prevent movement in case of very big timesteps, that e.g. occur when switching to the next day with available data
-        if dt > max_dt:
+        if dt > max_dt and not self.gui.switch_to_case_running:
             # It's necessary to also reset self.ref_vals in this case
             self.ref_vals = {}
             return False
@@ -689,6 +715,7 @@ class Plotting(QObject,app.Canvas):
                                      self.gui.switch_to_case_running else self.data_attr_before['scandatetime'][0]
             except Exception:
                 return False
+            ref_vals['datetime'] = self.gui.current_case['datetime'] if self.gui.switch_to_case_running else self.crd.before_variables['datetime']
             ref_vals['translate'] = self.panels_sttransforms[0].translate[:2]
             ref_vals['panel_center'] = self.panel_centers[0].copy()
             self.ref_vals[self.crd.radar] = ref_vals
@@ -703,7 +730,7 @@ class Plotting(QObject,app.Canvas):
             except Exception: 
                 continue
             # Moving needs to occur in opposite direction
-            distance_move = -self.translation_dist_km(dt)*np.array([1, -1])*scale
+            distance_move = -self.translation_dist_km(dt, ref_vals['datetime'])*np.array([1, -1])*scale
             center_shift = self.panel_centers[j] - ref_vals['panel_center']
             self.panels_sttransforms[j].translate = ref_vals['translate'] + center_shift + distance_move
 
@@ -1078,7 +1105,7 @@ class Plotting(QObject,app.Canvas):
                 face_colors.append(self.gui.radar_colors['Default'])
                 radars.append(j)
         # Use slightly different marker sizes for different radar wavelength bands, the biggest for S-band
-        scale_fac = {'S':1.1, 'C':1, 'X':1/1.1}
+        scale_fac = {'S':1.15, 'C':1, 'X':1/1.15}
         coords_xy, sizes = [], []
         for i,j in enumerate(radars):
             if j in self.gui.radars_download_older_data:
@@ -1092,7 +1119,7 @@ class Plotting(QObject,app.Canvas):
         self.visuals['radar_markers'][0].set_data(pos=coords_xy*np.array([1,-1]),symbol='disc',size=sizes,edge_width=1,face_color=face_colors/255.,edge_color='black')
 
             
-    def set_newdata(self,panellist,change_datetime=False,source_function=None,set_data=True,plain_products_parameters_changed=False,apply_storm_centering=False):
+    def set_newdata(self, panellist, delta_time=0, source_function=None, set_data=True, plain_products_parameters_changed=False, apply_storm_centering=False):
         # from cProfile import Profile
         # profiler = Profile()
         # profiler.enable()
@@ -1129,11 +1156,13 @@ class Plotting(QObject,app.Canvas):
             if self.map_transforms['aeqd'].radar != self.crd.selected_radar:
                 # Use a different condition than radar_changed, since this function might already have been called in self.gui.switch_to_case
                 self.change_map_center()
+            if self.gui.stormmotion[1] != 0.:
+                self.gui.update_stormmotion_change_datetime_or_radar()
                                         
             self.changed_colortables=self.set_cmaps([self.crd.products[j] for j in self.panellist])
             #Updates colormaps if the corresponding color tables have been changed.
             
-            if radar_changed or dataset_changed or self.crd.changing_subdataset or change_datetime:
+            if radar_changed or dataset_changed or self.crd.changing_subdataset or delta_time:
                 #Update the 'before' variables
                 self.update_before_variables(radar_changed,self.crd.changing_subdataset,dataset_changed)            
         
@@ -1152,7 +1181,7 @@ class Plotting(QObject,app.Canvas):
         t=pytime.time()
         try:
             # print('getting data', self.crd.lrstep_beingperformed, 0 in self.data_attr_before['scandatetime'])
-            returns=self.dsg.get_data(panellist,radar_changed,dataset_changed, set_data)
+            returns=self.dsg.get_data(panellist, delta_time, radar_changed, dataset_changed, set_data)
             if set_data:
                 data_changed, total_file_size = returns
             else:
@@ -1164,6 +1193,10 @@ class Plotting(QObject,app.Canvas):
                 if np.sign(int(scandatetime)-int(self.data_attr_before['scandatetime'][0])) != np.sign(self.crd.lrstep_beingperformed):
                     self.data_attr = copy.deepcopy(self.data_attr_before)
                     self.data_empty = self.data_empty_before.copy()
+                    # Also update self.scans_before, since otherwise a manual/forced scan change might be detected in
+                    # self.dsg.get_scans_information, while in fact the change of scans could have taken place in 
+                    # self.dsg.check_need_scans_change
+                    self.scans_before = self.crd.scans.copy()
                     print('again')
                     # from_timer can be set to True, since it's not needed to check for sleep time again
                     return self.crd.process_keyboardinput(self.crd.lrstep_beingperformed, from_timer=True)
@@ -1234,7 +1267,7 @@ class Plotting(QObject,app.Canvas):
         if not set_data:
             self.crd.radar=save_radar; self.crd.dataset=save_dataset
         else:            
-            move_view_with_storm = self.gui.use_storm_following_view and apply_storm_centering
+            move_view_with_storm = self.gui.use_storm_following_view and apply_storm_centering and self.gui.stormmotion[1] > 0.
             # print('move', move_view_with_storm, apply_storm_centering)
             if move_view_with_storm:
                 panellist_move = [j for j in panellist if data_changed[j]]
@@ -1327,7 +1360,7 @@ class Plotting(QObject,app.Canvas):
                     #the program is 'empty' (or in fact a 362*1 invisible array).
                     print(self.dsg.data[j].shape, 'ref_shape')
                     self.ref_azimuthal_bins[j], self.ref_radial_bins[j] = self.dsg.data[j].shape
-                       
+            
             self.products_before = self.crd.products.copy()
             self.scans_before = self.crd.scans.copy()
                     
@@ -1350,7 +1383,7 @@ class Plotting(QObject,app.Canvas):
             elif not self.changing_panels: self.set_draw_action('plotting')
             self.update()
             
-            if (not self.firstplot_performed or radar_changed or dataset_changed or self.crd.changing_subdataset or change_datetime) and\
+            if (not self.firstplot_performed or radar_changed or dataset_changed or self.crd.changing_subdataset or delta_time) and\
             any(data_changed.values()):
                 self.update_current_variables()
                                                                     
@@ -1410,8 +1443,6 @@ class Plotting(QObject,app.Canvas):
             self.set_sm_pos_markers()
             
         self.set_radarmarkers_data()
-        if self.gui.stormmotion[1] != 0.:
-            self.gui.update_stormmotion_change_radar()
         
     def get_map_sttransform_parameters(self):
         if self.map_initial_bounds is None: 

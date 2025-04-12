@@ -104,23 +104,22 @@ def compress_file(filename):
         print(e)
             
          
-            
-# directory = 'H:/radar_data_NLradar/Current/KNMI'
-# # directory = 'D:/Test_16bit_to_8bit'
-# radars = ['Den Helder', 'Herwijnen']
-# radars = ['Herwijnen']
-# for radar in radars:
-#     dates = os.listdir(directory+'/'+radar.replace(' ', ''))
-#     for date in dates:
-#         if 20080101 <= int(date) < 20230918:
-#             continue
+#%%            
+directory = 'H:/radar_data_NLradar/Current/KNMI'
+radars = ['Den Helder', 'Herwijnen']
+for radar in radars:
+    dates = os.listdir(directory+'/'+radar.replace(' ', ''))
+    for date in dates:
+        # if 20080101 <= int(date) < 20230918:
+        #     continue
     
-#         files = os.listdir(directory+'/'+radar.replace(' ', '')+'/'+date)
-#         for file in files:
-#             print(file)
-#             filename = directory+'/'+radar.replace(' ', '')+'/'+date+'/'+file
-#             compress_file(filename)            
-            
+        files = os.listdir(directory+'/'+radar.replace(' ', '')+'/'+date)
+        for file in files:
+            print(file)
+            filename = directory+'/'+radar.replace(' ', '')+'/'+date+'/'+file
+            compress_file(filename)         
+1/0          
+#%%            
 directory = 'H:/radar_data_NLradar/KNMI'
 subdirs = [j for j in os.listdir(directory) if j[:5] in ('RAD61', 'RAD62')]
 for subdir in subdirs:

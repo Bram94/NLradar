@@ -1,0 +1,46 @@
+To add to right-click menu:
+- VVP horizontal data range
+- Display settings:
+	- Storm motions to show
+	- Shear/SRH height ranges
+	- Maybe colors?
+
+- self.pb.update()?
+- Make vmin adjustable? Add default values in windows
+
+
+- Data range
+- VVP method
+- Maybe add option to use vertical polarization instead of horizontal polarization because of
+issue with Herwijnen radar? Or maybe I should blend both channels (before applying dealiasing)?
+- Maybe fix issue with weird velocities Zaventem by excluding bins with Z<-15 dBZ?
+- Import for every scan in get_data_multiple_scans when duplicate scans are present (Zaventem).
+Maybe add option add_duplicates to the function?
+- Weird low velocities in regions with no or very low reflectivity close to the radar for DWD radars
+- Opening two NLradar windows for same radar leads to different surface obs stations
+- sigma-max
+- sector pairs
+- Other filled sectors requirement closer to radar, since less data availabe there
+- z_order sigma circles. They get defined later, and it has been observed that they were plotted
+on top of a storm motion marker!
+- VVP window relative width: max 0.255, less if the screen ratio is larger than the default of 16/9.
+- Remove the use of pairs of sectors in the data availability check
+- Maybe include data span angle to data availability check: Require that the largest azimuthal
+range that is void of 
+
+Dealing with extended dealiasing:
+-Fit
+-Two groups
+-Determine for which group mean phase closest to zero
+-Correct other group
+
+sfc obs:
+Download -> Datetimes in names
+Check presence files -> check datetime within any datetime range files
+stationslist with end_datetime
+Status update for downloading in text bar
+Exclusion of station IDs, stations might be availabe for other times!!!
+Check stations DWD for date range with available data, and filter the station list.
+Add option of manually inputting sfc obs
+Displaying errors in status bar, at least the API key error!!!
+
