@@ -813,6 +813,9 @@ class Source_IMGW():
 
         self.files={j:{} for j in gv.radars['IMGW']}; self.files_datetimes={j:{} for j in gv.radars['IMGW']}
         
+        """Note for anyone who finds this URL and wants to use the Polish radar data for commercial purposes: This is not allowed by IMGW!!!
+        Doing so will the owner of this server, Marek Zieba, to shut down access again.
+        """
         self.base_url = 'https://datavis.daneradarowe.pl/volumes2'
         self.http_dirs = []
         
