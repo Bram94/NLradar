@@ -13,3 +13,4 @@ setup(name='NLradar',
       author="Bram van 't Veen",
       packages=[],
       install_requires=['numpy','pyproj','pyshp','opencv-python','pillow','imageio','pyqt5','scipy','requests','gpxpy','netcdf4==1.6','pyopengl','matplotlib','numpy-bufr @ git+https://github.com/Bram94/numpy_bufr.git','xmltodict','boto3','pytz','av','tensorflow==2.10']
+	  )
