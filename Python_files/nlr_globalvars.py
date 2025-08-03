@@ -13,7 +13,7 @@ import nlr_functions as ft
 
 python_version=str(sys.version_info[0])+'.'+str(sys.version_info[1])+'.'+str(sys.version_info[2])
     
-programdir=opa(os.path.dirname(os.getcwd()))
+programdir=opa(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(opa(programdir+'/Python_files/vispy'))
 
 
@@ -55,7 +55,7 @@ radars_ascii_names = {radar:unidecode(replace_chars(radar)) for radar in radars_
 
 
 
-radars_with_datasets=radars['KMI']+radars['DWD']+radars['IMGW']+radars['DMI']+radars['UKMO']
+radars_with_datasets=radars['KMI']+radars['DWD']+radars['IMGW']+radars['DMI']+radars['UKMO']+radars['Austro Control']+radars['DHMZ']
 #Radars for which the data is distributed over two datasets; one with large maximum range but small Nyquist velocity, and the other vice versa.
 radars_with_double_volume=('Den Helder','Herwijnen') 
 #Radars for which the volume can devided into two parts, with slightly different scans. This is the case for the new radars of the KNMI.
@@ -77,8 +77,9 @@ for source in radars:
             radarsources_dirs_Default[key] += '${date}/${radar}'+f'_{j}'*len(j)
 derivedproducts_dir_Default=default_basedir+'/Derived_products'
 
-intervals_autodownload={'KNMI':300,'KMI':300,'skeyes':300,'VMM':300,'DWD':300,'TU Delft':300,'IMGW':600,'DMI':300,'CHMI':300,'NWS':300,'ARRC':300,'Météo-France':300,'FMI':300,'ESTEA':300}
-timeoffsets_autodownload={'KNMI':[75,120,180,240],'KMI':[75,120,180,240],'skeyes':[75,120,180,240],'VMM':[75,120,180,240],'DWD':[45,105,165,225,285],'TU Delft': [45,105,165,225,285],'IMGW':[240,300,540,600],'DMI':[135,180,240,300],'CHMI':[0,60,120,180,240],'NWS':list(range(0, 300, 30)),'ARRC':[0],'Météo-France':list(range(0, 300, 60)),'FMI':list(range(0, 300, 60)),'ESTEA':list(range(0, 300, 60))}
+intervals_autodownload={'KNMI':300,'KMI':300,'skeyes':300,'VMM':300,'DWD':300,'TU Delft':300,'IMGW':300,'SHMU':300,'DHMZ':300,'DMI':300,'CHMI':300,'Microstep-MIS':300,'NWS':300,'ARRC':300,'Météo-France':300,'FMI':300,'ESTEA':300,'Meteo Romania':300, 'Geosphere Austria':300, 'SHMI':300}
+default = list(range(0, 300, 60))
+timeoffsets_autodownload={'KNMI':[75,120,180,240],'KMI':[75,120,180,240],'skeyes':[75,120,180,240],'VMM':[75,120,180,240],'DWD':[45,105,165,225,285],'TU Delft': [45,105,165,225,285],'IMGW':default,'SHMU':default,'DHMZ':default,'DMI':[135,180,240,300],'CHMI':default,'Microstep-MIS':default,'NWS':list(range(0, 300, 30)),'ARRC':[0],'Météo-France':default,'FMI':default,'ESTEA':default,'Meteo Romania':default, 'Geosphere Austria':default, 'SHMI':default}
 multifilevolume_autodownload={'KNMI':False,'KMI':True,'skeyes':True,'VMM':True,'DWD':True,'TU Delft':False,'IMGW':True,'DMI':False,'CHMI':False,'NWS':False,'ARRC':False,'Météo-France':True,'FMI':False}
 fileperscan_autodownload={'KNMI':False,'KMI':False,'skeyes':False,'VMM':False,'DWD':True,'TU Delft':False,'IMGW':False,'DMI':False,'CHMI':False,'NWS':False,'ARRC':False,'Météo-France':True,'FMI':False}
 api_keys = {'KNMI': ['opendata', 'sfcobs'],
@@ -107,12 +108,15 @@ i_p={'z':'z','r':'z','v':'v','s':'v','w':'w','d':'d','p':'p','k':'k','c':'c','x'
 productnames_KNMI={'z':'Z','v':'V','w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','q':'SQI','t':'CCOR','y':'CPA','uz':'uZ','ud':'uZDR','up':'uPhiDP'}
 #There are 3 different name formats for KMI data, and each name format corresponds to a different file extension
 productnames_KMI={'hdf':{'z':'dbzh','v':'vrad','w':'wrad'},'h5':{'z':'dBZ','v':'V','w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','uz':'dBuZ','up':'uPhiDP'},'vol':{'z':['z','Z','dBZ'],'v':['v','V'],'w':['w','W'],'d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','uz':'dBuZ','up':'uPhiDP'}}
-productnames_DWD={'hd5':{'z':'dbzh','v':'vradh','c':'urhohv','p':'uphidp','d':'uzdr','k':'kdpcorr'},'buf.bz2':{'z':'z','v':'v'},'buf':{'z':'z','v':'v'}}
+productnames_DWD={'hd5':{'z':'dbzh','v':'vradh','c':['rhohv', 'urhohv'],'p':'uphidp','d':['zdr', 'uzdr', 'attcorrzdrcorr'],'k':'kdpcorr'},
+                  'buf.bz2':{'z':'z','v':'v'},'buf':{'z':'z','v':'v'}}
 productnames_TUDelft={'z':'equivalent_reflectivity_factor','v':'radial_velocity','w':'spectrum_width','d':'differential_reflectivity','p':'differential_phase','x':'linear_depolarisation_ratio'}
 productnames_Leonardo={'z':['z', 'dBZ'],'v':['v', 'V'],'w':'W','d':'ZDR','p':'PhiDP','k':'KDP','c':'RhoHV','uz':'dBuZ','up':'uPhiDP','uk':'uKDP'}
 productnames_DMI={'z':'DBZH','v':'VRAD','w':'WRAD','d':'ZDR','c':'RHOHV','p':'PHIDP','x':'LDR'}
 productnames_AustroControl={'z':'PARA01','v':'PARA09','p':'PARA03','c':'PARA04','d':'PARA11','k':'PARA12'}
 productnames_CHMI={'z':'PAG','uz':'PAJ','v':'PAH','w':'PAI','d':'PAK','c':'PAL','p':'PAM'}
+productnames_SHMU={'z':'PAG','uz':'PAJ','v':'PAH','w':'PAI','d':'PAK','c':'PAL','p':'PAQ','k':'PAR'}
+productnames_MeteoRomania={'z':'dBZ','v':'V','d':'ZDR','c':'RhoHV','k':'KDP'}
 productnames_UKMO={'z':'REF','v':'VEL','w':'SW','d':'ZDR','c':'RHO','p':'PHI','q':'SQI','i':'CI','y':'CPA'}
 productnames_NEXRAD={'z':'REF','v':'VEL','w':'SW','d':'ZDR','c':'RHO','p':'PHI'}
 productnames_ARRC={'z':'DBZ','v':'VEL','w':'WIDTH','d':'ZDR','c':'RHOHV','p':'PHIDP'}

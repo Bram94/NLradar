@@ -703,19 +703,30 @@ class GUI(QWidget):
         if pytime.time()>self.time_set_textbar_new:
             
             if text is None or color is None:
-                if self.cd[self.crd.selected_radar].cd_message==None: color='black'
-                else: color='green' if self.cd[self.crd.selected_radar].cd_message_type in ('Progress_info','Download_info') else 'red'
-                if self.continue_savefig and not color=='red':
+                error_info = ''
+                for radar in [self.crd.selected_radar]+list(self.cd):
+                    if self.cd[radar].cd_message_type == 'Error_info':
+                        error_info = self.cd[radar].cd_message+f' ({radar})'
+                        break
+                
+                if error_info:
+                    color = 'red'
+                elif self.cd[self.crd.selected_radar].cd_message==None: 
+                    color='black'
+                elif self.cd[self.crd.selected_radar].cd_message_type in ('Progress_info','Download_info'): 
+                    color='green'
+                if self.continue_savefig and color!='red':
                     color='blue'
                 self.textbar.setStyleSheet('QLineEdit {color:'+color+'}')
-                textbar_text=''
-                if self.pb.datareadout_text!=None and self.cd[self.crd.selected_radar].cd_message_type!='Error_info': 
+                
+                textbar_text=error_info
+                if self.pb.datareadout_text!=None and not error_info: 
                     textbar_text+=self.pb.datareadout_text
-                if self.pb.radar_mouse_selected!=None and self.cd[self.crd.selected_radar].cd_message_type!='Error_info': 
+                if self.pb.radar_mouse_selected!=None and not error_info: 
                     textbar_text+=', '+self.pb.radar_mouse_selected
-                if self.cd[self.crd.selected_radar].cd_message!=None:
+                if self.cd[self.crd.selected_radar].cd_message!=None and not error_info:
                     textbar_text+=', '+self.cd[self.crd.selected_radar].cd_message
-                if self.ad[self.crd.selected_radar].timer_info!=None and self.cd[self.crd.selected_radar].cd_message_type!='Error_info':
+                if self.ad[self.crd.selected_radar].timer_info!=None and not error_info:
                     textbar_text+=', '+self.ad[self.crd.selected_radar].timer_info
                 if self.current_case_shown():
                     case = self.current_case

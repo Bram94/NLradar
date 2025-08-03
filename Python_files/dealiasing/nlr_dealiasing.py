@@ -252,15 +252,14 @@ def apply_dual_prf_dealiasing(v_array, data_mask, radial_res, vn_e, vn_l, vn_h, 
     """
     azimuthal_res = 360/v_array.shape[0]
     ratio = azimuthal_res / radial_res
+    n = int(round(ratio))
     if window_detection is None:
         if ratio <= 1: window_detection = [1,2,2,2,1]
-        elif ratio <= 2: window_detection = [1,2,3,2,1]
-        elif ratio < 5: window_detection = [1,3,5,3,1]
-        else: window_detection = [2,4,6,4,2]
+        else:
+            window_detection = [int(round(j)) for j in (0.5*n, 1.25*n, 2*n, 1.25*n, 0.5*n)]
     if window_correction is None:
         if ratio <= 1: window_correction = [1,2,1]
-        elif ratio <= 2: window_correction = [2,3,2]
-        elif ratio < 5: window_correction = [3,5,3]
-        else: window_correction = [4,6,4]
+        else:
+            window_correction = [int(round(j)) for j in (0.5*n, 1.5*n, 0.5*n)]
                 
     return da(v_array, data_mask, azimuthal_res, radial_res, vn_e, vn_l, vn_h, vn_first_azimuth, window_detection, window_correction, deviation_factor, n_it, z_array, c_array, mask_all_nearzero_velocities)

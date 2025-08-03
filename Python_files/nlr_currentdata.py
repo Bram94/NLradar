@@ -383,7 +383,7 @@ class CurrentData(QObject):
             n_downloads = 0
             # Newest datetime first, second-newest second
             newest_datetimes = list(self.dsg.get_newest_datetimes_currentdata(self.radar,self.crd.selected_dataset))
-            mod_base = min([10, (len(self.savenames[index])+1)//2])
+            mod_base = min([5, (len(self.savenames[index])+1)//2])
             for j in range(len(self.savenames[index])):
                 save_directory = os.path.dirname(self.savenames[index][j])
                 download_directory = os.path.dirname(self.download_savenames[index][j])
@@ -562,7 +562,7 @@ class CurrentData(QObject):
         
     def emit_info(self,info,info_type):
         self.cd_message_type=info_type; self.cd_message=info
-        if self.radar == self.crd.selected_radar:
+        if info_type == 'Error_info' or self.radar == self.crd.selected_radar:
             self.textbar_signal.emit()
         
     def show_error_info(self,message):
@@ -599,15 +599,23 @@ class CurrentData_DatasourceSpecific():
         self.source_KNMI=Source_KNMI(gui_class=self.gui, cds_class=self)
         self.source_DWD=Source_DWD(gui_class=self.gui, cds_class=self)
         self.source_IMGW=Source_IMGW(gui_class=self.gui, cds_class=self)
+        self.source_SHMU=Source_SHMU(gui_class=self.gui, cds_class=self)
+        self.source_DHMZ=Source_DHMZ(gui_class=self.gui, cds_class=self)
         self.source_DMI=Source_DMI(gui_class=self.gui, cds_class=self)
         self.source_CHMI=Source_CHMI(gui_class=self.gui, cds_class=self)
         self.source_MeteoFrance=Source_MeteoFrance(gui_class=self.gui, cds_class=self)
         self.source_FMI=Source_FMI(gui_class=self.gui, cds_class=self)
         self.source_ESTEA=Source_ESTEA(gui_class=self.gui, cds_class=self)
+        self.source_MeteoRomania=Source_MeteoRomania(gui_class=self.gui, cds_class=self)
+        self.source_Geosphere=Source_Geosphere(gui_class=self.gui, cds_class=self)
+        self.source_SHMI=Source_SHMI(gui_class=self.gui, cds_class=self)
         self.source_NWS=Source_NWS(gui_class=self.gui, cds_class=self)
-        self.source_classes={'KNMI':self.source_KNMI,'DWD':self.source_DWD,'IMGW':self.source_IMGW,'DMI':self.source_DMI,
-                             'CHMI':self.source_CHMI,'Météo-France':self.source_MeteoFrance,'FMI':self.source_FMI,
-                             'ESTEA':self.source_ESTEA,'NWS':self.source_NWS}
+        self.source_classes={'KNMI':self.source_KNMI,'DWD':self.source_DWD,'IMGW':self.source_IMGW,'SHMU':self.source_SHMU,
+                             'DHMZ':self.source_DHMZ,'DMI':self.source_DMI,'Météo-France':self.source_MeteoFrance,
+                             'CHMI':self.source_CHMI,'Microstep-MIS':self.source_CHMI,'FMI':self.source_FMI,
+                             'ESTEA':self.source_ESTEA,'Meteo Romania':self.source_MeteoRomania,
+                             'Geosphere Austria':self.source_Geosphere,'SHMI':self.source_SHMI,
+                             'NWS':self.source_NWS}
         self.sources_with_partial_last_file = ['NWS']
 
     def source_with_partial_last_file(self, radar):
@@ -814,7 +822,7 @@ class Source_IMGW():
         self.files={j:{} for j in gv.radars['IMGW']}; self.files_datetimes={j:{} for j in gv.radars['IMGW']}
         
         """Note for anyone who finds this URL and wants to use the Polish radar data for commercial purposes: This is not allowed by IMGW!!!
-        Doing so will the owner of this server, Marek Zieba, to shut down access again.
+        Doing so will force the owner of this server, Marek Zieba, to shut down access again.
         """
         self.base_url = 'https://datavis.daneradarowe.pl/volumes2'
         self.http_dirs = []
@@ -840,16 +848,9 @@ class Source_IMGW():
                 self.cd.show_error_info(str(error)+',update_downloadlist')
                 continue
         
-            end_indices=[s.end()-1 for s in re.finditer('.vol<', contents)]
-            start_indices=[]
-            for i in range(len(end_indices)):
-                part1 = contents[(0 if i==0 else end_indices[i-1]):end_indices[i]]
-                start_indices += [(0 if i==0 else end_indices[i-1])+part1.rfind('>')+1]
-            #The list at the DWD open data site includes files that contain the latest data, but these should not be included in the list with files,
-            #as they do not contain a datetime. Further, this last entry in the list with files at the DWD open data site is in fact a map of the
-            #form Oct 29 11:29 sweep_vol_v_9-latest_10410--buf.bz2 -> sweep_vol_v_9-20171029112904_10410--buf.bz2, and none of these filenames
-            #should be included. For the second name this is achieved with the second condition.
-            self.files[self.cd.radar][index]+=[j+'/'+contents[start_indices[i]:end_indices[i]] for i in range(0,len(start_indices))]
+            i_start = [s.end() for s in re.finditer('="', contents)]
+            i_end = [contents.find('"', i) for i in i_start]
+            self.files[self.cd.radar][index]+=[j+'/'+contents[i1:i2] for i1,i2 in zip(i_start, i_end) if '.vol' in contents[i1:i2]]
                         
         self.files[self.cd.radar][index]=np.array(self.files[self.cd.radar][index])
             
@@ -906,14 +907,172 @@ class Source_IMGW():
             self.cd.show_error_info(str(e)+',get_http_dirs')
             return
         
-        self.http_dirs = []
-        end_indices=[s.end()-2 for s in re.finditer('.vol/<', contents)]
-        for i_end in end_indices:
-            part1 = contents[:i_end]
-            i_start = part1.rfind('>')+1
-            self.http_dirs += [contents[i_start:i_end]]
-    
-    
+        i_start = [s.end() for s in re.finditer('="', contents)]
+        i_end = [contents.find('"', i) for i in i_start]
+        self.http_dirs = [contents[i:j] for i,j in zip(i_start, i_end)]
+            
+            
+            
+            
+            
+class Source_SHMU():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+
+        self.files={j:{} for j in gv.radars['SHMU']}; self.files_datetimes={j:{} for j in gv.radars['SHMU']}
+        
+        self.base_url = 'http://opendata.shmu.sk/meteorology/weather/radar/volume/'
+        
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist,'Progress_info')
+        
+        error = None
+        try: 
+            #Suppress ResourceWarnings, to prevent that they are raised when the socket is not closed.
+            with warnings.catch_warnings():
+                base_url = self.base_url+'/'+gv.radar_ids[self.cd.radar]
+                content = requests.get(base_url).content.decode('utf8')
+                
+                i_start = [s.end() for s in re.finditer('href="', content)]
+                i_end = [content.find('/"', i) for i in i_start]
+                products = [content[i:j] for i,j in zip(i_start, i_end) if len(content[i:j]) < 10]
+                
+                date = self.cd.currentdate if self.cd.date[index] == 'c' else self.cd.date[index]
+                startdate = ft.next_date(date, -1)
+                dtc = np.array([], dtype='int64')
+                self.files[self.cd.radar][index] = []
+                for product in products:
+                    for d in (startdate, date):
+                        url = base_url+'/'+product+'/'+d
+                        content = requests.get(url).content.decode('utf8')
+                    
+                        i_start = [s.end() for s in re.finditer('href="', content)]
+                        i_end = [content.find('"', i) for i in i_start]
+                        files = [content[i:j] for i,j in zip(i_start, i_end) if content[i:j].endswith('hdf')] 
+                        self.files[self.cd.radar][index] += [url+'/'+f for f in files]
+        except Exception as error: 
+            self.cd.show_error_info(str(error)+',update_downloadlist')
+
+        self.files[self.cd.radar][index] = np.array(self.files[self.cd.radar][index])
+        self.files_datetimes[self.cd.radar][index] = np.array([f.split('_')[-1][:12] for f in self.files[self.cd.radar][index]], dtype='uint64')
+        
+        dtc=np.unique(self.files_datetimes[self.cd.radar][index]) #Contains the unique datetimes of the files
+        if len(dtc)>0:
+            absolutetimes=ft.get_absolutetimes_from_datetimes(dtc.astype(str))
+            self.cd.datetimes_downloadlist[index]=[dtc,absolutetimes]
+            
+            self.cd.emit_info(None,None) #Remove the message given self.cd.cd_message_updating_downloadlist
+            files_available=True
+        else:
+            if error is None:
+                self.cd.show_error_info(self.cd.cd_message_run_nofilespresent)
+            files_available=False
+            
+        return files_available    
+
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        datetimes = self.files_datetimes[self.cd.radar][index]
+        select = datetimes == int(datetime)
+        urls = list(self.files[self.cd.radar][index][select])
+
+        date, time = datetime[:8], datetime[-4:]
+        for url in urls:
+            self.cd.urls[index] += [url]
+            self.cd.datetimes[index] += [datetime]
+            directory=self.dsg.get_directory(date, time,self.cd.radar,dir_index = 0)
+            filename=os.path.basename(url)
+            self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
+            download_directory=self.dsg.get_download_directory(self.cd.radar)
+            self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]
+
+
+
+
+
+class Source_DHMZ():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+
+        self.files={j:{} for j in gv.radars['DHMZ']}; self.files_datetimes={j:{} for j in gv.radars['DHMZ']}
+        
+        """Note for anyone who finds this URL and wants to use the Polish radar data for commercial purposes: This is not allowed by IMGW!!!
+        Doing so will force the owner of this server, Marek Zieba, to shut down access again.
+        """
+        self.base_url = 'https://datavis.daneradarowe.pl/volumes2'
+        
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist,'Progress_info')
+                
+        dtc=np.array([],dtype='int64')
+        url = self.base_url+'/'+gv.data_sources[self.cd.radar]
+        self.files[self.cd.radar][index]=[]
+        
+        error = None
+        try: 
+            #Suppress ResourceWarnings, to prevent that they are raised when the socket is not closed.
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                out = session.get(url, timeout=10)
+                content = out.content.decode('utf-8')
+        except Exception as error: 
+            self.cd.show_error_info(str(error)+',update_downloadlist')
+
+        i_start = [s.end() for s in re.finditer('="', content)]
+       	i_end = [content.find('"', i) for i in i_start]
+       	radar_id = gv.radar_ids[self.cd.radar]
+       	filenames = [content[i:j] for i,j in zip(i_start, i_end) if f'{radar_id}_' in content[i:j]]	
+        self.files[self.cd.radar][index] = np.array([url+'/'+f for f in filenames])
+                        
+        #Contains the datetimes for all files
+        self.files_datetimes[self.cd.radar][index] = np.array([f.split('_')[-1][:12] for f in filenames], dtype='uint64')
+        dtc=np.unique(self.files_datetimes[self.cd.radar][index]) #Contains the unique datetimes of the files
+        if len(dtc)>0:
+            absolutetimes=ft.get_absolutetimes_from_datetimes(dtc.astype(str))
+            self.cd.datetimes_downloadlist[index]=[dtc,absolutetimes]
+            
+            self.cd.emit_info(None,None) #Remove the message given self.cd.cd_message_updating_downloadlist
+            files_available=True
+        else:
+            if error is None:
+                self.cd.show_error_info(self.cd.cd_message_run_nofilespresent)
+            files_available=False
+            
+        return files_available    
+
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        datetimes = self.files_datetimes[self.cd.radar][index]
+        select = datetimes == int(datetime)
+        urls = list(self.files[self.cd.radar][index][select])
+
+        date, time = datetime[:8], datetime[-4:]
+        for url in urls:
+            self.cd.urls[index] += [url]
+            self.cd.datetimes[index] += [datetime]
+            directory=self.dsg.get_directory(date, time,self.cd.radar,dir_index = 0)
+            filename=os.path.basename(url)
+            self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
+            download_directory=self.dsg.get_download_directory(self.cd.radar)
+            self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]
+            
+
     
     
     
@@ -945,8 +1104,10 @@ class Source_DMI():
         try:
             output = session.get(url, params = {'stationId':self.radar_ids[self.cd.radar],'datetime':datetime,'api-key':self.gui.api_keys['DMI']['radardata']}, 
                                  timeout = self.gui.networktimeout)
+            if output.status_code != 200:
+                raise Exception
             files = output.json()['features']
-            if len(files) > 0:
+            if files:
                 datetimes = np.array([ft.format_datetime(j['properties']['datetime'],'YYYY-MM-DDTHH:MM:SSZ->YYYYMMDDHHMM') for j in files])[::-1]
                 absolutetimes = ft.get_absolutetimes_from_datetimes(datetimes)
                 self.cd.datetimes_downloadlist[index]=[datetimes.astype('uint64'), absolutetimes]
@@ -992,7 +1153,8 @@ class Source_CHMI():
         self.dsg=self.gui.dsg
         self.cds=cds_class
 
-        self.files={j:{} for j in gv.radars['CHMI']}; self.files_datetimes={j:{} for j in gv.radars['CHMI']}
+        radars = gv.radars['CHMI']+gv.radars['Microstep-MIS']
+        self.files={j:{} for j in radars}; self.files_datetimes={j:{} for j in radars}
         
         
     def update_downloadlist(self,index):
@@ -1011,14 +1173,14 @@ class Source_CHMI():
         
             indices = [s.end() for s in re.finditer('<a href="', contents)]
             for i1 in indices:
-                i2 = i1+contents[i1:i1+100].index('">')
+                i2 = contents.find('">', i1)
                 if contents[i1:i2] == '../':
                     continue
                 self.files[self.cd.radar][index].append(j+'/'+contents[i1:i2])
         self.files[self.cd.radar][index] = np.array(self.files[self.cd.radar][index])
             
         #Contains the datetimes for all files
-        self.files_datetimes[self.cd.radar][index] = self.dsg.get_datetimes_from_files(self.cd.radar, self.files[self.cd.radar][index], dtype='int64', return_unique_datetimes=False)
+        self.files_datetimes[self.cd.radar][index] = np.array([re.sub('[T_]', '', os.path.basename(f)).split('.')[0][-14:-2] for f in self.files[self.cd.radar][index]], dtype='uint64')
         dtc = np.unique(self.files_datetimes[self.cd.radar][index]) #Contains the unique datetimes of the files
         if len(dtc):
             absolutetimes = ft.get_absolutetimes_from_datetimes(dtc.astype(str))
@@ -1072,6 +1234,7 @@ class Source_CHMI():
                 urls.append(base_url+contents[i1:i2]+'/hdf5/')
         return urls
             
+    
             
      
 
@@ -1186,7 +1349,8 @@ class Source_FMI():
         else:
             startdatetime = ft.next_datetime(self.cd.currentdate+self.cd.currenttime, -1440)
             enddatetime = self.cd.currentdate+self.cd.currenttime
-        dates = set([startdatetime[:8], enddatetime[:8]])
+        # Use np.unique instead of python's set object, as a set is unordered
+        dates = np.unique([startdatetime[:8], enddatetime[:8]])
     
         radar_id = gv.radar_ids[self.cd.radar]
     
@@ -1320,10 +1484,180 @@ class Source_ESTEA():
         self.cd.savenames[index] += [directory+'/'+filename]
         download_directory = self.dsg.get_download_directory(self.cd.radar)
         self.cd.download_savenames[index] += [download_directory+'/'+filename]                 
-     
+
+        
+
+
+
+class Source_MeteoRomania():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+
+        self.files={j:{} for j in gv.radars['Meteo Romania']}; self.files_datetimes={j:{} for j in gv.radars['Meteo Romania']}
+        
+        self.base_url = 'https://opendata.meteoromania.ro/radar'
+        self.products_exclude = ('dBR', 'Height')
+        
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist,'Progress_info')
+                
+        dtc=np.array([],dtype='int64')
+        radar_id = gv.radar_ids[self.cd.radar]
+        url = self.base_url+'/'+radar_id
+        
+        self.files[self.cd.radar][index]=[]
+        
+        error = None
+        try: 
+            #Suppress ResourceWarnings, to prevent that they are raised when the socket is not closed.
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                out = session.get(url, timeout=10)
+                content = out.content.decode('utf-8')
+        except Exception as error: 
+            self.cd.show_error_info(str(error)+',update_downloadlist')
+    
+        i_start = [s.end() for s in re.finditer('="', content)]
+       	i_end = [content.find('"', i) for i in i_start]
+       	filenames = [content[i:j] for i,j in zip(i_start, i_end) if radar_id in content[i:j] if not any(content[i:j].endswith(p+'.hdf') for p in self.products_exclude)]	
+        self.files[self.cd.radar][index] = np.array([url+'/'+f for f in filenames])
+                        
+        #Contains the datetimes for all files
+        self.files_datetimes[self.cd.radar][index] = np.array([f.split('_')[-1][:12] for f in filenames], dtype='uint64')
+        dtc=np.unique(self.files_datetimes[self.cd.radar][index]) #Contains the unique datetimes of the files
+        if len(dtc)>0:
+            absolutetimes=ft.get_absolutetimes_from_datetimes(dtc.astype(str))
+            self.cd.datetimes_downloadlist[index]=[dtc,absolutetimes]
+            
+            self.cd.emit_info(None,None) #Remove the message given self.cd.cd_message_updating_downloadlist
+            files_available=True
+        else:
+            if error is None:
+                self.cd.show_error_info(self.cd.cd_message_run_nofilespresent)
+            files_available=False
+            
+        return files_available    
+
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        datetimes = self.files_datetimes[self.cd.radar][index]
+        select = datetimes == int(datetime)
+        urls = list(self.files[self.cd.radar][index][select])
+
+        date, time = datetime[:8], datetime[-4:]
+        for url in urls:
+            self.cd.urls[index] += [url]
+            self.cd.datetimes[index] += [datetime]
+            directory=self.dsg.get_directory(date, time,self.cd.radar,dir_index = 0)
+            filename=os.path.basename(url)
+            self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
+            download_directory=self.dsg.get_download_directory(self.cd.radar)
+            self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]
+
+        
+
+
+
+class Source_Geosphere():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+        
+        self.base_url = 'https://public.hub.geosphere.at/datahub/resources/radar_volumen_hochficht-v1-5min/filelisting/'
+        
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist, 'Progress_info')
+                
+        start_date = ft.next_date(self.cd.currentdate, -2)
+        datetimes = ft.get_datetimes_in_range(start_date+'0000', self.cd.currentdate+self.cd.currenttime, 5)
+        for d in datetimes[-3:].copy():
+            out = session.get(self.base_url+f'WXRHOF_{d}.hdf')
+            if out.status_code != 200:
+                datetimes.remove(d)
+        datetimes = np.array(datetimes, dtype='int64')
+                
+        absolutetimes=ft.get_absolutetimes_from_datetimes(datetimes.astype(str))
+        self.cd.datetimes_downloadlist[index]=[datetimes,absolutetimes]
+        
+        self.cd.emit_info(None,None) # Remove the message given self.cd.cd_message_updating_downloadlist
+        return True 
+
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        date, time = datetime[:8], datetime[-4:]
+        filename = f'WXRHOF_{datetime}.hdf'       
+        
+        self.cd.urls[index] += [self.base_url+filename]
+        self.cd.datetimes[index] += [datetime]
+        directory=self.dsg.get_directory(date, time,self.cd.radar,dir_index = 0)
+        self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
+        download_directory=self.dsg.get_download_directory(self.cd.radar)
+        self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]   
+
+
+
+
+
+class Source_SHMI():
+    def __init__(self,gui_class,cds_class,parent=None):
+        self.gui=gui_class
+        self.dsg=self.gui.dsg
+        self.cds=cds_class
+
+        self.base_url = 'https://opendata-download-radar.smhi.se/api/version/latest/area'
+        
+        
+    def update_downloadlist(self,index):
+        self.cd.emit_info(self.cd.cd_message_updating_downloadlist, 'Progress_info')
+        
+        datetimes = []
+        for date in (self.cd.previousdate, self.cd.currentdate):
+            url = self.base_url+'/'+self.cd.radar.lower()+f'/product/qcvol/{date[:4]}/{date[4:6]}/{date[-2:]}'
+            files = [f['formats'][0]['link'] for f in requests.get(url).json()['files']]
+            datetimes += [f[-15:-3] for f in files]
+        datetimes = np.array(datetimes, dtype='int64')
+                
+        absolutetimes=ft.get_absolutetimes_from_datetimes(datetimes.astype(str))
+        self.cd.datetimes_downloadlist[index]=[datetimes,absolutetimes]
+        
+        self.cd.emit_info(None,None) # Remove the message given self.cd.cd_message_updating_downloadlist
+        return True 
+
+    def get_urls_and_savenames_downloadfile(self,index):
+        """Obtain the urls and names under which the files will be saved.
+        The file will first be saved under the name given in self.cd.download_savenames[index], and after the download is finished this
+        will be renamed to the name given in self.cd.savenames[index].
+        """
+        datetime = self.cd.date[index]+self.cd.time[index]
+        date, time = datetime[:8], datetime[-4:]
+        filename = f'radar_{self.cd.radar.lower()}_qcvol_{datetime}.h5' 
+        
+        url = self.base_url+'/'+self.cd.radar.lower()+f'/product/qcvol/{date[:4]}/{date[4:6]}/{date[-2:]}'
+        self.cd.urls[index] += [url+'/'+filename]
+        self.cd.datetimes[index] += [datetime]
+        directory=self.dsg.get_directory(date, time,self.cd.radar,dir_index = 0)
+        self.cd.savenames[index] += [opa(os.path.join(directory,filename))]
+        download_directory=self.dsg.get_download_directory(self.cd.radar)
+        self.cd.download_savenames[index] += [opa(os.path.join(download_directory,filename))]  
         
      
             
+     
             
 class Source_NWS():
     def __init__(self,gui_class,cds_class,parent=None):

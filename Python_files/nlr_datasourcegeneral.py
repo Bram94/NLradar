@@ -68,13 +68,14 @@ class DataSource_General():
         self.source_TUDelft = dss.Source_TUDelft(gui_class = self.gui, dsg_class = self)
         self.source_Leonardo = dss.Source_Leonardo(gui_class = self.gui, dsg_class = self)
         self.source_DMI = dss.Source_DMI(gui_class = self.gui, dsg_class = self)
-        self.source_AustroControl = dss.Source_AustroControl(gui_class = self.gui, dsg_class = self)
         self.source_CHMI = dss.Source_CHMI(gui_class = self.gui, dsg_class = self)
+        self.source_SHMU = dss.Source_SHMU(gui_class = self.gui, dsg_class = self)
+        self.source_AustroControl = dss.Source_AustroControl(gui_class = self.gui, dsg_class = self)
         self.source_NWS = dss.Source_NWS(gui_class = self.gui, dsg_class = self)
         self.source_ARRC = dss.Source_ARRC(gui_class = self.gui, dsg_class = self)
         self.source_MeteoFrance = dss.Source_MeteoFrance(gui_class = self.gui, dsg_class = self)
         self.source_UKMO = dss.Source_UKMO(gui_class = self.gui, dsg_class = self)
-        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_Leonardo, 'DMI': self.source_DMI, 'Austro Control':self.source_AustroControl, 'CHMI': self.source_CHMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance, 'UKMO':self.source_UKMO}
+        self.source_classes = {'KNMI':self.source_KNMI,'KMI':self.source_KMI,'skeyes':self.source_skeyes,'VMM':self.source_VMM,'DWD':self.source_DWD, 'TU Delft': self.source_TUDelft, 'IMGW': self.source_Leonardo, 'SHMU':self.source_SHMU, 'DMI': self.source_DMI, 'Austro Control':self.source_AustroControl, 'CHMI': self.source_CHMI, 'NWS': self.source_NWS, 'ARRC': self.source_ARRC, 'Météo-France': self.source_MeteoFrance, 'UKMO':self.source_UKMO}
                 
         
         self.radial_res_all = {}; self.radial_bins_all = {}; self.radial_range_all = {}
@@ -147,7 +148,7 @@ class DataSource_General():
         self.attributes_version = 16
         # Should be updated when the structure of volume attributes has changed only for particular data sources.
         # Updating it resets only attributes for that particular data source.
-        self.attributes_version_sources = {'Météo-France':2, 'NWS':3}
+        self.attributes_version_sources = {'Météo-France':2, 'NWS':3, 'DWD':2}
                     
         self.scanangles = {}
         

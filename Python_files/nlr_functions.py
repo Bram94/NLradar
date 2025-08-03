@@ -889,7 +889,7 @@ def get_moving_avg(arr, n, axis, mask_value=None):
         avg[n_unmasked == 0] = mask_value
     return avg
         
-def get_window_sum(arr, window = [2, 2, 2, 2, 2]):
+def get_window_sum(arr, window = [2, 2, 2, 2, 2], dr=1):
     """For each radar bin this function sums all elements in the selected window. The length of the list 'window' specifies the number of radials that the window comprises,
     and the elements in 'window' specify for each radial (centered around the central radial in which the radar bin is located) the number of radial bins in the window. 
     For each radial do 2*x+1 radial bins belong to the window, where x is the element in 'window'. The elements in window thus specify the number of radial bins above and below
@@ -907,23 +907,31 @@ def get_window_sum(arr, window = [2, 2, 2, 2, 2]):
         add_rolled_arr(azi_sums[1 + 2*i], arr, 0, i)
     
     window_sum = azi_sums[1 + 2*n_azi].copy()
-    for j in range(1, max(window)+1):
+    for j in range(dr, max(window)+1, dr):
         n_azi_j = np.count_nonzero(window>=j)
         add_shifted_arr(window_sum, azi_sums[n_azi_j], 1, j)
         add_shifted_arr(window_sum, azi_sums[n_azi_j], 1, -j)
     
     return window_sum
 
-def get_window_mean(arr, data_mask, window, copy=False):
+def get_window_mean(arr, data_mask, window, dr=1, copy=False):
     arr = arr.copy() if copy else arr
     arr[data_mask] = 0
-    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
-    return get_window_sum(arr, window)/n_unmasked
+    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window, dr), 1)
+    return get_window_sum(arr, window, dr)/n_unmasked
+
+def get_window_stdev(arr, data_mask, window, dr=1, copy=False):
+    arr = arr.copy() if copy else arr
+    arr[data_mask] = 0
+    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window, dr), 1)
+    c1 = get_window_sum(arr, window, dr)/n_unmasked
+    c2 = get_window_sum(arr*arr, window, dr)/n_unmasked
+    return (c2 - c1*c1)**.5
 
 def get_window_mask_ratio(data_mask, window):
     # Returns ratio of number of masked elements in window to total elements in window
     window_size = sum(2*j+1 for j in window)
-    return get_window_sum(data_mask.astype('uint8'), window)/window_size
+    return get_window_sum(data_mask.astype('float32'), window)/window_size
 
 # def get_window_mean_abs_diff(arr_ref, arr, data_mask, window):
 #     if len(window) % 2 == 0: 
@@ -944,14 +952,6 @@ def get_window_mask_ratio(data_mask, window):
             
 #     n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
 #     return diff/n_unmasked
-
-def get_window_stdev(arr, data_mask, window, copy=False):
-    arr = arr.copy() if copy else arr
-    arr[data_mask] = 0
-    n_unmasked = np.maximum(get_window_sum((~data_mask).astype('uint8'), window), 1)
-    c1 = get_window_sum(arr, window)/n_unmasked
-    c2 = get_window_sum(arr*arr, window)/n_unmasked
-    return (c2 - c1*c1)**.5
 
 def calculate_ref_phase(sin_phi, cos_phi, window):
     sin_phi_sum, cos_phi_sum = get_window_sum(sin_phi, window), get_window_sum(cos_phi, window)
