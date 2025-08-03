@@ -883,13 +883,15 @@ class Source_MeteoFrance():
             entries = os.listdir(directory)
         except Exception: entries = []
         filenames = np.sort([j for j in entries if any(i in j for i in ('PAM', 'PAG'))])
-        if filenames[0].endswith('.nc'):
+        if len(filenames) and filenames[0].endswith('.nc'):
             # NC files contain data for a time period of 15 minutes. I find it desired however to split this period up in volumes of 
             # 5 minutes here in the code
             filenames = np.repeat(filenames, 3)
         return filenames
     
     def get_datetimes_from_files(self, filenames, dtype=str, return_unique_datetimes=True, mode='simple'):
+        if not len(filenames):
+            return []
         if filenames[0].endswith('.nc'):
             datetimes = [j.split('_')[-1][:12] for j in filenames]
             for j in range(len(datetimes)):
