@@ -969,7 +969,9 @@ class ODIM_hdf5():
                         self.dsg.nyquist_velocities_all_mps[j] = abs(float(dataset['what'].attrs['offset'])) if dataset else None
                 
                 try:
-                    radar_wavelength = float(hf['how'].attrs.get('wavelength', scangroup['how'].attrs.get('wavelength'))) * 1e-2
+                    radar_wavelength = float(hf['how'].attrs.get('wavelength', 0))/100
+                    radar_wavelength = float(scangroup['how'].attrs.get('wavelength', 0))/100 if radar_wavelength == 0 else radar_wavelength
+                    radar_wavelength = 299792458/float(hf['how'].attrs.get('frequency')) if radar_wavelength == 0 else radar_wavelength
                     if not self.crd.radar in ('Jabbeke', 'Wideumont'):
                         if 'lowprf' in scangroup['how'].attrs:
                             prf_l = float(scangroup['how'].attrs['lowprf'])
