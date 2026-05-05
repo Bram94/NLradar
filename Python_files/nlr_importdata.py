@@ -2112,7 +2112,7 @@ class MeteoFrance_BUFR():
         with open(filepath, 'rb') as f:
             content = f.read()
             indices = [i.start() for i in re.finditer(b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03', content)]
-            if 'PAM' in os.path.basename(filepath):
+            if 'PAM' in os.path.basename(filepath) and b'\x1f\x9d\x90B' in content:
                 # In this case the last message in the file has LZW compression instead of gzip compression, and therefore needs
                 # to be excluded to prevent errors in the gzip library
                 indices += [content.rindex(b'\x1f\x9d\x90B')]

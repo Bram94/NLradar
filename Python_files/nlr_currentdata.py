@@ -1358,7 +1358,7 @@ class Source_FMI():
         for date in dates:
             prefix = f'{date[:4]}/{date[4:6]}/{date[-2:]}/{radar_id}/'
             out = s3.list_objects(Bucket=self.bucket, Prefix=prefix, Delimiter='/')
-            files += [os.path.basename(item['Key']) for item in out['Contents']]
+            files += [os.path.basename(item['Key']) for item in out.get('Contents', [])]
     
         if files:
             datetimes = np.array([j[:12] for j in files])
